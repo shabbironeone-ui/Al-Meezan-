@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>Purchase & Stock Entry</title>
+  <style>
+    :root {
+      --primary-color: #1e293b;
+      --accent-color: #10b981;
+      --bg-color: #f1f5f9;
+      --border-color: #cbd5e1;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      color: #334155;
+    }
+    .form-container {
+      background: #ffffff;
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    h2, h3 {
+      margin-top: 0;
+      color: var(--primary-color);
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 10px;
+      font-size: 20px;
+    }
+    .row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .col {
+      flex: 1;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    input, select {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      text-align: left;
+      font-size: 12px;
+      vertical-align: middle;
+      white-space: nowrap !important;
+    }
+    th {
+      background-color: #f8fafc;
+      color: var(--primary-color);
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th.sortable:hover {
+      background-color: #e2e8f0;
+    }
+    .sort-icon {
+      font-size: 10px;
+      margin-left: 4px;
+      color: #64748b;
+    }
+    .btn {
+      padding: 8px 15px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-add { background-color: #3b82f6; color: white; }
+    .btn-add:hover { background-color: #2563eb; }
+    .btn-danger { background-color: #ef4444; color: white; padding: 5px 10px; }
+    .btn-danger:hover { background-color: #dc2626; }
+    .btn-warning { background-color: #f59e0b; color: white; padding: 5px 10px; }
+    .btn-warning:hover { background-color: #d97706; }
+    .btn-save-inline { background-color: #10b981; color: white; padding: 5px 10px; font-size: 12px; }
+    .btn-save-inline:hover { background-color: #059669; }
+    .btn-submit { background-color: var(--accent-color); color: white; padding: 12px 25px; font-size: 15px; width: 100%; }
+    .btn-submit:hover { background-color: #059669; }
+    
+    .grand-total-container {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 10px 15px;
+      background-color: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    .grand-total-value {
+      color: #059669;
+      font-size: 18px;
+    }
+
+    body.loading, body.loading * {
+      cursor: wait !important;
+    }
+    
+    .product-cell-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .product-input-row {
+      display: flex;
+      gap: 5px;
+    }
+    .product-buttons-row {
+      display: flex;
+      gap: 5px;
+    }
+    .btn-action-lg {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn-search-lg { background-color: #6366f1; }
+    .btn-search-lg:hover { background-color: #4f46e5; }
+    .btn-plus-lg { background-color: #10b981; }
+    .btn-plus-lg:hover { background-color: #059669; }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 3% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 95%;
+      max-width: 1250px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .close-modal {
+      float: right;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #64748b;
+    }
+    .close-modal:hover { color: #000; }
+    .search-box {
+      margin-bottom: 15px;
+      padding: 9px;
+      width: 100%;
+      box-sizing: border-box;
+      text-transform: uppercase;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+    #statusMsg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+    }
+    .success { background-color: #d1fae5; color: #065f46; }
+    .error { background-color: #fee2e2; color: #b91c1c; }
+  
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .change-url-link { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; cursor: pointer; text-decoration: underline; }
+
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+</head>
+<body>
+  <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+    <b>Setup:</b> Apna Apps Script Deployment URL neeche daal kar Save karein.
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+    <button onclick="saveScriptUrl()">Save URL</button>
+  </div>
+
+
+  <div class="form-container">
+    <h2>🛒 Purchase & Stock Entry Form</h2>
+    
+    <div class="row">
+      <div class="col">
+        <label for="purchase_date">Purchase Date</label>
+        <input type="date" id="purchase_date">
+      </div>
+      <div class="col">
+        <label for="vendor">Supplier / Vendor</label>
+        <select id="vendor">
+          <option value="">Loading vendors from Column J...</option>
+        </select>
+      </div>
+      <div class="col">
+        <label for="warehouse">Warehouse</label>
+        <input type="text" id="warehouse" value="Main Warehouse" style="text-transform: uppercase;">
+      </div>
+    </div>
+
+    <h3>Items List</h3>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 160px;">Product ID</th>
+            <th>Company / Brand</th>
+            <th>Category</th>
+            <th>Model</th>
+            <th>Color</th>
+            <th style="width: 55px;">Qty</th>
+            <th style="width: 75px;">Cost Price</th>
+            <th style="width: 75px;">MRP</th>
+            <th style="width: 45px;">HP %</th>
+            <th style="width: 100px;">Serial No</th>
+            <th style="width: 110px;">Remarks</th>
+            <th style="width: 85px;">Total</th>
+            <th style="width: 45px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="itemsTableBody">
+          <!-- Dynamic Rows -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Grand Total Section -->
+    <div class="grand-total-container">
+      <span>Grand Total:</span>
+      <span id="grandTotalValue" class="grand-total-value">0.00</span>
+    </div>
+
+    <button type="button" class="btn btn-add" onclick="addRow()">+ Add Item Row</button>
+    <br><br>
+
+    <button type="button" class="btn btn-submit" id="submitBtn" onclick="submitPurchase()">Save Purchase & Update Stock</button>
+    
+    <div id="statusMsg"></div>
+
+    <!-- Saved Purchases List Section -->
+    <hr style="margin: 35px 0 20px 0; border: none; border-top: 2px solid #e2e8f0;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+      <h3 style="margin: 0; border: none; padding: 0; color: var(--primary-color);">📋 Recently Saved Purchases</h3>
+      
+      <!-- Date Filter Controls -->
+      <div style="display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <span style="font-weight: 600; font-size: 13px;">Filter Date:</span>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <label style="font-size: 11px; margin: 0;">From:</label>
+          <input type="date" id="filterFromDate" style="padding: 5px; font-size: 12px; width: 130px;" onchange="filterSavedEntries()">
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <label style="font-size: 11px; margin: 0;">To:</label>
+          <input type="date" id="filterToDate" style="padding: 5px; font-size: 12px; width: 130px;" onchange="filterSavedEntries()">
+        </div>
+        <button type="button" class="btn" style="background-color: #64748b; color: white; padding: 5px 10px; font-size: 12px;" onclick="resetDateFilter()">Reset</button>
+      </div>
+    </div>
+
+    <div style="overflow-x: auto; max-height: 450px;">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" onclick="sortTable('purchase_date')">Date <span id="sort_purchase_date" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('purchase_id')">P/O Num <span id="sort_purchase_id" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('supplier')">Supplier <span id="sort_supplier" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('product_id')">Product ID <span id="sort_product_id" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('model')">Brand / Model <span id="sort_model" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('qty')">Qty <span id="sort_qty" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('cost_price')">Cost <span id="sort_cost_price" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('line_total')">Total <span id="sort_line_total" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('serial_no')">Serial No <span id="sort_serial_no" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="sortTable('remarks')">Remarks <span id="sort_remarks" class="sort-icon">↕</span></th>
+            <th style="width: 140px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="savedEntriesTableBody">
+          <tr><td colspan="11" style="text-align: center;">Loading saved entries...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Product Selection Modal -->
+  <div id="productModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeProductModal()">&times;</span>
+      <h3>Select Product from Master Inventory</h3>
+      <input type="text" id="modalSearchInput" class="search-box" placeholder="SEARCH BY BRAND, CATEGORY, MODEL, MEMORY, RAM, ID..." oninput="filterModalProducts()">
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Brand</th>
+              <th>Category</th>
+              <th>Model</th>
+              <th>Color</th>
+              <th>Memory</th>
+              <th>RAM</th>
+              <th>Serial No</th>
+              <th>Remarks</th>
+              <th style="width: 70px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="modalProductTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Add Product Modal -->
+  <div id="quickAddModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <span class="close-modal" onclick="closeQuickAddModal()">&times;</span>
+      <h3>➕ Quick Register Product Master</h3>
+      <div class="row">
+        <div class="col">
+          <label>Category</label>
+          <input type="text" id="qa_category" style="text-transform: uppercase;" placeholder="MOBILE, LED, etc." oninput="checkCategoryForMobile(this)">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Brand / Company</label>
+          <input type="text" id="qa_brand" style="text-transform: uppercase;" placeholder="SAMSUNG, DAWLANCE">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Model</label>
+          <input type="text" id="qa_model" style="text-transform: uppercase;" placeholder="MODEL NAME">
+        </div>
+      </div>
+      <div class="row" id="mobileSpecsRow" style="display: none;">
+        <div class="col">
+          <label>RAM</label>
+          <input type="text" id="qa_ram" style="text-transform: uppercase;" placeholder="e.g. 8 GB">
+        </div>
+        <div class="col">
+          <label>Memory (ROM)</label>
+          <input type="text" id="qa_memory" style="text-transform: uppercase;" placeholder="e.g. 256 GB">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Color</label>
+          <input type="text" id="qa_color" style="text-transform: uppercase;" placeholder="BLACK, BLUE">
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Remarks</label>
+          <input type="text" id="qa_remarks" style="text-transform: uppercase;" placeholder="REMARKS">
+        </div>
+      </div>
+      <button type="button" class="btn btn-add" style="width:100%; margin-top:10px;" onclick="saveQuickProduct()">Save & Select Product</button>
+    </div>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+    var activeRowForModal = null;
+    var allPurchasedProducts = [];
+    var allSavedPurchases = [];
+    var currentSortColumn = '';
+    var currentSortDirection = 'asc';
+    var isSavingInline = false;
+
+    window.onload = function() {
+      resetForm();
+      loadVendors();
+      loadSavedEntries();
+      setupQuickAddEnterNavigation();
+    };
+
+    function loadVendors() {
+      fetch(SCRIPT_URL + "?action=getVendorsFromSettings")
+        .then(r => r.json())
+        .then(function(res) {
+          var select = document.getElementById('vendor');
+          select.innerHTML = '<option value="">Select Vendor</option>';
+          if (res.success && res.vendors.length > 0) {
+            res.vendors.forEach(function(v) {
+              var opt = document.createElement('option');
+              opt.value = v;
+              opt.innerText = v;
+              select.appendChild(opt);
+            });
+          } else {
+            select.innerHTML = '<option value="">No vendors found in Column J</option>';
+          }
+        });
+    }
+
+    function loadSavedEntries() {
+      fetch(SCRIPT_URL + "?action=getRecentPurchases")
+        .then(r => r.json())
+        .then(function(res) {
+          if (res.success && res.purchases) {
+            allSavedPurchases = res.purchases || [];
+            filterSavedEntries();
+          } else {
+            var tbody = document.getElementById('savedEntriesTableBody');
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No saved purchase entries found.</td></tr>';
+          }
+        });
+    }
+
+    function sortTable(column) {
+      if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+      }
+      filterSavedEntries();
+    }
+
+    function filterSavedEntries() {
+      var fromDateVal = document.getElementById('filterFromDate').value;
+      var toDateVal = document.getElementById('filterToDate').value;
+      
+      var filtered = allSavedPurchases.filter(function(p) {
+        if (!p.purchase_date) return true;
+        var pDate = String(p.purchase_date).substring(0, 10);
+        if (fromDateVal && pDate < fromDateVal) return false;
+        if (toDateVal && pDate > toDateVal) return false;
+        return true;
+      });
+
+      if (currentSortColumn) {
+        filtered.sort(function(a, b) {
+          var valA = a[currentSortColumn];
+          var valB = b[currentSortColumn];
+          
+          if (valA === undefined || valA === null) valA = '';
+          if (valB === undefined || valB === null) valB = '';
+
+          if (['qty', 'cost_price', 'mrp', 'line_total'].includes(currentSortColumn)) {
+            valA = parseFloat(valA) || 0;
+            valB = parseFloat(valB) || 0;
+          } else {
+            valA = String(valA).toLowerCase();
+            valB = String(valB).toLowerCase();
+          }
+
+          if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+          if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+
+      updateSortIcons();
+      renderSavedEntriesTable(filtered);
+    }
+
+    function updateSortIcons() {
+      var headers = ['purchase_date', 'purchase_id', 'supplier', 'product_id', 'model', 'qty', 'cost_price', 'line_total', 'serial_no', 'remarks'];
+      headers.forEach(function(h) {
+        var icon = document.getElementById('sort_' + h);
+        if (icon) {
+          if (currentSortColumn === h) {
+            icon.innerText = currentSortDirection === 'asc' ? '▲' : '▼';
+            icon.style.color = '#10b981';
+          } else {
+            icon.innerText = '↕';
+            icon.style.color = '#64748b';
+          }
+        }
+      });
+    }
+
+    function resetDateFilter() {
+      document.getElementById('filterFromDate').value = '';
+      document.getElementById('filterToDate').value = '';
+      filterSavedEntries();
+    }
+
+    function formatDateToDDMMYY(dateStr) {
+      if (!dateStr) return '';
+      var cleanStr = String(dateStr).substring(0, 10);
+      var parts = cleanStr.split('-');
+      if (parts.length === 3) {
+        var yearFull = parts[0];
+        var yearShort = yearFull.length === 4 ? yearFull.substring(2) : yearFull;
+        return parts[2] + '-' + parts[1] + '-' + yearShort;
+      }
+      return cleanStr;
+    }
+
+    function renderSavedEntriesTable(purchases) {
+      var tbody = document.getElementById('savedEntriesTableBody');
+      tbody.innerHTML = '';
+      if (purchases && purchases.length > 0) {
+        purchases.forEach(function(p) {
+          var formattedDate = p.purchase_date ? String(p.purchase_date).substring(0, 10) : '';
+          var displayDate = formatDateToDDMMYY(formattedDate);
+          
+          var tr = document.createElement('tr');
+          tr.setAttribute('data-row-index', p.rowIndex);
+          tr.innerHTML = `
+            <td class="col-date">${displayDate}</td>
+            <td><b>${p.purchase_id}</b></td>
+            <td>${p.supplier}</td>
+            <td>${p.product_id}</td>
+            <td>${p.company_name} - ${p.model}</td>
+            <td class="col-qty"><b>${p.qty}</b></td>
+            <td class="col-cost">${p.cost_price}</td>
+            <td class="col-total" style="color: #059669; font-weight: bold;">${p.line_total}</td>
+            <td class="col-serial">${p.serial_no || '-'}</td>
+            <td class="col-remarks">${p.remarks || '-'}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              <button type="button" class="btn btn-save-inline" style="display: none;" onclick='saveInlineEdit(this, ${JSON.stringify(p)})'>💾</button>
+              <button type="button" class="btn btn-warning" onclick='enableInlineEdit(this, ${JSON.stringify(p)})'>Edit</button>
+              <button type="button" class="btn btn-danger" onclick="deleteSavedEntry(${p.rowIndex})">Del</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No saved purchase entries found.</td></tr>';
+      }
+    }
+
+    function enableInlineEdit(btn, p) {
+      var tr = btn.closest('tr');
+      var formattedDate = p.purchase_date ? String(p.purchase_date).substring(0, 10) : '';
+      
+      var dateTd = tr.querySelector('.col-date');
+      dateTd.innerHTML = `<input type="date" value="${formattedDate}" style="width: 130px; padding: 4px;">`;
+
+      var qtyTd = tr.querySelector('.col-qty');
+      qtyTd.innerHTML = `<input type="number" value="${p.qty}" min="1" style="width: 50px; padding: 4px;" oninput="calcInlineTotal(this)">`;
+      
+      var costTd = tr.querySelector('.col-cost');
+      costTd.innerHTML = `<input type="number" value="${p.cost_price}" step="any" style="width: 70px; padding: 4px;" oninput="calcInlineTotal(this)">`;
+      
+      var serialTd = tr.querySelector('.col-serial');
+      serialTd.innerHTML = `<input type="text" value="${p.serial_no || ''}" style="width: 90px; padding: 4px; text-transform: uppercase;">`;
+
+      var remarksTd = tr.querySelector('.col-remarks');
+      remarksTd.innerHTML = `<input type="text" value="${p.remarks || ''}" style="width: 110px; padding: 4px; text-transform: uppercase;">`;
+      
+      btn.style.display = 'none';
+      tr.querySelector('.btn-save-inline').style.display = 'inline-block';
+    }
+
+    function calcInlineTotal(input) {
+      var tr = input.closest('tr');
+      var qty = parseFloat(tr.querySelector('.col-qty input').value) || 0;
+      var cost = parseFloat(tr.querySelector('.col-cost input').value) || 0;
+      var total = qty * cost;
+      tr.querySelector('.col-total').innerText = total.toFixed(2);
+    }
+
+    function saveInlineEdit(btn, originalData) {
+      if (isSavingInline) return;
+
+      var tr = btn.closest('tr');
+      var newDate = tr.querySelector('.col-date input').value;
+      var newQty = parseFloat(tr.querySelector('.col-qty input').value) || 0;
+      var newCost = parseFloat(tr.querySelector('.col-cost input').value) || 0;
+      var newSerial = tr.querySelector('.col-serial input').value.trim().toUpperCase();
+      var newRemarks = tr.querySelector('.col-remarks input').value.trim().toUpperCase();
+      var newLineTotal = newQty * newCost;
+
+      var updatedData = {
+        rowIndex: originalData.rowIndex,
+        purchase_date: newDate,
+        purchase_id: originalData.purchase_id,
+        supplier: originalData.supplier,
+        product_id: originalData.product_id,
+        company_name: originalData.company_name,
+        product_category: originalData.product_category,
+        model: originalData.model,
+        color: originalData.color,
+        qty: newQty,
+        cost_price: newCost,
+        mrp: originalData.mrp,
+        hp_percent: originalData.hp_percent,
+        serial_no: newSerial,
+        remarks: newRemarks,
+        line_total: newLineTotal
+      };
+
+      isSavingInline = true;
+      document.body.classList.add('loading');
+      btn.disabled = true;
+
+      fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "updatePurchaseEntry", data: updatedData }) })
+        .then(r => r.json())
+        .then(function(res) {
+          isSavingInline = false;
+          document.body.classList.remove('loading');
+          if (res && res.success) {
+            loadSavedEntries();
+            fetch(SCRIPT_URL + "?action=rebuildStockLedgerNow").catch(() => {});
+          } else {
+            isSavingInline = false;
+            btn.disabled = false;
+            alert("Error updating entry: " + (res ? res.error : "Unknown error"));
+          }
+        })
+        .catch(function(err) {
+          isSavingInline = false;
+          document.body.classList.remove('loading');
+          btn.disabled = false;
+          alert("Server Error: " + err.message);
+        });
+    }
+
+    function deleteSavedEntry(rowIndex) {
+      if (confirm("Kya aap waqai is entry ko delete karna chahte hain?")) {
+        fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "deletePurchaseEntry", data: rowIndex }) })
+        .then(r => r.json())
+        .then(function(res) {
+            if (res && res.success) {
+              loadSavedEntries();
+              fetch(SCRIPT_URL + "?action=rebuildStockLedgerNow").catch(() => {});
+            } else {
+              alert("Error: " + (res ? res.error : "Unknown error"));
+            }
+          });
+      }
+    }
+
+    function addRow() {
+      var tbody = document.getElementById('itemsTableBody');
+      var row = document.createElement('tr');
+      
+      row.innerHTML = `
+        <td>
+          <div class="product-cell-container">
+            <div class="product-input-row">
+              <input type="text" placeholder="Product ID" onblur="fetchProductDetails(this)">
+            </div>
+            <div class="product-buttons-row">
+              <button type="button" class="btn-action-lg btn-search-lg" onclick="openProductModal(this)">🔍 Search</button>
+              <button type="button" class="btn-action-lg btn-plus-lg" onclick="openQuickAddModal(this)">➕ New</button>
+            </div>
+          </div>
+        </td>
+        <td><input type="text" placeholder="Brand" readonly style="background:#f1f5f9; text-transform: uppercase;"></td>
+        <td><input type="text" placeholder="Category" readonly style="background:#f1f5f9; text-transform: uppercase;"></td>
+        <td><input type="text" placeholder="Model" readonly style="background:#f1f5f9; text-transform: uppercase;"></td>
+        <td><input type="text" placeholder="Color" readonly style="background:#f1f5f9; text-transform: uppercase;"></td>
+        <td><input type="number" value="1" min="1" style="width:55px;" oninput="calculateCostFromQty(this)"></td>
+        <td><input type="number" value="0" step="any" style="width:75px;" oninput="calculateTotalFromCost(this)"></td>
+        <td><input type="number" value="0" step="any" style="width:75px;"></td>
+        <td><input type="number" value="0" step="any" style="width:45px;"></td>
+        <td><input type="text" placeholder="Serial No" style="text-transform: uppercase; width:100px;"></td>
+        <td><input type="text" placeholder="Remarks" style="text-transform: uppercase; width:110px;"></td>
+        <td><input type="number" value="0.00" step="any" style="width:85px; font-weight:bold; color:#059669;" oninput="calculateCostFromTotal(this)"></td>
+        <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">X</button></td>
+      `;
+      tbody.appendChild(row);
+      setupEnterKeyNavigation();
+      calculateGrandTotal();
+    }
+
+    function setupEnterKeyNavigation() {
+      var focusables = document.querySelectorAll('.form-container input:not([readonly]), .form-container select');
+      focusables.forEach(function(elem, index) {
+        elem.onkeydown = function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            var nextElement = focusables[index + 1];
+            if (nextElement) {
+              nextElement.focus();
+              if (nextElement.tagName === 'INPUT' && (nextElement.type === 'text' || nextElement.type === 'number')) {
+                nextElement.select();
+              }
+            }
+          }
+        };
+      });
+    }
+
+    function setupQuickAddEnterNavigation() {
+      var qaInputs = document.querySelectorAll('#quickAddModal input');
+      qaInputs.forEach(function(elem, index) {
+        elem.onkeydown = function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            for (var i = index + 1; i < qaInputs.length; i++) {
+              var nextElem = qaInputs[i];
+              if (nextElem.offsetParent !== null) {
+                nextElem.focus();
+                nextElem.select();
+                break;
+              }
+            }
+          }
+        };
+      });
+    }
+
+    function checkCategoryForMobile(input) {
+      var val = input.value.trim().toUpperCase();
+      var mobileSpecsRow = document.getElementById('mobileSpecsRow');
+      if (val.includes('MOBILE') || val.includes('PHONE') || val.includes('SMARTPHONE')) {
+        mobileSpecsRow.style.display = 'flex';
+      } else {
+        mobileSpecsRow.style.display = 'none';
+        document.getElementById('qa_ram').value = '';
+        document.getElementById('qa_memory').value = '';
+      }
+    }
+
+    function removeRow(btn) {
+      var row = btn.closest('tr');
+      if (document.querySelectorAll('#itemsTableBody tr').length > 1) {
+        row.remove();
+        setupEnterKeyNavigation();
+        calculateGrandTotal();
+      } else {
+        alert("At least one item is required.");
+      }
+    }
+
+    function calculateCostFromQty(element) {
+      var row = element.closest('tr');
+      var qty = parseFloat(row.cells[5].querySelector('input').value) || 0;
+      var cost = parseFloat(row.cells[6].querySelector('input').value) || 0;
+      var total = qty * cost;
+      row.cells[11].querySelector('input').value = total.toFixed(2);
+      calculateGrandTotal();
+    }
+
+    function calculateTotalFromCost(element) {
+      var row = element.closest('tr');
+      var qty = parseFloat(row.cells[5].querySelector('input').value) || 0;
+      var cost = parseFloat(row.cells[6].querySelector('input').value) || 0;
+      var total = qty * cost;
+      row.cells[11].querySelector('input').value = total.toFixed(2);
+      calculateGrandTotal();
+    }
+
+    function calculateCostFromTotal(element) {
+      var row = element.closest('tr');
+      var qty = parseFloat(row.cells[5].querySelector('input').value) || 0;
+      var total = parseFloat(row.cells[11].querySelector('input').value) || 0;
+      
+      if (qty > 0) {
+        var cost = total / qty;
+        row.cells[6].querySelector('input').value = cost.toFixed(2);
+      } else {
+        row.cells[6].querySelector('input').value = "0.00";
+      }
+      calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+      var rows = document.querySelectorAll('#itemsTableBody tr');
+      var grandTotal = 0;
+      rows.forEach(function(row) {
+        var total = parseFloat(row.cells[11].querySelector('input').value) || 0;
+        grandTotal += total;
+      });
+      document.getElementById('grandTotalValue').innerText = grandTotal.toFixed(2);
+    }
+
+    function fetchProductDetails(input) {
+      var productId = input.value.trim();
+      if (!productId) return;
+      var row = input.closest('tr');
+      
+      fetch(SCRIPT_URL + "?action=getProductDetailsById" + "&id=" + encodeURIComponent(productId))
+        .then(r => r.json())
+        .then(function(res) {
+          if (res.success) {
+            fillRowWithPurchaseData(row, res.product);
+          } else {
+            alert(res.error);
+            input.value = "";
+          }
+        });
+    }
+
+    function fillRowWithPurchaseData(row, p, customSerial = "") {
+      row.cells[0].querySelector('input').value = p.product_id;
+      row.cells[1].querySelector('input').value = String(p.company_name || "").toUpperCase();
+      row.cells[2].querySelector('input').value = String(p.product_category || "").toUpperCase();
+      
+      var modelText = String(p.model || "").toUpperCase();
+      var memVal = String(p.memory || "").replace(/GB|MB/gi, "").trim(); 
+      var ramVal = String(p.ram || "").replace(/GB|MB/gi, "").trim();       
+
+      if (ramVal || memVal) {
+        var specsStr = (ramVal && memVal) ? (ramVal + "/" + memVal) : (ramVal || memVal);
+        if (!modelText.includes(ramVal) && !modelText.includes(memVal)) {
+          modelText = modelText + " " + specsStr;
+        }
+      }
+      
+      row.cells[3].querySelector('input').value = modelText;
+      row.cells[4].querySelector('input').value = String(p.color || "").toUpperCase();
+      
+      if (p.cost_price !== undefined && p.cost_price !== 0) {
+        row.cells[6].querySelector('input').value = p.cost_price;
+      }
+      if (p.mrp !== undefined && p.mrp !== 0) {
+        row.cells[7].querySelector('input').value = p.mrp;
+      }
+      if (customSerial !== undefined && customSerial !== "") {
+        row.cells[9].querySelector('input').value = customSerial;
+      } else if (p.serial_no) {
+        row.cells[9].querySelector('input').value = p.serial_no;
+      }
+      
+      calculateTotalFromCost(row.cells[6].querySelector('input'));
+    }
+
+    function openProductModal(btn) {
+      activeRowForModal = btn.closest('tr');
+      document.getElementById('productModal').style.display = 'block';
+      var tbody = document.getElementById('modalProductTableBody');
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading products from Master...</td></tr>';
+      
+      fetch(SCRIPT_URL + "?action=getAllProductsFromMasterForSelection")
+        .then(r => r.json())
+        .then(function(res) {
+          if (res && res.success) {
+            allPurchasedProducts = res.products || [];
+            renderModalTable(allPurchasedProducts);
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:red;">Error loading products</td></tr>';
+          }
+        })
+        .catch(function(err) {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:red;">Error: ' + err.message + '</td></tr>';
+        });
+    }
+
+    function closeProductModal() {
+      document.getElementById('productModal').style.display = 'none';
+    }
+
+    function renderModalTable(products) {
+      var tbody = document.getElementById('modalProductTableBody');
+      tbody.innerHTML = '';
+      if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No products found in Master.</td></tr>';
+        return;
+      }
+      products.forEach(function(p, index) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.product_id}</td>
+          <td>${String(p.company_name || "").toUpperCase()}</td>
+          <td>${String(p.product_category || "").toUpperCase()}</td>
+          <td>${String(p.model || "").toUpperCase()}</td>
+          <td>${String(p.color || "").toUpperCase()}</td>
+          <td><span style="font-weight:600; color:#0284c7;">${String(p.memory || "").toUpperCase()}</span></td>
+          <td><span style="font-weight:600; color:#475569;">${String(p.ram || "").toUpperCase()}</span></td>
+          <td><input type="text" class="modal-serial-input" value="${p.serial_no || ''}" style="width: 100px;" data-product-id="${p.product_id}"></td>
+          <td>${String(p.remarks || "").toUpperCase()}</td>
+          <td style="text-align: center;"><button type="button" class="btn btn-add" style="padding: 3px 10px;" onclick="selectThisPurchase('${p.product_id}')">Select</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterModalProducts() {
+      var query = document.getElementById('modalSearchInput').value.toLowerCase();
+      var filtered = allPurchasedProducts.filter(function(p) {
+        return String(p.company_name).toLowerCase().includes(query) ||
+               String(p.product_category).toLowerCase().includes(query) ||
+               String(p.model).toLowerCase().includes(query) ||
+               String(p.product_id).toLowerCase().includes(query) ||
+               String(p.color || "").toLowerCase().includes(query) ||
+               String(p.memory || "").toLowerCase().includes(query) ||
+               String(p.ram || "").toLowerCase().includes(query) ||
+               String(p.serial_no || "").toLowerCase().includes(query) ||
+               String(p.remarks || "").toLowerCase().includes(query);
+      });
+      renderModalTable(filtered);
+    }
+
+    function selectThisPurchase(productId) {
+      var rowTr = document.querySelector('#modalProductTableBody input[data-product-id="' + productId + '"]').closest('tr');
+      var customSerial = rowTr.querySelector('.modal-serial-input').value;
+      
+      var selected = allPurchasedProducts.find(function(p) { return String(p.product_id).trim() === String(productId).trim(); });
+      
+      if (selected && activeRowForModal) {
+        fillRowWithPurchaseData(activeRowForModal, selected, customSerial);
+        closeProductModal();
+      }
+    }
+
+    function openQuickAddModal(btn) {
+      activeRowForModal = btn.closest('tr');
+      document.getElementById('qa_category').value = '';
+      document.getElementById('qa_brand').value = '';
+      document.getElementById('qa_model').value = '';
+      document.getElementById('qa_color').value = '';
+      document.getElementById('qa_ram').value = '';
+      document.getElementById('qa_memory').value = '';
+      document.getElementById('qa_remarks').value = '';
+      document.getElementById('mobileSpecsRow').style.display = 'none';
+      document.getElementById('quickAddModal').style.display = 'block';
+    }
+
+    function closeQuickAddModal() {
+      document.getElementById('quickAddModal').style.display = 'none';
+    }
+
+    function saveQuickProduct() {
+      var rawCategory = document.getElementById('qa_category').value.trim().toUpperCase();
+      var rawBrand = document.getElementById('qa_brand').value.trim().toUpperCase();
+      var rawModel = document.getElementById('qa_model').value.trim().toUpperCase();
+      var rawColor = document.getElementById('qa_color').value.trim().toUpperCase();
+      var rawRemarks = document.getElementById('qa_remarks').value.trim().toUpperCase();
+      
+      var rawRam = document.getElementById('qa_ram').value.trim().toUpperCase();
+      var rawMemory = document.getElementById('qa_memory').value.trim().toUpperCase();
+
+      var formData = {
+        product_category: rawCategory,
+        company_name: rawBrand,
+        model: rawModel,
+        color: rawColor,
+        ram: rawRam,
+        memory: rawMemory,
+        remarks: rawRemarks || ""
+      };
+
+      if (!formData.product_category || !formData.company_name || !formData.model) {
+        alert("Category, Brand, and Model are required!");
+        return;
+      }
+
+      fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "saveProductMaster", data: formData }) })
+        .then(r => r.json())
+        .then(function(res) {
+          if (res.success) {
+            if (activeRowForModal) {
+              activeRowForModal.cells[0].querySelector('input').value = res.product_id;
+              activeRowForModal.cells[1].querySelector('input').value = formData.company_name;
+              activeRowForModal.cells[2].querySelector('input').value = formData.product_category;
+              
+              var comboModel = formData.model;
+              if (formData.ram || formData.memory) {
+                var specs = (formData.ram && formData.memory) ? (formData.ram + "/" + formData.memory) : (formData.ram || formData.memory);
+                comboModel = comboModel + " " + specs;
+              }
+              activeRowForModal.cells[3].querySelector('input').value = comboModel;
+              activeRowForModal.cells[4].querySelector('input').value = formData.color;
+              closeQuickAddModal();
+            }
+          } else {
+            alert("Error: " + res.error);
+          }
+        });
+    }
+
+    function resetForm() {
+      document.getElementById('purchase_date').valueAsDate = new Date();
+      document.getElementById('warehouse').value = "MAIN WAREHOUSE";
+      var vendorSelect = document.getElementById('vendor');
+      if (vendorSelect.options.length > 0) vendorSelect.selectedIndex = 0;
+      
+      document.getElementById('itemsTableBody').innerHTML = '';
+      addRow();
+      document.getElementById('statusMsg').style.display = 'none';
+      isSavingInline = false;
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = false;
+      btn.innerText = "Save Purchase & Update Stock";
+    }
+
+    function submitPurchase() {
+      var purchaseDate = document.getElementById('purchase_date').value;
+      var vendor = document.getElementById('vendor').value;
+      var warehouse = document.getElementById('warehouse').value.trim();
+
+      if (!purchaseDate) {
+        alert("Please select a purchase date.");
+        document.getElementById('purchase_date').focus();
+        return;
+      }
+      if (!vendor) {
+        alert("Please select a supplier/vendor.");
+        document.getElementById('vendor').focus();
+        return;
+      }
+
+      var rows = document.querySelectorAll('#itemsTableBody tr');
+      var items = [];
+      var isValid = true;
+
+      rows.forEach(function(row, index) {
+        var productId = row.cells[0].querySelector('input').value.trim();
+        var brand = row.cells[1].querySelector('input').value.trim();
+        var category = row.cells[2].querySelector('input').value.trim();
+        var model = row.cells[3].querySelector('input').value.trim();
+        var color = row.cells[4].querySelector('input').value.trim();
+        var qty = parseFloat(row.cells[5].querySelector('input').value) || 0;
+        var costPrice = parseFloat(row.cells[6].querySelector('input').value) || 0;
+        var mrp = parseFloat(row.cells[7].querySelector('input').value) || 0;
+        var hpPercent = parseFloat(row.cells[8].querySelector('input').value) || 0;
+        var serialNo = row.cells[9].querySelector('input').value.trim();
+        var remarks = row.cells[10].querySelector('input').value.trim();
+        var lineTotal = parseFloat(row.cells[11].querySelector('input').value) || (qty * costPrice);
+
+        if (!productId) {
+          alert("Row " + (index + 1) + ": Product ID is missing or empty!");
+          row.cells[0].querySelector('input').focus();
+          isValid = false;
+          return;
+        }
+        if (qty <= 0) {
+          alert("Row " + (index + 1) + ": Quantity must be greater than 0!");
+          row.cells[5].querySelector('input').focus();
+          isValid = false;
+          return;
+        }
+
+        items.push({
+          product_id: productId,
+          company_name: brand,
+          product_category: category,
+          model: model,
+          color: color,
+          qty: qty,
+          cost_price: costPrice,
+          mrp: mrp,
+          hp_percent: hpPercent,
+          hp_amount: (costPrice * qty * hpPercent) / 100,
+          serial_no: serialNo,
+          remarks: remarks,
+          line_total: lineTotal
+        });
+      });
+
+      if (!isValid || items.length === 0) return;
+
+      var payload = {
+        purchase_date: purchaseDate,
+        supplier: vendor,
+        warehouse: warehouse || "MAIN WAREHOUSE",
+        items: items
+      };
+
+      var submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Saving Purchase & Updating Stock...";
+      document.body.classList.add('loading');
+      var statusMsg = document.getElementById('statusMsg');
+      statusMsg.style.display = 'none';
+
+      fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "savePurchaseTransaction", data: payload }) })
+        .then(r => r.json())
+        .then(function(res) {
+          document.body.classList.remove('loading');
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Purchase & Update Stock";
+          
+          if (res && res.success) {
+            statusMsg.className = "success";
+            statusMsg.innerText = res.message || "Purchase Successfully Recorded & Synced!";
+            statusMsg.style.display = 'block';
+            resetForm();
+            loadSavedEntries();
+            fetch(SCRIPT_URL + "?action=rebuildStockLedgerNow").catch(() => {}); // Stock Ledger turant refresh karein
+          } else {
+            statusMsg.className = "error";
+            statusMsg.innerText = "Error: " + (res ? res.error : "Unknown error occurred.");
+            statusMsg.style.display = 'block';
+          }
+        })
+        .catch(function(err) {
+          document.body.classList.remove('loading');
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Purchase & Update Stock";
+          statusMsg.className = "error";
+          statusMsg.innerText = "Server Error: " + err.message;
+          statusMsg.style.display = 'block';
+        });
+    }
+  
+    // ===== Deployment URL config (auto-added) =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT (auto-added) =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return; // already has a manual mic button
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const curPad = window.getComputedStyle(input).paddingRight;
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Customer Ledger View</title>
+  <!-- Include html2pdf library for clean PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html { overflow-x: hidden; max-width: 100%; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 8px auto; max-width: 1100px; background-color: #f4f6f9; color: #222; font-size: 11px; transition: all 0.3s ease; overflow-x: hidden; }
+    
+    .container-wrapper {
+      max-width: 1100px;
+      margin: auto;
+      position: relative;
+      transition: max-width 0.3s ease;
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    /* Mobile View Mode Styles - No Horizontal Scroll, Vertical Wrap Layout */
+    body.mobile-mode {
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+    body.mobile-mode .container-wrapper {
+      max-width: 100% !important;
+      width: 100% !important;
+      padding: 6px !important;
+      box-sizing: border-box !important;
+      border-radius: 0 !important;
+    }
+    body.mobile-mode .top-header-container {
+      padding-right: 40px !important;
+    }
+    body.mobile-mode h2 {
+      font-size: 14px !important;
+    }
+    body.mobile-mode .btn {
+      font-size: 10px !important;
+      padding: 5px 8px !important;
+    }
+    body.mobile-mode .ledger-header-card {
+      flex-direction: column !important;
+      gap: 10px !important;
+      padding: 8px 10px !important;
+    }
+    body.mobile-mode .summary-box {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box;
+    }
+    body.mobile-mode .search-box-inline {
+      flex-wrap: wrap !important;
+    }
+    body.mobile-mode .search-box-inline input {
+      min-width: 0;
+    }
+    body.mobile-mode .table-container {
+      overflow-x: auto !important;
+      max-height: 65vh !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.mobile-mode table {
+      width: 100% !important;
+      table-layout: fixed !important;
+    }
+    body.mobile-mode th, body.mobile-mode td {
+      white-space: normal !important;
+      word-break: break-word !important;
+      padding: 4px 5px !important;
+      font-size: 9.5px !important;
+    }
+    body.mobile-mode .col-date { width: 50px !important; }
+    body.mobile-mode .col-voucher { width: 45px !important; }
+    body.mobile-mode .col-type { width: 40px !important; }
+    body.mobile-mode .col-amount { width: 60px !important; }
+
+    .floating-mobile-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: 100;
+      transition: background 0.2s;
+    }
+    .floating-mobile-toggle:hover {
+      background: #1557b0;
+    }
+
+    .top-header-container { display: flex; justify-content: space-between; align-items: center; margin: 0 0 8px 0; padding-right: 40px; flex-wrap: wrap; gap: 8px; }
+    h2 { color: #1a73e8; margin: 0; font-size: 16px; }
+    
+    .ledger-header-card { background: #fff; padding: 10px 14px; border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .ledger-info div { margin-bottom: 3px; font-size: 11.5px; }
+    .ledger-info span { font-weight: bold; color: #111; }
+
+    .summary-box { background: #f8f9fa; border: 1px solid #e1e4e8; padding: 6px 12px; border-radius: 4px; min-width: 210px; font-size: 11px; line-height: 1.4; }
+    .summary-box div { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .summary-box span { font-weight: bold; color: #1a73e8; }
+
+    .btn-group { display: flex; gap: 6px; align-items: center; }
+    .btn { padding: 5px 12px; background: #34a853; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+    .btn:hover { background: #2b8743; }
+    .btn-whatsapp { background: #25d366; }
+    .btn-whatsapp:hover { background: #1ebe5d; }
+
+    .table-container { 
+      max-height: 500px; 
+      overflow-y: auto; 
+      overflow-x: auto; 
+      background: #fff; 
+      border-radius: 5px; 
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08); 
+    }
+    
+    table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; font-size: 11px; }
+    th, td { border: 1px solid #e1e4e8; padding: 5px 8px; text-align: left; border-collapse: separate; }
+    th { background-color: #1a73e8; color: white; position: sticky; top: 0; z-index: 10; white-space: nowrap; font-size: 11px; }
+    
+    tr:nth-child(even) { background-color: #fafbfc; }
+    .number { text-align: right; white-space: nowrap; }
+    
+    .col-date { width: 85px; white-space: nowrap; }
+    .col-voucher { width: 85px; white-space: nowrap; }
+    .col-type { width: 75px; white-space: nowrap; }
+    .col-amount { width: 95px; }
+
+    .loading { text-align: center; font-size: 13px; padding: 20px; color: #666; background: #fff; border-radius: 5px; }
+    .footer-total { font-weight: bold; background-color: #e8f0fe !important; position: sticky; bottom: 0; z-index: 5; }
+
+    .search-box-inline { display: flex; gap: 6px; margin-bottom: 8px; }
+    .search-box-inline input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 11px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
+    .change-url-link { cursor: pointer; color: #1a73e8; font-size: 11px; margin-bottom: 6px; display: inline-block; }
+
+    @media print {
+      .btn, .search-box-inline, .config-box, .change-url-link, .floating-mobile-toggle { display: none; }
+      body { background-color: #fff; margin: 0; max-width: 100%; }
+      .table-container { max-height: none; box-shadow: none; }
+    }
+  
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+  <div class="container-wrapper" id="pdfContainer">
+    <!-- Floating Mobile View Toggle Button -->
+    <button class="floating-mobile-toggle" onclick="toggleMobileView()" id="mobileToggleBtn" title="Switch Mobile/Desktop View">
+      📱
+    </button>
+
+    <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+    <div id="configBox" class="config-box">
+      <b>Setup:</b> Agar data load na ho to apna Apps Script URL neeche update karein.
+      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+      <button onclick="saveScriptUrl()">Save URL</button>
+    </div>
+
+    <div class="top-header-container">
+      <h2>Customer Account Ledger</h2>
+      <div class="btn-group">
+        <button class="btn" onclick="window.print()"><i class="fa fa-print"></i> Print Ledger</button>
+        <button class="btn btn-whatsapp" onclick="downloadLedgerPDF()" title="Download PDF & Open WhatsApp"><i class="fa-brands fa-whatsapp"></i> PDF & WhatsApp</button>
+      </div>
+    </div>
+
+    <div class="search-box-inline">
+      <input type="text" id="accNoInput" placeholder="Account No enter karein aur Enter dabayein..." onkeydown="if(event.key==='Enter'){ loadLedgerForAccount(); }" inputmode="numeric" pattern="[0-9]*">
+      <button class="btn" onclick="loadLedgerForAccount()">Load Ledger</button>
+    </div>
+
+    <div class="ledger-header-card">
+      <div class="ledger-info" id="customerInfo">
+        <div>Account No: <span id="lblAccNo">-</span></div>
+        <div>Account Title: <span id="lblAccTitle">-</span></div>
+        <div>Approved By: <span id="lblApprovedBy">-</span> | CRO: <span id="lblCro">-</span></div>
+        <div>Mobile: <span id="lblMobile">-</span></div>
+      </div>
+      
+      <div class="summary-box">
+        <div>Total Amount: <span id="lblTotalAmount">-</span></div>
+        <div>No of Month: <span id="lblTotalMonth">-</span></div>
+        <div>Per Month Inst: <span id="lblPerMonthInst">-</span></div>
+        <div>Starting Month: <span id="lblStartMonth">-</span></div>
+        <div>Ending Month: <span id="lblEndMonth">-</span></div>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">Account No enter karein upar box mein.</div>
+
+    <div class="table-container">
+      <table id="ledgerTable" style="display: none;">
+        <thead>
+          <tr>
+            <th class="col-date">Date</th>
+            <th class="col-voucher">Voucher No</th>
+            <th class="col-type">Type</th>
+            <th>Particulars / Description</th>
+            <th class="number col-amount">Debit (In)</th>
+            <th class="number col-amount">Credit (Out)</th>
+            <th class="number col-amount">Balance</th>
+          </tr>
+        </thead>
+        <tbody id="ledgerTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+    let currentLedgerData = null;
+
+    let urlParams = new URLSearchParams(window.location.search);
+    let accNo = urlParams.get('accNo') || urlParams.get('acc') || "";
+
+    window.onload = function() {
+      if (accNo) {
+        document.getElementById('accNoInput').value = accNo;
+        loadLedgerForAccount();
+      }
+    };
+
+    function toggleMobileView() {
+      document.body.classList.toggle('mobile-mode');
+      const isMobile = document.body.classList.contains('mobile-mode');
+      const btn = document.getElementById('mobileToggleBtn');
+      if (isMobile) {
+        btn.textContent = '💻';
+        btn.title = 'Switch to Desktop View';
+      } else {
+        btn.textContent = '📱';
+        btn.title = 'Switch to Mobile View';
+      }
+    }
+
+    function loadLedgerForAccount() {
+      accNo = document.getElementById('accNoInput').value.trim();
+      if (!accNo) {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('loading').innerHTML = '<span style="color:red;">Error: Account Number enter karein!</span>';
+        return;
+      }
+
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').innerHTML = 'Loading customer ledger details... Please wait.';
+      document.getElementById('ledgerTable').style.display = 'none';
+      currentLedgerData = null;
+
+      fetch(SCRIPT_URL + "?action=getCustomerLedgerData&accNo=" + encodeURIComponent(accNo))
+        .then(res => res.json())
+        .then(result => {
+          document.getElementById('loading').style.display = 'none';
+          if (!result || !result.success) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').innerHTML = '<span style="color:red;">Error: ' + (result ? result.message : 'Data not found') + '</span>';
+            return;
+          }
+          currentLedgerData = result;
+          renderLedger(result);
+        })
+        .catch(err => {
+          document.getElementById('loading').style.display = 'block';
+          document.getElementById('loading').innerHTML = '<span style="color:red;">Connection Error: ' + err.message + '</span>';
+        });
+    }
+
+    function downloadLedgerPDF() {
+      if (!currentLedgerData) {
+        alert("Pehle koi ledger load karein!");
+        return;
+      }
+
+      let accNum = currentLedgerData.accNo || "Ledger";
+      let accName = currentLedgerData.accTitle || "Customer";
+      let pdfFileName = `${accNum} ${accName}.pdf`;
+
+      let rawMobile = String(currentLedgerData.mobile || "").trim();
+      let cleanMob = rawMobile.replace(/\D/g, '');
+      
+      if (cleanMob.startsWith('92')) {
+        cleanMob = '0' + cleanMob.substring(2);
+      } else if (!cleanMob.startsWith('0') && cleanMob.length === 10) {
+        cleanMob = '0' + cleanMob;
+      }
+
+      if (cleanMob.length >= 11) {
+        document.getElementById('lblMobile').textContent = cleanMob;
+      }
+
+      // Hide elements not needed in PDF
+      document.querySelector('.top-header-container').style.display = 'none';
+      document.querySelector('.search-box-inline').style.display = 'none';
+      const toggleBtn = document.getElementById('mobileToggleBtn');
+      if(toggleBtn) toggleBtn.style.display = 'none';
+
+      const element = document.getElementById('pdfContainer');
+      const opt = {
+        margin:       5,
+        filename:     pdfFileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(element).set(opt).save().then(() => {
+        // Restore hidden elements after download
+        document.querySelector('.top-header-container').style.display = 'flex';
+        document.querySelector('.search-box-inline').style.display = 'flex';
+        if(toggleBtn) toggleBtn.style.display = 'flex';
+
+        if (cleanMob && cleanMob.length >= 11 && cleanMob.startsWith('0')) {
+          let waNumber = '92' + cleanMob.substring(1);
+          let msg = `Assalam o Alekum ,this is computer gerated ledger plz verify it and if you have any qurey reply in this chat..`;
+          let waUrl = `https://wa.me/${waNumber}?text=` + encodeURIComponent(msg);
+          window.open(waUrl, '_blank');
+        } else {
+          alert("PDF downloaded successfully with name: " + pdfFileName);
+        }
+      });
+    }
+
+    function formatMonthYear(dateStr) {
+      if (!dateStr || dateStr === '-') return '-';
+      let parts = dateStr.split('-');
+      if (parts.length === 3) {
+        let monthIdx = parseInt(parts[1], 10) - 1;
+        let year = parts[0].length === 4 ? parts[0].slice(-2) : parts[2].slice(-2);
+        const monthsNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        if (monthIdx >= 0 && monthIdx < 12) {
+          return monthsNames[monthIdx] + '-' + year;
+        }
+      }
+      return dateStr;
+    }
+
+    function calculateEndingMonth(startEntryDate, totalMonths) {
+      if (!startEntryDate || startEntryDate === '-' || !totalMonths || totalMonths <= 0) return '-';
+      let parts = startEntryDate.split('-');
+      if (parts.length === 3) {
+        let day, month, year;
+        if (parts[0].length === 4) {
+          year = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10) - 1;
+          day = parseInt(parts[2], 10);
+        } else {
+          day = parseInt(parts[0], 10);
+          month = parseInt(parts[1], 10) - 1;
+          year = parseInt(parts[2], 10);
+          if (year < 100) year += 2000;
+        }
+
+        let totalMonthsToAdd = parseInt(totalMonths, 10) - 1;
+        let targetDate = new Date(year, month + totalMonthsToAdd, 1);
+
+        let finalMonthIdx = targetDate.getMonth();
+        let finalYear = String(targetDate.getFullYear()).slice(-2);
+
+        const monthsNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return monthsNames[finalMonthIdx] + '-' + finalYear;
+      }
+      return '-';
+    }
+
+    function cleanFormattedProduct(productStr) {
+      if (!productStr) return "";
+      if (Array.isArray(productStr)) productStr = productStr.join(", ");
+      return String(productStr).split(",")
+        .map(p => {
+          let str = p.trim();
+          str = str.replace(/PRD-\d+/gi, "").trim();
+          return str;
+        })
+        .filter(p => p !== "")
+        .join(", ");
+    }
+
+    function renderLedger(data) {
+      document.getElementById('lblAccNo').textContent = data.accNo || '';
+      document.getElementById('lblAccTitle').textContent = data.accTitle || '';
+      document.getElementById('lblApprovedBy').textContent = data.approvedBy || data.salesman || 'N/A';
+      document.getElementById('lblCro').textContent = data.cro || data.subSalesman || 'N/A';
+      
+      let rawMob = String(data.mobile || "").trim();
+      let formattedMob = rawMob.replace(/\D/g, '');
+      if (formattedMob.startsWith('92')) {
+        formattedMob = '0' + formattedMob.substring(2);
+      } else if (!formattedMob.startsWith('0') && formattedMob.length === 10) {
+        formattedMob = '0' + formattedMob;
+      }
+      document.getElementById('lblMobile').textContent = (formattedMob && formattedMob.length >= 11) ? formattedMob : (data.mobile || 'N/A');
+
+      let entries = data.entries || [];
+      let startRaw = '-';
+
+      if (entries.length > 0) {
+        startRaw = entries[0].date || '-';
+      }
+
+      let totalMonthsVal = data.totalMonths ? parseInt(data.totalMonths, 10) : 0;
+      let totalAmountDisplay = data.grandTotalAmt ? parseFloat(data.grandTotalAmt) : 0;
+
+      document.getElementById('lblTotalAmount').textContent = totalAmountDisplay ? totalAmountDisplay.toLocaleString() : '0';
+      document.getElementById('lblTotalMonth').textContent = totalMonthsVal ? totalMonthsVal : '0';
+      document.getElementById('lblPerMonthInst').textContent = data.perMonthInst ? parseFloat(data.perMonthInst).toLocaleString() : '0';
+      document.getElementById('lblStartMonth').textContent = formatMonthYear(startRaw);
+      document.getElementById('lblEndMonth').textContent = calculateEndingMonth(startRaw, totalMonthsVal);
+
+      let table = document.getElementById('ledgerTable');
+      let tbody = document.getElementById('ledgerTableBody');
+      tbody.innerHTML = '';
+      table.style.display = 'table';
+
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 15px;">No transaction records found for this account.</td></tr>';
+        return;
+      }
+
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      let mainProductDesc = data.productFormatted || data.product || data.productName || data.products || "";
+      if (typeof mainProductDesc === 'object') {
+        if (Array.isArray(mainProductDesc)) mainProductDesc = mainProductDesc.join(", ");
+        else mainProductDesc = cleanFormattedProduct(mainProductDesc);
+      }
+
+      entries.forEach(function(entry) {
+        totalDebit += parseFloat(entry.debit) || 0;
+        totalCredit += parseFloat(entry.credit) || 0;
+
+        let particularText = entry.particulars || '';
+
+        if (/^PRD-\d+/i.test(particularText.trim()) || particularText.trim() === '') {
+          if (entry.productFormatted) {
+            particularText = entry.productFormatted;
+          } else if (entry.companyName || entry.model) {
+            let comp = entry.companyName || "";
+            let cat = entry.category || entry.productCategory || "";
+            let mdl = entry.model || "";
+            let cShort = comp.length > 4 ? comp.substring(0, 4) : comp;
+            let catShort = cat.length > 4 ? cat.substring(0, 4) : cat;
+            particularText = [cShort, catShort, mdl].filter(Boolean).join(", ");
+          } else if (mainProductDesc) {
+            particularText = cleanFormattedProduct(mainProductDesc);
+          }
+        }
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="col-date">${entry.date || ''}</td>
+          <td class="col-voucher"><b>${entry.voucherNo || entry.receiptNo || ''}</b></td>
+          <td class="col-type"><b>${entry.type || ''}</b></td>
+          <td>${particularText}</td>
+          <td class="number col-amount">${entry.debit ? parseFloat(entry.debit).toLocaleString() : ''}</td>
+          <td class="number col-amount">${entry.credit ? parseFloat(entry.credit).toLocaleString() : ''}</td>
+          <td class="number col-amount"><b>${entry.balance !== undefined ? parseFloat(entry.balance).toLocaleString() : ''}</b></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      let totalTr = document.createElement('tr');
+      totalTr.className = 'footer-total';
+      totalTr.innerHTML = `
+        <td colspan="4" style="text-align:right;">TOTAL / CLOSING BALANCE:</td>
+        <td class="number col-amount">${totalDebit.toLocaleString()}</td>
+        <td class="number col-amount">${totalCredit.toLocaleString()}</td>
+        <td class="number col-amount">${data.closingBalance !== undefined ? parseFloat(data.closingBalance).toLocaleString() : ''}</td>
+      `;
+      tbody.appendChild(totalTr);
+    }
+    
+    // ===== Deployment URL config =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : '');
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      SCRIPT_URL = val;
+      localStorage.setItem('erp_script_url', val);
+      document.getElementById('configBox').classList.remove('show');
+      if (document.getElementById('accNoInput').value.trim()) {
+        loadLedgerForAccount();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return; 
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+</body>
+</html>

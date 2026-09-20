@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Product Master Registration</title>
+  <style>
+    :root {
+      --primary-color: #1e293b;
+      --accent-color: #10b981;
+      --bg-color: #f1f5f9;
+      --border-color: #cbd5e1;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      color: #334155;
+    }
+    .form-container {
+      background: #ffffff;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    h2 {
+      margin-top: 0;
+      color: var(--primary-color);
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 10px;
+      font-size: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+      text-transform: uppercase; 
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    textarea {
+      resize: vertical;
+      height: 70px;
+    }
+    .mobile-fields {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px dashed #cbd5e1;
+      margin-bottom: 15px;
+      display: none;
+    }
+    .row-fields {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-submit {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover {
+      background-color: #059669;
+    }
+    #statusMsg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+    }
+    .success { background-color: #d1fae5; color: #065f46; }
+    .error { background-color: #fee2e2; color: #b91c1c; }
+
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 11px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box; text-transform: none; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
+  
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+</head>
+<body>
+
+  <div class="form-container">
+      <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+      <b>Setup:</b> Agar data load na ho to apna Apps Script URL neeche update karein.
+      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+      <button onclick="saveScriptUrl()">Save URL</button>
+    </div>
+
+    <h2>📦 Product Master Registration</h2>
+    <form id="productForm" onsubmit="handleFormSubmit(event)">
+      
+      <div class="form-group">
+        <label for="product_category">Product Category</label>
+        <input type="text" id="product_category" name="product_category" list="catList" placeholder="e.g. Mobile, Ref, LED" required oninput="checkCategory(this.value)" onkeydown="handleEnter(event, 'company_name')">
+        <datalist id="catList"></datalist>
+      </div>
+
+      <div class="form-group">
+        <label for="company_name">Company Name / Brand</label>
+        <input type="text" id="company_name" name="company_name" list="companyList" placeholder="e.g. Samsung, Apple, Dawlance" required onkeydown="handleEnter(event, 'model')">
+        <datalist id="companyList"></datalist>
+      </div>
+
+      <div class="form-group">
+        <label for="model">Model</label>
+        <input type="text" id="model" name="model" list="modelList" placeholder="e.g. Galaxy S23, 9170 WB LVS" required onkeydown="handleModelEnter(event)">
+        <datalist id="modelList"></datalist>
+      </div>
+
+      <!-- Color field -->
+      <div class="form-group">
+        <label for="color">Color</label>
+        <input type="text" id="color" name="color" list="colorList" placeholder="e.g. Black, Blue, Silver" onkeydown="handleColorEnter(event)">
+        <datalist id="colorList"></datalist>
+      </div>
+
+      <!-- Dynamic Mobile Extra Fields (RAM & ROM) -->
+      <div id="mobileExtraSection" class="mobile-fields">
+        <label style="color: #0d9488; margin-bottom: 8px;">📱 Mobile Specifications</label>
+        <div class="row-fields">
+          <div style="flex: 1;">
+            <label for="ram">RAM</label>
+            <input type="text" id="ram" name="ram" list="ramList" placeholder="e.g. 8GB, 12GB" onkeydown="handleEnter(event, 'memory')">
+            <datalist id="ramList"></datalist>
+          </div>
+          <div style="flex: 1;">
+            <label for="memory">Memory (ROM)</label>
+            <input type="text" id="memory" name="memory" list="romList" placeholder="e.g. 128GB, 256GB" onkeydown="handleEnter(event, 'remarks')">
+            <datalist id="romList"></datalist>
+          </div>
+        </div>
+      </div>
+
+      <!-- Remarks field -->
+      <div class="form-group">
+        <label for="remarks">Remarks</label>
+        <textarea id="remarks" name="remarks" placeholder="Optional notes or specifications..."></textarea>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">Save Product</button>
+      
+      <div id="statusMsg"></div>
+    </form>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+    function saveScriptUrl() {
+      const val = document.getElementById('scriptUrlInput').value.trim();
+      if (!val) { alert("URL enter karein"); return; }
+      SCRIPT_URL = val;
+      localStorage.setItem('erp_script_url', val);
+      document.getElementById('configBox').classList.remove('show');
+      loadDropdownSuggestions();
+    }
+
+    // Page load hote hi backend se dropdown lists load karna
+    window.onload = function() {
+      loadDropdownSuggestions();
+    };
+
+    function loadDropdownSuggestions() {
+      fetch(SCRIPT_URL + "?action=getProductDropdownData")
+        .then(res => res.json())
+        .then(data => {
+          if (!data) return;
+          populateDatalist('catList', data.categories);
+          populateDatalist('companyList', data.companies);
+          populateDatalist('modelList', data.models);
+          populateDatalist('colorList', data.colors);
+          populateDatalist('ramList', data.rams);
+          populateDatalist('romList', data.roms);
+        })
+        .catch(err => console.error("Dropdown load error:", err));
+    }
+
+    function populateDatalist(listId, items) {
+      var list = document.getElementById(listId);
+      list.innerHTML = '';
+      if (items && items.length > 0) {
+        items.forEach(function(item) {
+          if (item) {
+            var opt = document.createElement('option');
+            opt.value = item;
+            list.appendChild(opt);
+          }
+        });
+      }
+    }
+
+    function handleEnter(event, nextFieldId) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        var nextField = document.getElementById(nextFieldId);
+        if (nextField) {
+          nextField.focus();
+          nextField.select();
+        }
+      }
+    }
+
+    function handleModelEnter(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        var mobileSection = document.getElementById('mobileExtraSection');
+        var nextField;
+        
+        if (mobileSection.style.display === 'block') {
+          nextField = document.getElementById('ram');
+        } else {
+          nextField = document.getElementById('color');
+        }
+        
+        if (nextField) {
+          nextField.focus();
+          nextField.select();
+        }
+      }
+    }
+
+    function handleColorEnter(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        var mobileSection = document.getElementById('mobileExtraSection');
+        var nextField;
+        
+        if (mobileSection.style.display === 'block') {
+          nextField = document.getElementById('ram');
+        } else {
+          nextField = document.getElementById('remarks');
+        }
+        
+        if (nextField) {
+          nextField.focus();
+          nextField.select();
+        }
+      }
+    }
+
+    function checkCategory(val) {
+      var cat = val.trim().toLowerCase();
+      var mobileSection = document.getElementById('mobileExtraSection');
+      if (cat.indexOf('mobile') !== -1 || cat.indexOf('phone') !== -1 || cat.indexOf('smartphone') !== -1) {
+        mobileSection.style.display = 'block';
+      } else {
+        mobileSection.style.display = 'none';
+        document.getElementById('memory').value = '';
+        document.getElementById('ram').value = '';
+      }
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      var btn = document.getElementById('submitBtn');
+      var statusMsg = document.getElementById('statusMsg');
+      
+      btn.disabled = true;
+      btn.innerText = "Saving...";
+      statusMsg.style.display = "none";
+      
+      var rawMemory = document.getElementById('memory').value.trim();
+      var rawRam = document.getElementById('ram').value.trim();
+      
+      var formattedMemory = rawMemory ? (rawMemory.toLowerCase().includes('gb') ? rawMemory : rawMemory + " GB") : "";
+      var formattedRam = rawRam ? (rawRam.toLowerCase().includes('gb') ? rawRam : rawRam + " GB") : "";
+      
+      var formData = {
+        product_category: document.getElementById('product_category').value.trim().toUpperCase(),
+        company_name: document.getElementById('company_name').value.trim().toUpperCase(),
+        model: document.getElementById('model').value.trim().toUpperCase(),
+        color: document.getElementById('color').value.trim().toUpperCase(),
+        memory: formattedMemory.toUpperCase(),
+        ram: formattedRam.toUpperCase(),
+        remarks: document.getElementById('remarks').value.trim().toUpperCase()
+      };
+      
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveProductMaster', data: formData })
+      })
+        .then(res => res.json())
+        .then(response => {
+          btn.disabled = false;
+          btn.innerText = "Save Product";
+          statusMsg.style.display = "block";
+
+          if (response.success) {
+            statusMsg.className = "success";
+            statusMsg.innerText = response.message + " (ID: " + response.product_id + ")";
+            document.getElementById('productForm').reset();
+            document.getElementById('mobileExtraSection').style.display = 'none';
+            loadDropdownSuggestions();
+          } else {
+            statusMsg.className = "error";
+            statusMsg.innerText = "Error: " + response.error;
+          }
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerText = "Save Product";
+          statusMsg.style.display = "block";
+          statusMsg.className = "error";
+          statusMsg.innerText = "Server Error: " + err.message;
+        });
+    }
+  
+    // ===== Deployment URL config (auto-added) =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT (auto-added) =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return; // already has a manual mic button
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const curPad = window.getComputedStyle(input).paddingRight;
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+
+</body>
+</html>

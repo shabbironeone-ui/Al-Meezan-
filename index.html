@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+  <meta charset="utf-8">
+  <title>Al Meezan ERP Professional</title>
+  <style>
+    :root {
+      --sidebar-bg: #1e293b;
+      --sidebar-hover: #334155;
+      --sidebar-text: #f8fafc;
+      --accent: #10b981;
+      --bg-main: #f1f5f9;
+      --header-bg: #ffffff;
+      --border-color: #e2e8f0;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      color: #334155;
+    }
+
+    /* Sidebar Styling */
+    .sidebar {
+      width: 260px;
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #0f172a;
+      border-bottom: 1px solid #334155;
+      text-align: center;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .sidebar-menu li {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      color: var(--sidebar-text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .sidebar-menu a:hover {
+      background-color: var(--sidebar-hover);
+      border-left: 4px solid var(--accent);
+    }
+
+    /* Main Container */
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-navbar {
+      height: 60px;
+      background-color: var(--header-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+    }
+
+    .top-navbar h1 {
+      font-size: 18px;
+      margin: 0;
+      color: #1e293b;
+    }
+
+    .user-badge {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    .content-frame {
+      flex: 1;
+      background-color: var(--bg-main);
+      padding: 25px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .welcome-box {
+      text-align: center;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin: auto;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .welcome-box h3 {
+      color: #0f172a;
+      margin-top: 0;
+    }
+
+    .welcome-box p {
+      color: #64748b;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+ <div class="sidebar">
+    <div class="sidebar-header">Al Meezan ERP Pro</div>
+    <ul class="sidebar-menu" id="sidebarMenu">
+      <!-- Screenshot ke exact file names ke mutabiq links -->
+      <li><a href="receipts.html" target="_blank">💵 Receipts</a></li>
+      <li><a href="voucher_entry.html" target="_blank">💵 Voucher Entry</a></li>
+      <li><a href="DailyRecoveryReport.html" target="_blank">💰 Daily Recovery Report</a></li>
+      <li><a href="AgingReport2.html" target="_blank">📈 Aging Report 2</a></li>
+      <li><a href="daybook.html" target="_blank">📖 Day Book / Bank Entries</a></li>
+      <li><a href="ProductForm.html" target="_blank">📦 Product Form</a></li>
+      <li><a href="PurchaseForm.html" target="_blank">🛒 Purchase Form</a></li>
+      <li><a href="customer.html" target="_blank">👤 Customer Register</a></li>
+      <li><a href="SalesForm.html" target="_blank">🛒 Sales Form</a></li>
+      <li><a href="DashboardView.html" target="_blank">📊 Dashboard View</a></li>
+      <li><a href="LedgerView.html" target="_blank">👤 Ledger View</a></li>
+      <li><a href="AgingReportModal.html" target="_blank">📈 Aging Report Modal</a></li>
+      <li><a href="ReconciliationView.html" target="_blank">🔄 Reconciliation View</a></li>
+      <li><a href="StockLedger.html" target="_blank">📦 Stock Ledger</a></li>
+      <li><a href="VenderLedger.html" target="_blank">👤 Vendor Ledger</a></li>
+      
+    </ul>
+  </div>
+
+  <div class="main-container">
+    <div class="top-navbar">
+      <h1>Executive Dashboard</h1>
+      <div class="user-badge">Al Meezan Electronics</div>
+    </div>
+    <div class="content-frame">
+      <div class="welcome-box">
+        <h3>Al Meezan ERP Professional</h3>
+        <p>Aapke تمام folders aur files ab exact names ke sath map kar diye gaye hain. Sidebar se kisi bhi option par click karne par wo naye Chrome tab mein direct open ho jaye gi.</p>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 10px; background-color: #f4f6f9; color: #333; font-size: 11px; }
+    h2 { text-align: center; color: #1a73e8; margin: 5px 0 15px 0; font-size: 15px; }
+    
+    .filter-panel { background: #fff; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+    .filter-group.balance-group { min-width: 180px; }
+    .filter-group label { font-weight: bold; margin-bottom: 3px; color: #555; font-size: 11px; }
+    .filter-group select, .filter-group input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; }
+    
+    .balance-filter-inline { display: flex; gap: 4px; }
+    
+    .btn-container { display: flex; align-items: flex-end; gap: 4px; }
+    .btn { padding: 6px 10px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
+    .btn:hover { background: #1557b0; }
+    .btn-generate { background: #f9ab00; color: #000; }
+    .btn-generate:hover { background: #e09900; }
+    .btn-print { background: #34a853; }
+    .btn-print:hover { background: #2b8743; }
+    .btn-reset { background: #999; }
+    .btn-reset:hover { background: #777; }
+    .btn-mic { background: #ea4335; }
+    .btn-mic:hover { background: #d33828; }
+
+    .table-container { 
+      max-height: 480px; 
+      overflow-y: auto; 
+      overflow-x: auto; 
+      background: #fff; 
+      border-radius: 6px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+      position: relative; 
+      width: 100%;
+    }
+    
+    table { 
+      width: 1300px; 
+      border-collapse: collapse; 
+      background: #fff; 
+      font-size: 11px; 
+      table-layout: fixed !important; 
+    }
+    
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 5px 6px; 
+      text-align: left; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      white-space: nowrap; 
+      line-height: 1.1; 
+      font-size: 11px; 
+    }
+    
+    th:nth-child(1), td:nth-child(1) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(2), td:nth-child(2) { width: 125px; min-width: 125px; max-width: 125px; }
+    th:nth-child(3), td:nth-child(3) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(4), td:nth-child(4) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(5), td:nth-child(5) { width: 85px; min-width: 85px; max-width: 85px; }
+    th:nth-child(6), td:nth-child(6) { width: 95px; min-width: 95px; max-width: 95px; }
+    th:nth-child(7), td:nth-child(7) { width: 45px; min-width: 45px; max-width: 45px; }
+    th:nth-child(8), td:nth-child(8) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(9), td:nth-child(9) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(10), td:nth-child(10) { width: 95px; min-width: 95px; max-width: 95px; }
+    th:nth-child(11), td:nth-child(11) { width: 75px; min-width: 75px; max-width: 75px; }
+    th:nth-child(12), td:nth-child(12) { width: 70px; min-width: 70px; max-width: 70px; }
+    th:nth-child(13), td:nth-child(13) { width: 60px; min-width: 60px; max-width: 60px; }
+    th:nth-child(14), td:nth-child(14) { width: 60px; min-width: 60px; max-width: 60px; }
+    th:nth-child(15), td:nth-child(15) { width: 60px; min-width: 60px; max-width: 60px; }
+    th:nth-child(16), td:nth-child(16) { width: 60px; min-width: 60px; max-width: 60px; }
+    
+    th { background-color: #1a73e8; color: white; position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none; font-size: 11px; }
+    th:hover { background-color: #1557b0; }
+    
+    .search-wrapper { position: relative; margin-top: 4px; }
+    th .col-search { display: none; width: 90%; padding: 3px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: #fff; color: #000; cursor: text; }
+    
+    .suggestions-list {
+      display: none; position: absolute; left: 0; top: 100%; width: 130px; max-height: 150px;
+      overflow-y: auto; background: #fff; border: 1px solid #ccc; border-radius: 0 0 4px 4px;
+      z-index: 15; box-shadow: 0 4px 6px rgba(0,0,0,0.15); color: #333; text-align: left;
+    }
+    .suggestions-list div { padding: 5px 8px; font-size: 11px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; }
+    .suggestions-list div:hover { background-color: #e8f0fe; color: #1a73e8; }
+
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .number { text-align: right; }
+    .loading { text-align: center; font-size: 11px; padding: 25px; color: #666; background: #fff; border-radius: 6px; }
+    .footer-total { font-weight: bold; background-color: #e8f0fe !important; position: sticky; bottom: 0; z-index: 5; }
+
+    .clickable-acc { color: #1a73e8; cursor: pointer; text-decoration: underline; font-weight: bold; }
+    .clickable-acc:hover { color: #1557b0; }
+  
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .change-url-link { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; cursor: pointer; text-decoration: underline; }
+
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+</head>
+<body>
+  <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+    <b>Setup:</b> Apna Apps Script Deployment URL neeche daal kar Save karein.
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+    <button onclick="saveScriptUrl()">Save URL</button>
+  </div>
+
+
+  <h2>Customer Aging Report & Analytics</h2>
+  
+  <div class="filter-panel">
+    <div class="filter-group">
+      <label>Approved By:</label>
+      <select id="filterApprovedBy"><option value="">All Approved By</option></select>
+    </div>
+    <div class="filter-group">
+      <label>CRO:</label>
+      <select id="filterCro"><option value="">All CROs</option></select>
+    </div>
+    <div class="filter-group">
+      <label>From Account:</label>
+      <select id="filterFromAccount"><option value="">Start Account</option></select>
+    </div>
+    <div class="filter-group">
+      <label>To Account:</label>
+      <select id="filterToAccount"><option value="">End Account</option></select>
+    </div>
+    <div class="filter-group">
+      <label>From Date:</label>
+      <input type="date" id="fromDate">
+    </div>
+    <div class="filter-group">
+      <label>To Date:</label>
+      <input type="date" id="toDate">
+    </div>
+    <div class="filter-group balance-group">
+      <label>Balance Filter:</label>
+      <div class="balance-filter-inline">
+        <select id="balanceOperator" style="width: 50%;">
+          <option value="all">All</option>
+          <option value="gt">&gt;</option>
+          <option value="lt">&lt;</option>
+          <option value="eq">=</option>
+          <option value="gt_zero">&gt; 0</option>
+        </select>
+        <input type="number" id="balanceValue" placeholder="Amount" style="width: 50%;">
+      </div>
+    </div>
+    <div class="btn-container">
+      <button class="btn btn-generate" onclick="applyFilters()">Generate</button>
+      <button class="btn btn-reset" onclick="resetFilters()">Reset</button>
+      <button class="btn btn-print" onclick="window.print()">Print</button>
+      <button class="btn btn-mic" id="micBtn" onclick="startVoiceRecognition()" title="Voice Search">🎙️ Speak</button>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">Fetching data from Sales and Receipts... Please wait.[cite: 1]</div>
+  
+  <div class="table-container">
+    <table id="reportTable" style="display: none;">
+      <thead>
+        <tr id="headerRow">
+          <th onclick="toggleColSearch(event, 0)">Account No.<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 0)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 1)">Account Title<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 1)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 2)">Approved By<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 2)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 3)">CRO<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 3)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 4)">Mobile No<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 4)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 5)">Product Category<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 5)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 6)">Plan<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 6)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 7)">Total Sales<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 7)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 8)">Total Received<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 8)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 9)">Balance Outstanding<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 9)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 10)">Delivery Date<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 10)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 11)">Monthly Inst<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 11)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 12)">0-30</th>
+          <th class="number" onclick="toggleColSearch(event, 13)">31-60</th>
+          <th class="number" onclick="toggleColSearch(event, 14)">61-90</th>
+          <th class="number" onclick="toggleColSearch(event, 15)">91-120+</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+    let globalData = [];
+    let rawAccountsList = [];
+    let currentRenderedRows = [];
+    let isOpeningLedger = false;
+
+    function resetLedgerClickState() {
+      isOpeningLedger = false;
+      document.body.style.cursor = 'default';
+    }
+
+    window.onload = function() {
+      fetch(SCRIPT_URL + "?action=getAgingReportData")
+        .then(r => r.json())
+        .then(function(response) {
+          document.getElementById('loading').style.display = 'none';
+          globalData = response.data;
+          rawAccountsList = response.filters.accountsObj || [];
+          
+          populateDropdown('filterApprovedBy', response.filters.approvedBy || response.filters.salesmen);
+          populateDropdown('filterCro', response.filters.cro || response.filters.subSalesmen);
+          
+          populateAccountDropdowns(rawAccountsList);
+          renderTable(globalData);
+        })
+        .catch(function(err) {
+          document.getElementById('loading').innerHTML = '<span style="color:red;">Error: ' + err.message + '</span>';
+        });
+
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('th')) {
+          document.querySelectorAll('.suggestions-list').forEach(list => list.style.display = 'none');
+        }
+      });
+    };
+
+    function startVoiceRecognition() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("Aapka browser voice recognition support nahi karta. Kindly Google Chrome use karein.");
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      let micBtn = document.getElementById('micBtn');
+      micBtn.style.background = '#fbbc05';
+      micBtn.style.color = '#000';
+      micBtn.textContent = '🎙️ Listening...';
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        let speechResult = event.results[0][0].transcript.trim();
+        let searchInputs = document.querySelectorAll('th .col-search');
+        if (searchInputs.length > 0) {
+          searchInputs[0].value = speechResult;
+          searchInputs[0].style.display = 'block';
+          filterTableColumns();
+        }
+
+        micBtn.style.background = '#ea4335';
+        micBtn.style.color = 'white';
+        micBtn.textContent = '🎙️ Speak';
+      };
+
+      recognition.onerror = function(event) {
+        console.error("Speech recognition error", event.error);
+        micBtn.style.background = '#ea4335';
+        micBtn.style.color = 'white';
+        micBtn.textContent = '🎙️ Speak';
+      };
+
+      recognition.onend = function() {
+        micBtn.style.background = '#ea4335';
+        micBtn.style.color = 'white';
+        micBtn.textContent = '🎙️ Speak';
+      };
+    }
+
+    function toggleColSearch(event, colIndex) {
+      let th = event.currentTarget;
+      let input = th.querySelector('.col-search');
+      if (input) {
+        if (input.style.display === 'block') {
+          input.style.display = 'none';
+          input.value = '';
+          th.querySelector('.suggestions-list').style.display = 'none';
+          filterTableColumns();
+        } else {
+          input.style.display = 'block';
+          input.focus();
+        }
+      }
+    }
+
+    function getColumnUniqueValues(colIndex) {
+      let valuesSet = new Set();
+      let table = document.getElementById('reportTable');
+      let trs = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+      for (let i = 0; i < trs.length; i++) {
+        if (trs[i].classList.contains('footer-total')) continue;
+        let tdArray = trs[i].getElementsByTagName('td');
+        if (tdArray[colIndex]) {
+          let val = (tdArray[colIndex].textContent || tdArray[colIndex].innerText).trim();
+          if (val) valuesSet.add(val);
+        }
+      }
+      return Array.from(valuesSet).sort();
+    }
+
+    function onColSearchInput(event, colIndex) {
+      event.stopPropagation();
+      let input = event.target;
+      let filterVal = input.value.toLowerCase();
+      let wrapper = input.parentElement;
+      let suggestionsBox = wrapper.querySelector('.suggestions-list');
+      filterTableColumns();
+      let uniqueVals = getColumnUniqueValues(colIndex);
+      let matched = uniqueVals.filter(v => v.toLowerCase().includes(filterVal));
+      suggestionsBox.innerHTML = '';
+      if (matched.length > 0 && filterVal.length > 0) {
+        matched.forEach(item => {
+          let div = document.createElement('div');
+          div.textContent = item;
+          div.onclick = function(e) {
+            e.stopPropagation();
+            input.value = item;
+            suggestionsBox.style.display = 'none';
+            filterTableColumns();
+          };
+          suggestionsBox.appendChild(div);
+        });
+        suggestionsBox.style.display = 'block';
+      } else {
+        suggestionsBox.style.display = 'none';
+      }
+    }
+
+    function filterTableColumns() {
+      let table = document.getElementById('reportTable');
+      let tbody = table.getElementsByTagName('tbody')[0];
+      let trs = tbody.getElementsByTagName('tr');
+      let inputs = table.querySelectorAll('th .col-search');
+      
+      let tSales = 0, tRec = 0, tBal = 0, tMonthlyInst = 0, t0_30 = 0, t31_60 = 0, t61_90 = 0, t91_plus = 0;
+
+      for (let i = 0; i < trs.length; i++) {
+        if (trs[i].classList.contains('footer-total')) continue;
+        let tdArray = trs[i].getElementsByTagName('td');
+        let showRow = true;
+        for (let j = 0; j < inputs.length; j++) {
+          let filterVal = inputs[j].value.toLowerCase();
+          if (filterVal && tdArray[j]) {
+            let textValue = tdArray[j].textContent || tdArray[j].innerText;
+            if (textValue.toLowerCase().indexOf(filterVal) === -1) {
+              showRow = false;
+              break;
+            }
+          }
+        }
+        trs[i].style.display = showRow ? '' : 'none';
+
+        if (showRow) {
+          let originalRowData = currentRenderedRows[i];
+          if (originalRowData) {
+            tSales += originalRowData.totalSales;
+            tRec += originalRowData.totalReceived;
+            tBal += originalRowData.balance;
+
+            if (originalRowData.balance > 0) {
+              tMonthlyInst += originalRowData.monthlyInst;
+              t0_30 += originalRowData.b0;
+              t31_60 += originalRowData.b31;
+              t61_90 += originalRowData.b61;
+              t91_plus += originalRowData.b91;
+            }
+          }
+        }
+      }
+
+      let totalTr = tbody.querySelector('.footer-total');
+      if (totalTr) {
+        totalTr.innerHTML = `
+          <td colspan="7" style="text-align:right;">TOTAL:</td>
+          <td class="number">${tSales.toLocaleString()}</td>
+          <td class="number">${tRec.toLocaleString()}</td>
+          <td class="number">${tBal.toLocaleString()}</td>
+          <td></td>
+          <td class="number">${tMonthlyInst ? tMonthlyInst.toLocaleString() : ''}</td>
+          <td class="number">${t0_30 ? t0_30.toLocaleString() : ''}</td>
+          <td class="number">${t31_60 ? t31_60.toLocaleString() : ''}</td>
+          <td class="number">${t61_90 ? t61_90.toLocaleString() : ''}</td>
+          <td class="number">${t91_plus ? t91_plus.toLocaleString() : ''}</td>
+        `;
+      }
+    }
+
+    function populateDropdown(elementId, items) {
+      let select = document.getElementById(elementId);
+      if (!select) return;
+      let labelText = elementId.includes('ApprovedBy') ? 'All Approved By' : (elementId.includes('Cro') ? 'All CROs' : 'All Accounts');
+      select.innerHTML = '<option value="">' + labelText + '</option>';
+      if (items && Array.isArray(items)) {
+        items.forEach(item => {
+          let opt = document.createElement('option');
+          opt.value = item;
+          opt.textContent = item;
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    function populateAccountDropdowns(accounts) {
+      let fromSelect = document.getElementById('filterFromAccount');
+      let toSelect = document.getElementById('filterToAccount');
+      accounts.forEach(acc => {
+        let opt1 = document.createElement('option');
+        opt1.value = acc.accNo;
+        opt1.textContent = acc.accNo + " - " + acc.accTitle;
+        fromSelect.appendChild(opt1);
+        let opt2 = document.createElement('option');
+        opt2.value = acc.accNo;
+        opt2.textContent = acc.accNo + " - " + acc.accTitle;
+        toSelect.appendChild(opt2);
+      });
+    }
+
+    function applyFilters() {
+      let approvedByFilter = document.getElementById('filterApprovedBy').value;
+      let croFilter = document.getElementById('filterCro').value;
+      let fromAcc = document.getElementById('filterFromAccount').value;
+      let toAcc = document.getElementById('filterToAccount').value;
+      let fromDateVal = document.getElementById('fromDate').value;
+      let toDateVal = document.getElementById('toDate').value;
+      let balOperator = document.getElementById('balanceOperator').value;
+      let balValue = parseFloat(document.getElementById('balanceValue').value) || 0;
+
+      let filtered = globalData.filter(row => {
+        let matchApprovedBy = !approvedByFilter || row.approvedBy === approvedByFilter;
+        let matchCro = !croFilter || row.cro === croFilter;
+        let matchAccountRange = true;
+        let currentAccNum = String(row.accNo).trim();
+        if (fromAcc && currentAccNum < fromAcc) matchAccountRange = false;
+        if (toAcc && currentAccNum > toAcc) matchAccountRange = false;
+
+        let matchDate = true;
+        if (row.deliveryDate) {
+          let rowDate = row.deliveryDate;
+          if (fromDateVal && rowDate < fromDateVal) matchDate = false;
+          if (toDateVal && rowDate > toDateVal) matchDate = false;
+        } else if (fromDateVal || toDateVal) { matchDate = false; }
+
+        let matchBalance = true;
+        let rowBalance = parseFloat(row.balance) || 0;
+        if (balOperator === 'gt') matchBalance = rowBalance > balValue;
+        else if (balOperator === 'lt') matchBalance = rowBalance < balValue;
+        else if (balOperator === 'eq') matchBalance = rowBalance === balValue;
+        else if (balOperator === 'gt_zero') matchBalance = rowBalance > 0;
+
+        return matchApprovedBy && matchCro && matchAccountRange && matchDate && matchBalance;
+      });
+
+      renderTable(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('filterApprovedBy').value = '';
+      document.getElementById('filterCro').value = '';
+      document.getElementById('filterFromAccount').value = '';
+      document.getElementById('filterToAccount').value = '';
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      document.getElementById('balanceOperator').value = 'all';
+      document.getElementById('balanceValue').value = '';
+
+      document.querySelectorAll('th .col-search').forEach(input => {
+        input.value = '';
+        input.style.display = 'none';
+      });
+      document.querySelectorAll('.suggestions-list').forEach(list => {
+        list.style.display = 'none';
+      });
+
+      renderTable(globalData);
+    }
+
+    function renderTable(data) {
+      let table = document.getElementById('reportTable');
+      let tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      table.style.display = 'table';
+      currentRenderedRows = [];
+
+      if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center; padding: 20px;">No records match the selected filters.</td></tr>';
+        return;
+      }
+      
+      let tSales = 0, tRec = 0, tBal = 0, tMonthlyInst = 0, t0_30 = 0, t31_60 = 0, t61_90 = 0, t91_plus = 0;
+      
+      data.forEach(function(row) {
+        tSales += row.totalSales;
+        tRec += row.totalReceived;
+        tBal += row.balance;
+
+        let outstandingBal = parseFloat(row.balance) || 0;
+        let monthlyInst = parseFloat(row.monthlyInst) || 0;
+        let b0 = 0, b31 = 0, b61 = 0, b91 = 0;
+
+        if (outstandingBal > 0 && monthlyInst > 0 && row.deliveryDate) {
+          let dDate = new Date(row.deliveryDate);
+          let startYear = dDate.getFullYear();
+          let startMonth = dDate.getMonth() + 1;
+          if (startMonth > 11) { startMonth = 0; startYear++; }
+          let targetDate = new Date(startYear, startMonth, 1);
+          let todayObj = new Date();
+
+          let remainingBal = outstandingBal;
+          let m = 0;
+          while (remainingBal > 0) {
+            let instDueDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + m, targetDate.getDate());
+            let diffDays = Math.floor((todayObj - instDueDate) / (1000 * 60 * 60 * 24));
+            let instAmt = Math.min(monthlyInst, remainingBal);
+
+            if (diffDays >= 0) {
+              if (diffDays <= 30) b0 += instAmt;
+              else if (diffDays <= 60) b31 += instAmt;
+              else if (diffDays <= 90) b61 += instAmt;
+              else b91 += instAmt;
+            } else {
+              b0 += instAmt; 
+              break;
+            }
+            remainingBal -= instAmt;
+            m++;
+            if (m > 60) break;
+          }
+        } else if (outstandingBal > 0) {
+          b0 = outstandingBal;
+        }
+
+        if (outstandingBal > 0) {
+          tMonthlyInst += monthlyInst;
+          t0_30 += b0;
+          t31_60 += b31;
+          t61_90 += b61;
+          t91_plus += b91;
+        }
+
+        currentRenderedRows.push({
+          totalSales: row.totalSales, totalReceived: row.totalReceived, balance: row.balance,
+          monthlyInst: monthlyInst, b0: b0, b31: b31, b61: b61, b91: b91
+        });
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="clickable-acc" onclick="openLedger('${row.accNo}')">${row.accNo}</span></td>
+          <td title="${row.accTitle}"><b>${row.accTitle}</b></td>
+          <td title="${row.approvedBy || ''}">${row.approvedBy || ''}</td>
+          <td title="${row.cro || ''}">${row.cro || ''}</td>
+          <td title="${row.mobile || ''}">${row.mobile || ''}</td>
+          <td title="${row.product || ''}">${row.product || ''}</td>
+          <td title="${row.plan || ''}">${row.plan || ''}</td>
+          <td class="number" title="${row.totalSales.toLocaleString()}">${row.totalSales.toLocaleString()}</td>
+          <td class="number" title="${row.totalReceived.toLocaleString()}">${row.totalReceived.toLocaleString()}</td>
+          <td class="number" style="color: #d93025;" title="${row.balance.toLocaleString()}"><b>${row.balance.toLocaleString()}</b></td>
+          <td title="${row.deliveryDate || ''}">${row.deliveryDate || ''}</td>
+          <td class="number" title="${row.monthlyInst ? row.monthlyInst.toLocaleString() : ''}">${row.monthlyInst ? row.monthlyInst.toLocaleString() : ''}</td>
+          <td class="number" title="${b0 ? b0.toLocaleString() : ''}">${b0 ? b0.toLocaleString() : ''}</td>
+          <td class="number" title="${b31 ? b31.toLocaleString() : ''}">${b31 ? b31.toLocaleString() : ''}</td>
+          <td class="number" title="${b61 ? b61.toLocaleString() : ''}">${b61 ? b61.toLocaleString() : ''}</td>
+          <td class="number" title="${b91 ? b91.toLocaleString() : ''}">${b91 ? b91.toLocaleString() : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      let totalTr = document.createElement('tr');
+      totalTr.className = 'footer-total';
+      totalTr.innerHTML = `
+        <td colspan="7" style="text-align:right;">TOTAL:</td>
+        <td class="number">${tSales.toLocaleString()}</td>
+        <td class="number">${tRec.toLocaleString()}</td>
+        <td class="number">${tBal.toLocaleString()}</td>
+        <td></td>
+        <td class="number">${tMonthlyInst ? tMonthlyInst.toLocaleString() : ''}</td>
+        <td class="number">${t0_30 ? t0_30.toLocaleString() : ''}</td>
+        <td class="number">${t31_60 ? t31_60.toLocaleString() : ''}</td>
+        <td class="number">${t61_90 ? t61_90.toLocaleString() : ''}</td>
+        <td class="number">${t91_plus ? t91_plus.toLocaleString() : ''}</td>
+      `;
+      tbody.appendChild(totalTr);
+    }
+
+    function openLedger(accNo) {
+      if (!accNo) return alert('Account number is missing!');
+      if (isOpeningLedger) return;
+      isOpeningLedger = true;
+      document.body.style.cursor = 'wait';
+
+      resetLedgerClickState();
+      window.open('LedgerView.html?accNo=' + encodeURIComponent(accNo), '_blank');
+    }
+  
+    // ===== Deployment URL config (auto-added) =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT (auto-added) =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return; // already has a manual mic button
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const curPad = window.getComputedStyle(input).paddingRight;
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+</body>
+</html>

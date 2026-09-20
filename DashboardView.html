@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #3b82f6; }
+    .card.success { border-left-color: #10b981; }
+    .card.warning { border-left-color: #f59e0b; }
+    .card.danger { border-left-color: #ef4444; }
+    .card-title { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+    .card-value { font-size: 22px; font-weight: 700; color: #0f172a; }
+    .table-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h3 { margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; }
+    .number { text-align: right; }
+    .loading { text-align: center; padding: 40px; font-weight: bold; color: #64748b; }
+
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 11px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
+  
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+</head>
+<body>
+
+    <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+    <b>Setup:</b> Agar data load na ho to apna Apps Script URL neeche update karein.
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+    <button onclick="saveScriptUrl()">Save URL</button>
+  </div>
+
+  <div id="loading" class="loading">Loading Real-Time Executive Metrics...</div>
+  
+  <div id="dashboardContent" style="display:none;">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Total Sales Volume</div>
+        <div class="card-value" id="mSalesVol">Rs 0</div>
+      </div>
+      <div class="card success">
+        <div class="card-title">Total Collections</div>
+        <div class="card-value" id="mCollections">Rs 0</div>
+      </div>
+      <div class="card warning">
+        <div class="card-title">Outstanding Receivable</div>
+        <div class="card-value" id="mReceivable">Rs 0</div>
+      </div>
+      <div class="card danger">
+        <div class="card-title">Net Cash Balance</div>
+        <div class="card-value" id="mNetCash">Rs 0</div>
+      </div>
+    </div>
+
+    <div class="table-box">
+      <h3>Detailed Breakdown & Performance Metrics</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Performance Metric Indicator</th>
+            <th class="number">Recorded Value / Amount</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+    function saveScriptUrl() {
+      const val = document.getElementById('scriptUrlInput').value.trim();
+      if (!val) { alert("URL enter karein"); return; }
+      SCRIPT_URL = val;
+      localStorage.setItem('erp_script_url', val);
+      document.getElementById('configBox').classList.remove('show');
+      loadDashboard();
+    }
+
+    function loadDashboard() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('dashboardContent').style.display = 'none';
+
+      fetch(SCRIPT_URL + "?action=getDashboardMetrics")
+        .then(res => res.json())
+        .then(res => {
+          document.getElementById('loading').style.display = 'none';
+          if (res.success) {
+            let m = res.metrics;
+            document.getElementById('dashboardContent').style.display = 'block';
+
+            document.getElementById('mSalesVol').textContent = "Rs " + m.totalSalesAmount.toLocaleString();
+            document.getElementById('mCollections').textContent = "Rs " + m.totalCollections.toLocaleString();
+            document.getElementById('mReceivable').textContent = "Rs " + m.totalReceivable.toLocaleString();
+            document.getElementById('mNetCash').textContent = "Rs " + m.netCashBalance.toLocaleString();
+
+            let rows = [
+              ["Total Sales Contracts", m.totalSalesCount.toLocaleString()],
+              ["Total Active Customers", m.totalActiveCustomers.toLocaleString()],
+              ["Cash Collections (Receipts)", "Rs " + m.cashCollections.toLocaleString()],
+              ["Bank / Cheque Collections", "Rs " + m.bankCollections.toLocaleString()],
+              ["Processing Fee Total (PROS)", "Rs " + m.processingFeeTotal.toLocaleString()],
+              ["Advance Total (ADV)", "Rs " + m.advanceTotal.toLocaleString()],
+              ["Total Expense Outflows", "Rs " + m.totalExpenses.toLocaleString()],
+              ["Total Receipt Entries Count", m.totalReceiptCount.toLocaleString()]
+            ];
+
+            let tbody = document.getElementById('breakdownTableBody');
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+              tbody.innerHTML += `<tr><td>${r[0]}</td><td class="number"><b>${r[1]}</b></td></tr>`;
+            });
+          } else {
+            alert("Error loading metrics: " + res.error);
+          }
+        })
+        .catch(err => {
+          document.getElementById('loading').style.display = 'none';
+          alert("Server Error: " + err.message);
+        });
+    }
+
+    window.onload = function() {
+      if (!localStorage.getItem('erp_script_url')) {
+        // hardcoded default already set, config box sirf tab dikhega agar user manually change karna chahe
+      }
+      loadDashboard();
+    };
+  
+    // ===== Deployment URL config (auto-added) =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT (auto-added) =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return; // already has a manual mic button
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const curPad = window.getComputedStyle(input).paddingRight;
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+</body>
+</html>

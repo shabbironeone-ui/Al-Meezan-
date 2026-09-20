@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Al Meezan ERP - Customer Register</title>
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-hover: #2e7d32;
+      --accent: #81c784;
+      --danger: #c62828;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 25px 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 22px 25px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 900px;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      text-align: center;
+      font-size: 17px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+    }
+
+    /* CONFIG BOX - Apps Script URL enter karne ke liye (sirf pehli baar) */
+    .config-box {
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 11px;
+      display: none;
+    }
+    .config-box.show { display: block; }
+    .config-box input {
+      width: 100%;
+      padding: 6px 8px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 11px;
+      box-sizing: border-box;
+    }
+    .config-box button {
+      margin-top: 6px;
+      padding: 6px 14px;
+      background: #1b5e20;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    fieldset {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+
+    legend {
+      font-weight: bold;
+      color: var(--primary);
+      background: #e8f5e9;
+      padding: 3px 10px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .form-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #444;
+      font-size: 11px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 12px;
+      background: #fff;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 4px rgba(27, 94, 32, 0.2);
+    }
+
+    /* MIC BUTTON WRAPPER */
+    .input-with-mic {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .input-with-mic input {
+      flex: 1;
+    }
+    .mic-btn {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      border: none;
+      border-radius: 50%;
+      background: #1b5e20;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .mic-btn:hover { background: #2e7d32; }
+    .mic-btn.listening {
+      background: #c62828;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 8px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      margin-top: 15px;
+    }
+
+    .action-btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      color: #fff;
+      flex: 1;
+      transition: background 0.2s;
+    }
+    .action-btn:disabled {
+      background-color: #9e9e9e !important;
+      cursor: not-allowed;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #546e7a; }
+    .btn-secondary:hover { background-color: #455a64; }
+
+    /* FULLSCREEN DIM OVERLAY & SPINNING BOWL LOADER */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .loading-overlay.show {
+      display: flex;
+    }
+    .spinning-bowl {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #e8f5e9;
+      border-top: 5px solid #1b5e20;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .loading-text {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+</style>
+</head>
+<body>
+
+<!-- SCREEN DIM & SPINNING BOWL LOADER OVERLAY -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinning-bowl"></div>
+  <div class="loading-text">Saving customer data, please wait...</div>
+</div>
+
+<div class="container">
+  <h2>Al Meezan ERP - Customer Register (COA)</h2>
+
+  <!-- Ye box sirf tab dikhega jab Apps Script URL set nahi hoga -->
+  <div class="change-url-link" onclick="showUrlConfig()">⚙️ Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+    <b>Setup:</b> Pehli baar use karne ke liye apna Apps Script Web App URL neeche paste karein aur Save dabayein.
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+    <button onclick="saveScriptUrl()">Save URL</button>
+  </div>
+
+  <!-- BASIC INFORMATION -->
+  <fieldset>
+    <legend>Customer Basic Information</legend>
+    <div class="form-row">
+      <div class="form-group" style="flex: 1;">
+        <label for="accNo">Account No *</label>
+        <input type="text" id="accNo" placeholder="Auto..." readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: #1b5e20;">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="accTitle">Account Title (Customer Name) *</label>
+        <div class="input-with-mic">
+          <input type="text" id="accTitle" placeholder="Full name...">
+          <button type="button" class="mic-btn" data-target="accTitle" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="mobileNo">Mobile Number</label>
+        <div class="input-with-mic">
+          <input type="text" id="mobileNo" placeholder="Mobile no...">
+          <button type="button" class="mic-btn" data-target="mobileNo" data-type="number" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex: 1.5;">
+        <label for="sowdowo">S/O D/O W/O</label>
+        <div class="input-with-mic">
+          <input type="text" id="sowdowo" placeholder="Father/Husband name...">
+          <button type="button" class="mic-btn" data-target="sowdowo" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="cnicNo">CNIC #</label>
+        <input type="text" id="cnicNo" placeholder="XXXXX-XXXXXXX-X">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="address">Address</label>
+        <div class="input-with-mic">
+          <input type="text" id="address" placeholder="Address...">
+          <button type="button" class="mic-btn" data-target="address" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex: 1;">
+        <label for="approvedBy">Approved By</label>
+        <select id="approvedBy">
+          <option value="">Select Approved By...</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="cro">CRO</label>
+        <select id="cro">
+          <option value="">Select CRO...</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="department">Department</label>
+        <input type="text" id="department" placeholder="Department...">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex: 1;">
+        <label for="salary">Salary</label>
+        <input type="number" id="salary" placeholder="Monthly salary...">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="designation">Designation</label>
+        <input type="text" id="designation" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- GUARANTOR 1 -->
+  <fieldset>
+    <legend>Guarantor 1 Details</legend>
+    <div class="form-row">
+      <div class="form-group" style="flex: 2;">
+        <label for="g1Name">Guarantor 1 Name</label>
+        <div class="input-with-mic">
+          <input type="text" id="g1Name" placeholder="Name...">
+          <button type="button" class="mic-btn" data-target="g1Name" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="g1Mobile">Mobile Number</label>
+        <input type="text" id="g1Mobile" placeholder="Mobile...">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="g1Dept">Department</label>
+        <input type="text" id="g1Dept" placeholder="Department...">
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="g1Desig">Designation</label>
+        <input type="text" id="g1Desig" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- GUARANTOR 2 -->
+  <fieldset>
+    <legend>Guarantor 2 Details</legend>
+    <div class="form-row">
+      <div class="form-group" style="flex: 2;">
+        <label for="g2Name">Guarantor 2 Name</label>
+        <div class="input-with-mic">
+          <input type="text" id="g2Name" placeholder="Name...">
+          <button type="button" class="mic-btn" data-target="g2Name" onclick="toggleMic(this)">🎤</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="g2Mobile">Mobile Number</label>
+        <input type="text" id="g2Mobile" placeholder="Mobile...">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="g2Dept">Department</label>
+        <input type="text" id="g2Dept" placeholder="Department...">
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label for="g2Desig">Designation</label>
+        <input type="text" id="g2Desig" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="btn-row">
+    <button id="saveBtn" class="action-btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+    <button class="action-btn btn-secondary" onclick="clearForm()">Reset</button>
+  </div>
+</div>
+
+<script>
+  let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+  window.onload = function() {
+    if (!SCRIPT_URL) {
+      document.getElementById('configBox').classList.add('show');
+    } else {
+      loadNextAccountNo();
+      loadDropdownSettings();
+    }
+  };
+
+  function saveScriptUrl() {
+    const val = document.getElementById('scriptUrlInput').value.trim();
+    if (!val) { alert("URL enter karein"); return; }
+    SCRIPT_URL = val;
+    localStorage.setItem('erp_script_url', val);
+    document.getElementById('configBox').classList.remove('show');
+    loadNextAccountNo();
+    loadDropdownSettings();
+  }
+
+  // ============================================================
+  // VOICE INPUT (Mic Button) Logic
+  // ============================================================
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let activeRecognition = null;
+  let activeBtn = null;
+
+  function cleanNumericText(text) {
+    return text.replace(/[^\d\-]/g, '').trim();
+  }
+
+  function toggleMic(btn) {
+    if (!SpeechRecognition) {
+      alert("Ye browser voice input support nahi karta. Chrome use karein.");
+      return;
+    }
+
+    const targetId = btn.getAttribute('data-target');
+    const inputEl = document.getElementById(targetId);
+    const isNumeric = btn.getAttribute('data-type') === 'number';
+
+    if (btn.classList.contains('listening')) {
+      forceStopMic(btn, inputEl, isNumeric);
+      return;
+    }
+
+    if (activeRecognition && activeBtn) {
+      forceStopMic(activeBtn, document.getElementById(activeBtn.getAttribute('data-target')), activeBtn.getAttribute('data-type') === 'number');
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalTranscript = '';
+
+    activeRecognition = recognition;
+    activeBtn = btn;
+    btn.classList.add('listening');
+    inputEl.dataset.origPlaceholder = inputEl.placeholder;
+    inputEl.placeholder = "🎧 Sun raha hoon... rokne ke liye mic dobara dabayein";
+
+    recognition.onresult = function(event) {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+      let combined = (finalTranscript + interim).trim();
+      inputEl.value = isNumeric ? cleanNumericText(combined) : combined;
+    };
+
+    recognition.onerror = function(event) {
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        alert("Mic Error: " + event.error);
+      }
+    };
+
+    recognition.onend = function() {
+      btn.classList.remove('listening');
+      inputEl.placeholder = inputEl.dataset.origPlaceholder || '';
+      if (isNumeric) {
+        inputEl.value = cleanNumericText(inputEl.value);
+      }
+      if (activeBtn === btn) {
+        activeRecognition = null;
+        activeBtn = null;
+      }
+    };
+
+    recognition.start();
+  }
+
+  function forceStopMic(btn, inputEl, isNumeric) {
+    if (activeRecognition) {
+      activeRecognition.onend = null;
+      activeRecognition.onresult = null;
+      try { activeRecognition.abort(); } catch (e) {}
+      activeRecognition = null;
+    }
+    btn.classList.remove('listening');
+    if (inputEl) {
+      inputEl.placeholder = inputEl.dataset.origPlaceholder || '';
+      if (isNumeric) {
+        inputEl.value = cleanNumericText(inputEl.value);
+      }
+    }
+    activeBtn = null;
+  }
+
+  // ============================================================
+  // BACKEND CALLS
+  // ============================================================
+
+  function loadNextAccountNo() {
+    fetch(SCRIPT_URL + "?action=getNextAccountNumber")
+      .then(res => res.json())
+      .then(res => {
+        if (res && res.success) {
+          document.getElementById('accNo').value = res.nextAccNo;
+        }
+      })
+      .catch(err => console.error("Account No load error:", err));
+  }
+
+  function loadDropdownSettings() {
+    fetch(SCRIPT_URL + "?action=getAppSettings")
+      .then(res => res.json())
+      .then(res => {
+        if (res && res.success) {
+          let croSelect = document.getElementById('cro');
+          croSelect.innerHTML = '<option value="">Select CRO...</option>';
+          if (res.cros) {
+            res.cros.forEach(cro => {
+              croSelect.innerHTML += `<option value="${cro}">${cro}</option>`;
+            });
+          }
+
+          let approvedSelect = document.getElementById('approvedBy');
+          approvedSelect.innerHTML = '<option value="">Select Approved By...</option>';
+          if (res.approvedBy) {
+            res.approvedBy.forEach(name => {
+              approvedSelect.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+          }
+        }
+      })
+      .catch(err => console.error("Settings load error:", err));
+  }
+
+  function showLoader(show) {
+    const overlay = document.getElementById('loadingOverlay');
+    const saveBtn = document.getElementById('saveBtn');
+    if (show) {
+      overlay.classList.add('show');
+      saveBtn.disabled = true;
+    } else {
+      overlay.classList.remove('show');
+      saveBtn.disabled = false;
+    }
+  }
+
+  function saveCustomer() {
+    let data = {
+      accountTitle: document.getElementById('accTitle').value.trim(),
+      approvedBy: document.getElementById('approvedBy').value,
+      cro: document.getElementById('cro').value,
+      mobileNo: document.getElementById('mobileNo').value.trim(),
+      sowdowo: document.getElementById('sowdowo').value.trim(),
+      cnicNo: document.getElementById('cnicNo').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      department: document.getElementById('department').value.trim(),
+      salary: document.getElementById('salary').value.trim(),
+      designation: document.getElementById('designation').value.trim(),
+
+      g1Name: document.getElementById('g1Name').value.trim(),
+      g1Mobile: document.getElementById('g1Mobile').value.trim(),
+      g1Dept: document.getElementById('g1Dept').value.trim(),
+      g1Desig: document.getElementById('g1Desig').value.trim(),
+
+      g2Name: document.getElementById('g2Name').value.trim(),
+      g2Mobile: document.getElementById('g2Mobile').value.trim(),
+      g2Dept: document.getElementById('g2Dept').value.trim(),
+      g2Desig: document.getElementById('g2Desig').value.trim()
+    };
+
+    if (!data.accountTitle) {
+      alert("Account Title (Customer Name) is required!");
+      return;
+    }
+
+    if (!SCRIPT_URL) {
+      alert("Pehle Apps Script URL set karein (upar wale box mein).");
+      return;
+    }
+
+    showLoader(true);
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveNewCustomer', data: data })
+    })
+      .then(res => res.json())
+      .then(res => {
+        showLoader(false);
+        if (res && res.success) {
+          alert("Customer Saved Successfully!");
+          clearForm();
+          loadNextAccountNo();
+        } else {
+          alert("Error: " + (res ? res.error : "Unknown error"));
+        }
+      })
+      .catch(err => {
+        showLoader(false);
+        alert("Server Error: " + err.message);
+      });
+  }
+
+  function clearForm() {
+    const inputs = document.querySelectorAll('input:not(#accNo)');
+    inputs.forEach(input => input.value = '');
+    const selects = document.querySelectorAll('select');
+    selects.forEach(select => select.selectedIndex = 0);
+  }
+
+    // ===== Deployment URL config =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return;
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const curPad = window.getComputedStyle(input).paddingRight;
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+
+</body>
+</html>

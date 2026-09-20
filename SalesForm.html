@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-hover: #2e7d32;
+      --accent: #81c784;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      font-size: 13px;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      max-width: 1300px;
+      margin: auto;
+      width: 100%;
+    }
+
+    .top-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 18px;
+    }
+
+    .section-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      background: #fafafa;
+    }
+
+    .section-header-flex {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px dashed var(--accent);
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-weight: bold;
+      color: var(--primary);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .btn-header-search {
+      background-color: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .btn-header-search:hover { background-color: #4f46e5; }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .col {
+      flex: 1;
+      min-width: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #444;
+      font-size: 11px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 12px;
+      background: #fff;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    input[readonly] { 
+      background-color: #eaeded; 
+      color: #555; 
+      pointer-events: none;
+    }
+
+    .product-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .product-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+      min-width: 1300px;
+    }
+
+    .product-table th, .product-table td {
+      border: 1px solid var(--border);
+      padding: 7px 8px;
+      text-align: left;
+    }
+
+    .product-table th {
+      background-color: #e8f5e9;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .recent-scroll-container {
+      max-height: 380px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+
+    .recent-table {
+      min-width: 1100px !important;
+      width: 100%;
+      margin-top: 0 !important;
+    }
+
+    .recent-table th {
+      position: sticky;
+      top: 0;
+      background-color: #e2f0d9;
+      z-index: 10;
+    }
+
+    .recent-table th, .recent-table td {
+      padding: 4px 6px;
+      white-space: nowrap;
+      font-size: 10px;
+    }
+
+    .sortable-th {
+      cursor: pointer;
+      user-select: none;
+    }
+    .sortable-th:hover {
+      background-color: #d4e8c1 !important;
+    }
+    .sort-arrow {
+      font-size: 9px;
+      color: var(--primary);
+    }
+
+    .recent-totals-bar {
+      display: flex;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      padding: 6px 10px;
+      font-weight: bold;
+      font-size: 11px;
+      color: var(--primary);
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .product-table input {
+      border: none;
+      background: transparent;
+      padding: 3px;
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .product-table input:focus {
+      outline: none;
+      background: #fff;
+    }
+
+    .product-table input.editable-mode {
+      background: #ffffff;
+      border: 1px solid var(--primary);
+      border-radius: 3px;
+    }
+
+    .product-table input[readonly] {
+      background: #eaeded;
+    }
+
+    .product-table td.product-cell {
+      background-color: #f1f8e9;
+    }
+    .product-table input.productId {
+      font-weight: bold;
+      color: #1b5e20;
+    }
+
+    .add-row-btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 26px;
+      height: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .add-row-btn:hover { background-color: var(--primary-hover); }
+
+    .del-row-btn {
+      background-color: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .del-row-btn:hover { background-color: #c62828; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .action-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      color: #fff;
+      flex: 1;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #546e7a; }
+
+    .loader {
+      display: none;
+      text-align: center;
+      color: var(--primary);
+      font-weight: bold;
+      margin: 8px 0;
+      font-size: 12px;
+    }
+
+    .recent-sales-section {
+      margin-top: 25px;
+      border-top: 2px solid #e0e0e0;
+      padding-top: 15px;
+    }
+
+    .recent-filter-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      background: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .recent-filter-bar input {
+      width: 140px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 1050px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .close-modal {
+      float: right;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #64748b;
+    }
+    .close-modal:hover { color: #000; }
+    .search-box {
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      width: 100%;
+      box-sizing: border-box;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+  
+    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: none; }
+    .config-box.show { display: block; }
+    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
+    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .change-url-link { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; cursor: pointer; text-decoration: underline; }
+
+    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
+    .auto-mic-btn {
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
+      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auto-mic-btn:hover { opacity: 1; }
+    .auto-mic-btn.listening {
+      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
+      animation: autoMicPulse 1s infinite;
+    }
+    @keyframes autoMicPulse {
+      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
+  <div id="configBox" class="config-box">
+    <b>Setup:</b> Apna Apps Script Deployment URL neeche daal kar Save karein.
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+    <button onclick="saveScriptUrl()">Save URL</button>
+  </div>
+
+  <div class="container">
+    <div class="top-header-row">
+      <h2>Al Meezan ERP - Sales Entry</h2>
+    </div>
+
+    <div id="loader" class="loader">Processing, please wait...</div>
+
+    <!-- Account & Details -->
+    <div class="section-card">
+      <div class="section-title" style="margin-bottom: 8px;">1. Account & Details</div>
+      <div class="row" style="align-items: flex-end;">
+        <div class="col" style="flex: 1.1;">
+          <label for="saleDate">Date</label>
+          <input type="date" id="saleDate">
+        </div>
+        <div class="col" style="flex: 1.2;">
+          <label for="accountNo">Account No. (Type & Press Enter)</label>
+          <input type="text" id="accountNo" placeholder="Type & Press Enter" onkeydown="handleAccountKey(event)">
+        </div>
+        <div class="col" style="flex: 2.5;">
+          <label for="accountTitle">Account Title</label>
+          <input type="text" id="accountTitle" readonly placeholder="Auto-fetched">
+        </div>
+        <div class="col" style="flex: 1.5;">
+          <label for="approvedBy">Approved By</label>
+          <input type="text" id="approvedBy" readonly placeholder="Auto-fetched">
+        </div>
+        <div class="col" style="flex: 1.2;">
+          <label for="cro">CRO</label>
+          <input type="text" id="cro" readonly placeholder="Auto-fetched">
+        </div>
+      </div>
+    </div>
+
+    <!-- Product & Installment Details -->
+    <div class="section-card">
+      <div class="section-header-flex">
+        <span class="section-title">2. Product & Installment Details</span>
+        <button type="button" class="btn-header-search" onclick="openGlobalSearchModal()">🔍 Search Stock Ledger</button>
+      </div>
+      <div class="product-table-wrapper">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th style="width: 9%;">Product ID</th>
+              <th style="width: 10%;">Company</th>
+              <th style="width: 8%;">Category</th>
+              <th style="width: 10%;">Model</th>
+              <th style="width: 8%;">Color</th>
+              <th style="width: 5%;">Qty</th>
+              <th style="width: 7%;">Rate</th>
+              <th style="width: 7%;">Amount</th>
+              <th style="width: 5%;">Months</th>
+              <th style="width: 6%;">Advance</th>
+              <th style="width: 7%;">Per Month</th>
+              <th style="width: 6%;">Proc Fee</th>
+              <th style="width: 7%;">Remarks</th>
+              <th style="width: 4%; text-align: center;">
+                <button type="button" class="add-row-btn" onclick="addProductRow()" title="Add Product Line">+</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="productTableBody">
+            <tr>
+              <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
+              <td><input type="text" class="companyName" placeholder="Company" readonly></td>
+              <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
+              <td><input type="text" class="model" placeholder="Model" readonly></td>
+              <td><input type="text" class="color" placeholder="Color" readonly></td>
+              <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
+              <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
+              <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
+              <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+              <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+              <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
+              <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+              <td><input type="text" class="remarks" placeholder="Remarks"></td>
+              <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Overall Totals -->
+    <div class="section-card">
+      <div class="section-title">3. Overall Totals</div>
+      <div class="row">
+        <div class="col">
+          <label for="totalAmount">Total Amount (Sales + Fees)</label>
+          <input type="text" id="totalAmount" readonly tabindex="-1" placeholder="Auto calculated">
+        </div>
+        <div class="col">
+          <label for="nextInstMonth">Next Inst Month</label>
+          <select id="nextInstMonth"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="actionMainBtn" class="action-btn btn-primary" onclick="submitNewSale()">Save Sales</button>
+      <button class="action-btn btn-secondary" onclick="clearSaleForm()">Reset / New</button>
+    </div>
+
+    <!-- Recent Saved Sales Section -->
+    <div class="recent-sales-section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="margin: 0; color: var(--primary); font-size: 15px;">Recent Saved Sales</h3>
+      </div>
+      <div class="recent-filter-bar">
+        <span style="font-weight: 600; font-size: 11px;">From Date:</span>
+        <input type="date" id="recentFromDate" onchange="loadRecentSales()">
+        <span style="font-weight: 600; font-size: 11px; margin-left: 10px;">To Date:</span>
+        <input type="date" id="recentToDate" onchange="loadRecentSales()">
+        <button type="button" class="btn-header-search" style="margin-left: auto;" onclick="loadRecentSales()">Refresh List</button>
+      </div>
+      
+      <!-- Frozen Totals Bar -->
+      <div class="recent-totals-bar">
+        <span style="margin-right: auto;">Totals:</span>
+        <div style="display: flex; gap: 15px; text-align: right;">
+          <div>Qty: <span id="totalQty" style="font-weight:700;">0</span></div>
+          <div>Sales Amt: <span id="totalSalesAmt" style="font-weight:700;">0</span></div>
+          <div>Advance: <span id="totalAdvance" style="font-weight:700;">0</span></div>
+          <div>Proc Fee: <span id="totalProcFee" style="font-weight:700;">0</span></div>
+          <div>Total Amount: <span id="totalGrandAmount" style="font-weight:700;">0</span></div>
+        </div>
+      </div>
+
+      <!-- Scrollable Table Container -->
+      <div class="recent-scroll-container">
+        <table class="product-table recent-table">
+          <thead>
+            <tr>
+              <th class="sortable-th" data-field="date" onclick="sortSalesTable('date')">Date <span class="sort-arrow" id="arrow-date"></span></th>
+              <th class="sortable-th" data-field="productId" onclick="sortSalesTable('productId')">Product ID <span class="sort-arrow" id="arrow-productId"></span></th>
+              <th class="sortable-th" data-field="approvedBy" onclick="sortSalesTable('approvedBy')">Approved By <span class="sort-arrow" id="arrow-approvedBy"></span></th>
+              <th class="sortable-th" data-field="accountNo" onclick="sortSalesTable('accountNo')">Account No <span class="sort-arrow" id="arrow-accountNo"></span></th>
+              <th class="sortable-th" data-field="accountTitle" onclick="sortSalesTable('accountTitle')">Account Title <span class="sort-arrow" id="arrow-accountTitle"></span></th>
+              <th class="sortable-th" data-field="companyName" onclick="sortSalesTable('companyName')">Company Name <span class="sort-arrow" id="arrow-companyName"></span></th>
+              <th class="sortable-th" data-field="productCategory" onclick="sortSalesTable('productCategory')">Category <span class="sort-arrow" id="arrow-productCategory"></span></th>
+              <th class="sortable-th" data-field="model" onclick="sortSalesTable('model')">Model <span class="sort-arrow" id="arrow-model"></span></th>
+              <th class="sortable-th" data-field="qty" onclick="sortSalesTable('qty')">Qty <span class="sort-arrow" id="arrow-qty"></span></th>
+              <th class="sortable-th" data-field="salesRate" onclick="sortSalesTable('salesRate')">Sales Rate <span class="sort-arrow" id="arrow-salesRate"></span></th>
+              <th class="sortable-th" data-field="salesAmt" onclick="sortSalesTable('salesAmt')">Sales Amt <span class="sort-arrow" id="arrow-salesAmt"></span></th>
+              <th class="sortable-th" data-field="planMonths" onclick="sortSalesTable('planMonths')">Months <span class="sort-arrow" id="arrow-planMonths"></span></th>
+              <th class="sortable-th" data-field="advance" onclick="sortSalesTable('advance')">Advance <span class="sort-arrow" id="arrow-advance"></span></th>
+              <th class="sortable-th" data-field="installmentPerMonth" onclick="sortSalesTable('installmentPerMonth')">Per Month <span class="sort-arrow" id="arrow-installmentPerMonth"></span></th>
+              <th class="sortable-th" data-field="processingFee" onclick="sortSalesTable('processingFee')">Proc Fee <span class="sort-arrow" id="arrow-processingFee"></span></th>
+              <th class="sortable-th" data-field="totalAmount" onclick="sortSalesTable('totalAmount')">Total Amount <span class="sort-arrow" id="arrow-totalAmount"></span></th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="recentSalesTableBody">
+            <tr><td colspan="17" style="text-align: center; color: #666;">Loading recent sales...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Selection Modal -->
+  <div id="productModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeProductModal()">&times;</span>
+      <h3 style="margin-top:0; color:var(--primary); font-size:15px;">Select Product from Stock Ledger</h3>
+      <input type="text" id="modalSearchInput" class="search-box" placeholder="Search by Product ID, Company, Category, Model, Color..." oninput="filterModalProducts()">
+      <div style="overflow-x:auto;">
+        <table class="product-table" style="min-width: 100%;">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Company Name</th>
+              <th>Category</th>
+              <th>Model</th>
+              <th>Color</th>
+              <th style="text-align: center; color: #059669;">Balance</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="modalProductTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+
+    let activeRowForModal = null;
+    let allMasterProducts = [];
+
+    window.onload = function() {
+      setCurrentDatePakistani();
+      populateNextInstMonthDropdown();
+      loadRecentSales(); 
+    };
+
+    function setCurrentDatePakistani() {
+      let now = new Date();
+      let yyyy = now.getFullYear();
+      let mm = String(now.getMonth() + 1).padStart(2, '0');
+      let dd = String(now.getDate()).padStart(2, '0');
+      document.getElementById('saleDate').value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    function populateNextInstMonthDropdown(selectedVal = '') {
+      let select = document.getElementById('nextInstMonth');
+      select.innerHTML = '';
+      
+      let date = new Date();
+      let monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      for (let i = 0; i < 24; i++) {
+        let mIndex = date.getMonth();
+        let year = date.getFullYear();
+        let monthName = monthNames[mIndex];
+        let displayStr = monthName + " " + year;
+        
+        let option = document.createElement('option');
+        option.value = displayStr;
+        option.text = displayStr;
+        
+        if (selectedVal && displayStr.toLowerCase() === String(selectedVal).trim().toLowerCase()) {
+          option.selected = true;
+        }
+        
+        select.appendChild(option);
+        date.setMonth(date.getMonth() + 1);
+      }
+      
+      if (selectedVal && ![...select.options].some(o => o.value.toLowerCase() === String(selectedVal).trim().toLowerCase())) {
+        let option = document.createElement('option');
+        option.value = selectedVal;
+        option.text = selectedVal;
+        option.selected = true;
+        select.insertBefore(option, select.firstChild);
+      }
+    }
+
+    function showLoader(show) {
+      document.getElementById('loader').style.display = show ? 'block' : 'none';
+    }
+
+    function handleAccountKey(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        fetchCustomerDetails(false);
+      }
+    }
+
+    function fetchCustomerDetails(isEditMode = false) {
+      let accNo = document.getElementById("accountNo").value.trim();
+      if (!accNo) return;
+
+      showLoader(true);
+      fetch(SCRIPT_URL + "?action=getCustomerDetailsForSales" + "&accNo=" + encodeURIComponent(accNo) + "&isEditMode=" + isEditMode)
+        .then(r => r.json())
+        .then(function(res) {
+          showLoader(false);
+          if (res && res.success) {
+            if (res.alreadySaved && !isEditMode) {
+              alert("Error: Sale against this Account Number is already saved!");
+              document.getElementById("accountNo").value = "";
+              document.getElementById("accountTitle").value = "";
+              document.getElementById("approvedBy").value = "";
+              document.getElementById("cro").value = "";
+              document.getElementById("accountNo").focus();
+              return;
+            }
+            document.getElementById("accountTitle").value = res.accountTitle || "";
+            document.getElementById("approvedBy").value = res.approvedBy || "";
+            document.getElementById("cro").value = res.cro || "";
+          } else {
+            alert(res.error || "Account not found!");
+            document.getElementById("accountNo").value = "";
+            document.getElementById("accountNo").focus();
+          }
+        })
+        .catch(function(err) {
+          showLoader(false);
+          alert("Error fetching customer details.");
+        });
+    }
+
+    function openGlobalSearchModal() {
+      let rows = document.querySelectorAll("#productTableBody tr");
+      activeRowForModal = rows[rows.length - 1]; 
+      document.getElementById('productModal').style.display = 'block';
+      document.getElementById('modalSearchInput').value = '';
+      
+      showLoader(true);
+      fetch(SCRIPT_URL + "?action=getStockLedgerProductsForSales")
+        .then(r => r.json())
+        .then(function(res) {
+          showLoader(false);
+          if (res.success) {
+            allMasterProducts = res.products;
+            renderModalTable(allMasterProducts);
+          } else {
+            alert("Could not load stock ledger products.");
+          }
+        })
+        .catch(function(err) {
+          showLoader(false);
+          alert("Error loading stock ledger.");
+        });
+    }
+
+    function closeProductModal() {
+      document.getElementById('productModal').style.display = 'none';
+    }
+
+    function renderModalTable(products) {
+      let tbody = document.getElementById('modalProductTableBody');
+      tbody.innerHTML = '';
+      if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No products found in stock ledger.</td></tr>';
+        return;
+      }
+
+      let groupedProducts = {};
+      products.forEach(function(p) {
+        let prodIdVal = p.product_id !== undefined ? p.product_id : (p.PRODUCT_ID !== undefined ? p.PRODUCT_ID : '');
+        if (!prodIdVal) return;
+
+        let balanceVal = 0;
+        if (p.balance !== undefined) balanceVal = Number(p.balance) || 0;
+        else if (p.BALAN !== undefined) balanceVal = Number(p.BALAN) || 0;
+
+        groupedProducts[prodIdVal] = {
+          product_id: prodIdVal,
+          companyName: p.companyName !== undefined ? p.companyName : (p.COMPANY_NAME !== undefined ? p.COMPANY_NAME : ''),
+          productCategory: p.productCategory !== undefined ? p.productCategory : (p.PRODUCT_CATEGORY !== undefined ? p.PRODUCT_CATEGORY : ''),
+          model: p.model !== undefined ? p.model : (p.MODEL !== undefined ? p.MODEL : ''),
+          color: p.color !== undefined ? p.color : (p.Color !== undefined ? p.Color : ''),
+          balance: balanceVal
+        };
+      });
+
+      let uniqueList = Object.values(groupedProducts);
+
+      uniqueList.forEach(function(p) {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${p.product_id}</b></td>
+          <td>${String(p.companyName).toUpperCase()}</td>
+          <td>${String(p.productCategory).toUpperCase()}</td>
+          <td>${String(p.model).toUpperCase()}</td>
+          <td>${String(p.color).toUpperCase()}</td>
+          <td style="font-weight: bold; color: #059669; text-align: center;">${p.balance}</td>
+          <td style="text-align: center;"><button type="button" class="action-btn btn-primary" style="padding: 4px 8px; font-size:11px;" onclick='selectProductFromModal(${JSON.stringify(p)})'>Select</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterModalProducts() {
+      let query = document.getElementById('modalSearchInput').value.toLowerCase();
+      let filtered = allMasterProducts.filter(function(p) {
+        let pid = String(p.product_id || p.PRODUCT_ID || '').toLowerCase();
+        let comp = String(p.companyName || p.COMPANY_NAME || '').toLowerCase();
+        let cat = String(p.productCategory || p.PRODUCT_CATEGORY || '').toLowerCase();
+        let mod = String(p.model || p.MODEL || '').toLowerCase();
+        let col = String(p.color || p.Color || '').toLowerCase();
+        return pid.includes(query) || comp.includes(query) || cat.includes(query) || mod.includes(query) || col.includes(query);
+      });
+      renderModalTable(filtered);
+    }
+
+    function selectProductFromModal(p) {
+      if (!activeRowForModal) return;
+
+      let prodIdVal = p.product_id || p.PRODUCT_ID || '';
+      let companyVal = p.companyName || p.COMPANY_NAME || '';
+      let categoryVal = p.productCategory || p.PRODUCT_CATEGORY || '';
+      let modelVal = String(p.model || p.MODEL || '').toUpperCase();
+      let colorVal = String(p.color || p.Color || '').trim().toUpperCase();
+      
+      activeRowForModal.querySelector('.productId').value = String(prodIdVal).toUpperCase();
+      activeRowForModal.querySelector('.companyName').value = String(companyVal).toUpperCase();
+      activeRowForModal.querySelector('.productCategory').value = String(categoryVal).toUpperCase();
+      activeRowForModal.querySelector('.model').value = modelVal;
+      activeRowForModal.querySelector('.color').value = colorVal;
+      
+      closeProductModal();
+      activeRowForModal.querySelector('.qty').focus();
+    }
+
+    function addProductRow() {
+      let tbody = document.getElementById("productTableBody");
+      let newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
+        <td><input type="text" class="companyName" placeholder="Company" readonly></td>
+        <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
+        <td><input type="text" class="model" placeholder="Model" readonly></td>
+        <td><input type="text" class="color" placeholder="Color" readonly></td>
+        <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
+        <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
+        <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
+        <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+        <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+        <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
+        <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+        <td><input type="text" class="remarks" placeholder="Remarks"></td>
+        <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
+      `;
+      tbody.appendChild(newRow);
+    }
+
+    function removeProductRow(btn) {
+      let tbody = document.getElementById("productTableBody");
+      if (tbody.rows.length > 1) {
+        btn.closest("tr").remove();
+        calculateTotals();
+      } else {
+        alert("At least one product row is required!");
+      }
+    }
+
+    function calculateRow(input) {
+      let row = input.closest("tr");
+      let qty = Number(row.querySelector('.qty').value) || 0;
+      let rate = Number(row.querySelector('.salesRate').value) || 0;
+      let rowAmt = qty * rate;
+      row.querySelector('.salesAmount').value = rowAmt;
+
+      let planMonths = Number(row.querySelector('.planMonths').value) || 0;
+      let advance = Number(row.querySelector('.advance').value) || 0;
+
+      let netRowVal = rowAmt - advance;
+      if (planMonths > 0) {
+        let perMonthInst = netRowVal / planMonths;
+        row.querySelector('.installmentPerMonth').value = perMonthInst > 0 ? perMonthInst.toFixed(2) : '0.00';
+      } else {
+        row.querySelector('.installmentPerMonth').value = '0.00';
+      }
+
+      calculateTotals();
+    }
+
+    function calculateTotals() {
+      let rows = document.querySelectorAll("#productTableBody tr");
+      let grandTotal = 0;
+
+      rows.forEach(row => {
+        let rowAmt = Number(row.querySelector('.salesAmount').value) || 0;
+        let procFee = Number(row.querySelector('.processingFee').value) || 0;
+        grandTotal += (rowAmt + procFee);
+      });
+
+      document.getElementById('totalAmount').value = grandTotal.toFixed(2);
+    }
+
+    function submitNewSale() {
+      let data = collectFormData();
+      if (!data) return;
+
+      let saveBtn = document.getElementById('actionMainBtn');
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = '0.5';
+      saveBtn.style.cursor = 'wait';
+      document.body.style.cursor = 'wait';
+
+      showLoader(true);
+      fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "saveSalesEntry", data: data }) })
+        .then(r => r.json())
+        .then(function(res) {
+          saveBtn.disabled = false;
+          saveBtn.style.opacity = '1';
+          saveBtn.style.cursor = 'pointer';
+          document.body.style.cursor = 'default';
+          showLoader(false);
+
+          if (res.success) {
+            clearSaleForm();
+            loadRecentSales();
+            fetch(SCRIPT_URL + "?action=rebuildStockLedgerNow").catch(() => {});
+            window.open('receipts.html', '_blank');
+          } else {
+            alert("Error: " + res.error);
+          }
+        })
+        .catch(function(err) {
+          saveBtn.disabled = false;
+          saveBtn.style.opacity = '1';
+          saveBtn.style.cursor = 'pointer';
+          document.body.style.cursor = 'default';
+          showLoader(false);
+
+          alert("Server Error: " + err.message);
+        });
+    }
+
+    function collectFormData() {
+      let accNoVal = document.getElementById('accountNo').value.trim();
+      let rawDate = document.getElementById('saleDate').value;
+      let formattedDate = "";
+      if (rawDate) {
+        let parts = rawDate.split("-");
+        if (parts.length === 3) {
+          formattedDate = parts[2] + "/" + parts[1] + "/" + parts[0].slice(-2);
+        }
+      }
+
+      let rows = document.querySelectorAll("#productTableBody tr");
+      let products = [];
+
+      rows.forEach(row => {
+        let sAmt = Number(row.querySelector('.salesAmount').value) || 0;
+        let pFee = Number(row.querySelector('.processingFee').value) || 0;
+        let rowItemTotal = sAmt + pFee;
+
+        products.push({
+          product_id: row.querySelector('.productId').value.trim(),
+          companyName: row.querySelector('.companyName').value.trim(),
+          productCategory: row.querySelector('.productCategory').value.trim(),
+          model: row.querySelector('.model').value.trim(),
+          color: row.querySelector('.color').value.trim(),
+          qty: row.querySelector('.qty').value,
+          salesRate: row.querySelector('.salesRate').value,
+          salesAmt: sAmt,
+          planMonths: row.querySelector('.planMonths').value,
+          advance: row.querySelector('.advance').value,
+          installmentPerMonth: row.querySelector('.installmentPerMonth').value,
+          processingFee: pFee,
+          rowTotalAmount: rowItemTotal,
+          remarks: row.querySelector('.remarks').value.trim()
+        });
+      });
+
+      let data = {
+        accountNo: accNoVal,
+        accountTitle: document.getElementById('accountTitle').value.trim(),
+        approvedBy: document.getElementById('approvedBy').value.trim(),
+        cro: document.getElementById('cro').value.trim(),
+        date: formattedDate || rawDate,
+        products: products,
+        totalAmount: document.getElementById('totalAmount').value,
+        nextInstMonth: document.getElementById('nextInstMonth').value.trim()
+      };
+
+      if (!data.accountNo || !products[0].model || !products[0].salesRate) {
+        alert("Please fill required fields (Account No, Model, Sales Rate)!");
+        return null;
+      }
+      return data;
+    }
+
+    function clearSaleForm() {
+      document.getElementById('accountNo').value = '';
+      document.getElementById('accountTitle').value = '';
+      document.getElementById('approvedBy').value = '';
+      document.getElementById('cro').value = '';
+      
+      let tbody = document.getElementById('productTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
+          <td><input type="text" class="companyName" placeholder="Company" readonly></td>
+          <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
+          <td><input type="text" class="model" placeholder="Model" readonly></td>
+          <td><input type="text" class="color" placeholder="Color" readonly></td>
+          <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
+          <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
+          <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
+          <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+          <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+          <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
+          <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
+          <td><input type="text" class="remarks" placeholder="Remarks"></td>
+          <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
+        </tr>
+      `;
+
+      document.getElementById('totalAmount').value = '';
+      populateNextInstMonthDropdown();
+      setCurrentDatePakistani();
+      document.getElementById('accountNo').focus();
+    }
+
+    let recentSalesData = [];
+    let salesSortState = { field: null, asc: true };
+
+    function loadRecentSales() {
+      let fromDate = document.getElementById('recentFromDate').value;
+      let toDate = document.getElementById('recentToDate').value;
+
+      fetch(SCRIPT_URL + "?action=getRecentSalesList" + "&fromDate=" + encodeURIComponent(fromDate) + "&toDate=" + encodeURIComponent(toDate))
+        .then(r => r.json())
+        .then(function(res) {
+          recentSalesData = (res && res.success && res.sales) ? res.sales : [];
+          salesSortState = { field: null, asc: true };
+          renderSalesTable(recentSalesData);
+        })
+        .catch(function(err) {
+          console.error("Error loading recent sales:", err);
+        });
+    }
+
+    function sortSalesTable(field) {
+      if (salesSortState.field === field) {
+        salesSortState.asc = !salesSortState.asc;
+      } else {
+        salesSortState.field = field;
+        salesSortState.asc = true;
+      }
+
+      const numericFields = ['qty', 'salesRate', 'salesAmt', 'planMonths', 'advance', 'installmentPerMonth', 'processingFee', 'totalAmount'];
+      const isNumeric = numericFields.includes(field);
+
+      recentSalesData.sort((a, b) => {
+        let valA = a[field], valB = b[field];
+        if (isNumeric) {
+          valA = Number(valA) || 0;
+          valB = Number(valB) || 0;
+          return salesSortState.asc ? valA - valB : valB - valA;
+        } else {
+          valA = String(valA || '').toLowerCase();
+          valB = String(valB || '').toLowerCase();
+          if (valA < valB) return salesSortState.asc ? -1 : 1;
+          if (valA > valB) return salesSortState.asc ? 1 : -1;
+          return 0;
+        }
+      });
+
+      document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+      const arrowEl = document.getElementById('arrow-' + field);
+      if (arrowEl) arrowEl.textContent = salesSortState.asc ? '▲' : '▼';
+
+      renderSalesTable(recentSalesData);
+    }
+
+    function renderSalesTable(sales) {
+      let tbody = document.getElementById('recentSalesTableBody');
+      tbody.innerHTML = '';
+
+      let sumQty = 0;
+      let sumSalesAmt = 0;
+      let sumAdvance = 0;
+      let sumProcFee = 0;
+      let sumTotalAmount = 0;
+
+      if (sales && sales.length > 0) {
+        sales.forEach(s => {
+          let qtyVal = Number(s.qty || 0);
+          let salesAmtVal = Number(s.salesAmt || 0);
+          let advanceVal = Number(s.advance || 0);
+          let procFeeVal = Number(s.processingFee || 0);
+
+          let rowTotal = (s.rowTotalAmount !== undefined && s.rowTotalAmount !== null) 
+                       ? Number(s.rowTotalAmount) 
+                       : (salesAmtVal + procFeeVal);
+
+          sumQty += qtyVal;
+          sumSalesAmt += salesAmtVal;
+          sumAdvance += advanceVal;
+          sumProcFee += procFeeVal;
+          sumTotalAmount += rowTotal;
+
+          let tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${s.date || ''}</td>
+            <td>${s.productId || ''}</td>
+            <td>${s.approvedBy || ''}</td>
+            <td><b>${s.accountNo || ''}</b></td>
+            <td>${s.accountTitle || ''}</td>
+            <td>${s.companyName || ''}</td>
+            <td>${s.productCategory || ''}</td>
+            <td>${s.model || ''}</td>
+            <td>${s.qty || ''}</td>
+            <td>${s.salesRate ? Number(s.salesRate).toLocaleString() : ''}</td>
+            <td>${s.salesAmt ? Number(s.salesAmt).toLocaleString() : ''}</td>
+            <td>${s.planMonths || ''}</td>
+            <td>${s.advance ? Number(s.advance).toLocaleString() : ''}</td>
+            <td>${s.installmentPerMonth ? Number(s.installmentPerMonth).toLocaleString() : ''}</td>
+            <td>${s.processingFee ? Number(s.processingFee).toLocaleString() : ''}</td>
+            <td><b>${rowTotal ? rowTotal.toLocaleString() : '0'}</b></td>
+            <td style="text-align: center;">
+              <button type="button" class="action-btn btn-primary" style="padding: 2px 5px; font-size: 9px;" onclick="loadSpecificSale('${s.accountNo}')">View / Edit</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        tbody.innerHTML = `<tr><td colspan="17" style="text-align: center; color: #666;">No recent sales found.</td></tr>`;
+      }
+
+      document.getElementById('totalQty').innerText = sumQty ? sumQty.toLocaleString() : '0';
+      document.getElementById('totalSalesAmt').innerText = sumSalesAmt ? sumSalesAmt.toLocaleString() : '0';
+      document.getElementById('totalAdvance').innerText = sumAdvance ? sumAdvance.toLocaleString() : '0';
+      document.getElementById('totalProcFee').innerText = sumProcFee ? sumProcFee.toLocaleString() : '0';
+      document.getElementById('totalGrandAmount').innerText = sumTotalAmount ? sumTotalAmount.toLocaleString() : '0';
+    }
+
+    // UPDATED: loadSpecificSale اب ڈپلیکیٹ چیک بائی پاس کرنے کے ساتھ ساتھ پروڈکٹ ڈیٹا بھی لوڈ کرے گا
+    function loadSpecificSale(accNo) {
+      document.getElementById('accountNo').value = accNo;
+      
+      // 1. Fetch customer details in edit mode (Bypass duplicate check)
+      fetchCustomerDetails(true);
+
+      // 2. Fetch and populate sale products and details
+      showLoader(true);
+      fetch(SCRIPT_URL + "?action=getSaleDetailsForEdit" + "&accNo=" + encodeURIComponent(accNo))
+        .then(r => r.json())
+        .then(function(res) {
+          showLoader(false);
+          if (res && res.success) {
+            if (res.metadata) {
+              if (res.metadata.date) {
+                let dParts = res.metadata.date.split('/');
+                if (dParts.length === 3) {
+                  let fullYear = dParts[2].length === 2 ? "20" + dParts[2] : dParts[2];
+                  document.getElementById('saleDate').value = fullYear + "-" + dParts[1] + "-" + dParts[0];
+                }
+              }
+              if (res.metadata.nextInstMonth) {
+                populateNextInstMonthDropdown(res.metadata.nextInstMonth);
+              }
+            }
+
+            let tbody = document.getElementById('productTableBody');
+            tbody.innerHTML = '';
+
+            if (res.products && res.products.length > 0) {
+              res.products.forEach(p => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td class="product-cell"><input type="text" class="productId" value="${p.product_id || ''}" placeholder="Product ID" readonly></td>
+                  <td><input type="text" class="companyName" value="${p.companyName || ''}" placeholder="Company" readonly></td>
+                  <td><input type="text" class="productCategory" value="${p.productCategory || ''}" placeholder="Category" readonly></td>
+                  <td><input type="text" class="model" value="${p.model || ''}" placeholder="Model" readonly></td>
+                  <td><input type="text" class="color" value="${p.color || ''}" placeholder="Color" readonly></td>
+                  <td><input type="number" class="qty" value="${p.qty || 1}" oninput="calculateRow(this)" onfocus="this.select()"></td>
+                  <td><input type="number" class="salesRate" value="${p.salesRate || 0}" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
+                  <td><input type="text" class="salesAmount" value="${p.salesAmt || 0}" readonly tabindex="-1" placeholder="Amt"></td>
+                  <td><input type="number" class="planMonths" value="${p.planMonths || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
+                  <td><input type="number" class="advance" value="${p.advance || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
+                  <td><input type="text" class="installmentPerMonth" value="${p.installmentPerMonth || 0}" readonly tabindex="-1" placeholder="Inst"></td>
+                  <td><input type="number" class="processingFee" value="${p.processingFee || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
+                  <td><input type="text" class="remarks" value="${p.remarks || ''}" placeholder="Remarks"></td>
+                  <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
+                `;
+                tbody.appendChild(tr);
+              });
+              calculateTotals();
+            }
+          } else {
+            alert(res.error || "Could not load sale details for editing.");
+          }
+        })
+        .catch(function(err) {
+          showLoader(false);
+          console.error("Error loading sale details for edit:", err);
+        });
+    }
+
+    // ===== Deployment URL config =====
+    function showUrlConfig() {
+      var inp = document.getElementById('scriptUrlInput');
+      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
+      var box = document.getElementById('configBox');
+      if (box) box.classList.add('show');
+    }
+    function saveScriptUrl() {
+      var inp = document.getElementById('scriptUrlInput');
+      var val = inp ? inp.value.trim() : '';
+      if (!val) { alert("URL enter karein"); return; }
+      localStorage.setItem('erp_script_url', val);
+      location.reload();
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUrl = localStorage.getItem('erp_script_url');
+      if (!savedUrl) {
+        var box = document.getElementById('configBox');
+        if (box) box.classList.add('show');
+      }
+    });
+
+    // ================= UNIVERSAL MIC INPUT =================
+    (function() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let activeRec = null, activeBtn = null, activeInput = null;
+
+      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+      function stopActiveMic() {
+        if (activeRec) {
+          activeRec.onend = null; activeRec.onresult = null;
+          try { activeRec.abort(); } catch (e) {}
+          activeRec = null;
+        }
+        if (activeBtn) activeBtn.classList.remove('listening');
+        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+        activeBtn = null; activeInput = null;
+      }
+
+      function toggleMic(input, btn) {
+        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+        const isNumeric = input.type === 'number';
+
+        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+        stopActiveMic();
+
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.continuous = true;
+        rec.interimResults = true;
+        let finalText = '';
+
+        activeRec = rec; activeBtn = btn; activeInput = input;
+        btn.classList.add('listening');
+        input.dataset.origPh = input.placeholder || '';
+        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+        rec.onresult = function(ev) {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const t = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+          }
+          let text = (finalText + interim).trim();
+          if (isNumeric) text = cleanNumeric(text);
+          input.value = text;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        rec.onerror = function(ev) {
+          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+        };
+        rec.onend = function() {
+          btn.classList.remove('listening');
+          input.placeholder = input.dataset.origPh || '';
+          if (isNumeric) input.value = cleanNumeric(input.value);
+          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+        };
+        try { rec.start(); } catch (e) {}
+      }
+
+      function attachMic(input) {
+        if (!input || input.dataset.autoMic) return;
+        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+        if (input.closest('#configBox')) return;
+        if (input.closest('.input-with-mic')) return;
+        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+        input.dataset.autoMic = '1';
+
+        const wrap = document.createElement('span');
+        wrap.className = 'auto-mic-wrap';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        input.style.paddingRight = '24px';
+        input.style.boxSizing = 'border-box';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auto-mic-btn';
+        btn.title = 'Voice input';
+        btn.innerHTML = '&#127908;';
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+        wrap.appendChild(btn);
+      }
+
+      function scanAndAttach(root) {
+        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        scanAndAttach(document);
+      });
+
+      const mo = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (node.nodeType !== 1) return;
+            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+              attachMic(node);
+            }
+            if (node.querySelectorAll) scanAndAttach(node);
+          });
+        });
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+  </script>
+</body>
+</html>
