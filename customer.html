@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Al Meezan ERP - Customer Register</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary: #1b5e20;
@@ -46,37 +47,6 @@
       border-bottom: 2px solid var(--accent);
       padding-bottom: 8px;
       margin-bottom: 15px;
-    }
-
-    /* CONFIG BOX - Apps Script URL enter karne ke liye (sirf pehli baar) */
-    .config-box {
-      background: #fff3cd;
-      border: 1px solid #ffe69c;
-      padding: 10px 14px;
-      border-radius: 6px;
-      margin-bottom: 15px;
-      font-size: 11px;
-      display: none;
-    }
-    .config-box.show { display: block; }
-    .config-box input {
-      width: 100%;
-      padding: 6px 8px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 11px;
-      box-sizing: border-box;
-    }
-    .config-box button {
-      margin-top: 6px;
-      padding: 6px 14px;
-      background: #1b5e20;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
     }
 
     fieldset {
@@ -249,26 +219,18 @@
       70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
       100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
     }
-</style>
+  </style>
 </head>
 <body>
 
 <!-- SCREEN DIM & SPINNING BOWL LOADER OVERLAY -->
 <div id="loadingOverlay" class="loading-overlay">
   <div class="spinning-bowl"></div>
-  <div class="loading-text">Saving customer data, please wait...</div>
+  <div class="loading-text">Saving customer data to Supabase, please wait...</div>
 </div>
 
 <div class="container">
-  <h2>Al Meezan ERP - Customer Register (COA)</h2>
-
-  <!-- Ye box sirf tab dikhega jab Apps Script URL set nahi hoga -->
-  <div class="change-url-link" onclick="showUrlConfig()">⚙️ Change Deployment URL</div>
-  <div id="configBox" class="config-box">
-    <b>Setup:</b> Pehli baar use karne ke liye apna Apps Script Web App URL neeche paste karein aur Save dabayein.
-    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-    <button onclick="saveScriptUrl()">Save URL</button>
-  </div>
+  <h2>Al Meezan ERP - Customer Register (COA)[cite: 13]</h2>
 
   <!-- BASIC INFORMATION -->
   <fieldset>
@@ -405,26 +367,15 @@
 </div>
 
 <script>
-  let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+  // Supabase Configuration
+  const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   window.onload = function() {
-    if (!SCRIPT_URL) {
-      document.getElementById('configBox').classList.add('show');
-    } else {
-      loadNextAccountNo();
-      loadDropdownSettings();
-    }
-  };
-
-  function saveScriptUrl() {
-    const val = document.getElementById('scriptUrlInput').value.trim();
-    if (!val) { alert("URL enter karein"); return; }
-    SCRIPT_URL = val;
-    localStorage.setItem('erp_script_url', val);
-    document.getElementById('configBox').classList.remove('show');
     loadNextAccountNo();
     loadDropdownSettings();
-  }
+  };
 
   // ============================================================
   // VOICE INPUT (Mic Button) Logic
@@ -522,43 +473,117 @@
   }
 
   // ============================================================
-  // BACKEND CALLS
+  // SUPABASE BACKEND CALLS (CUSTOMERS TABLE)
   // ============================================================
 
-  function loadNextAccountNo() {
-    fetch(SCRIPT_URL + "?action=getNextAccountNumber")
-      .then(res => res.json())
-      .then(res => {
-        if (res && res.success) {
-          document.getElementById('accNo').value = res.nextAccNo;
+  async function loadNextAccountNo() {
+    try {
+      let allData = [];
+      let page = 0;
+      let pageSize = 1000;
+      let fetchMore = true;
+
+      while (fetchMore) {
+        let { data, error } = await _supabase
+          .from('customers')
+          .select('account_no')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) {
+          console.error("Account No load error:", error);
+          break;
         }
-      })
-      .catch(err => console.error("Account No load error:", err));
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          if (data.length < pageSize) fetchMore = false;
+          else page++;
+        } else {
+          fetchMore = false;
+        }
+      }
+
+      if (allData.length > 0) {
+        let maxAcc = 786000;
+        allData.forEach(row => {
+          let num = parseInt(String(row.account_no || '').trim());
+          if (!isNaN(num) && num > maxAcc) {
+            maxAcc = num;
+          }
+        });
+        document.getElementById('accNo').value = maxAcc + 1;
+      } else {
+        document.getElementById('accNo').value = "786001";
+      }
+    } catch (err) {
+      console.error("Account No load catch error:", err);
+      document.getElementById('accNo').value = "786001";
+    }
   }
 
-  function loadDropdownSettings() {
-    fetch(SCRIPT_URL + "?action=getAppSettings")
-      .then(res => res.json())
-      .then(res => {
-        if (res && res.success) {
-          let croSelect = document.getElementById('cro');
-          croSelect.innerHTML = '<option value="">Select CRO...</option>';
-          if (res.cros) {
-            res.cros.forEach(cro => {
-              croSelect.innerHTML += `<option value="${cro}">${cro}</option>`;
-            });
-          }
+  async function getNextSrNo() {
+    try {
+      let allData = [];
+      let page = 0;
+      let pageSize = 1000;
+      let fetchMore = true;
 
-          let approvedSelect = document.getElementById('approvedBy');
-          approvedSelect.innerHTML = '<option value="">Select Approved By...</option>';
-          if (res.approvedBy) {
-            res.approvedBy.forEach(name => {
-              approvedSelect.innerHTML += `<option value="${name}">${name}</option>`;
-            });
-          }
+      while (fetchMore) {
+        let { data, error } = await _supabase
+          .from('customers')
+          .select('sr_no')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) break;
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          if (data.length < pageSize) fetchMore = false;
+          else page++;
+        } else {
+          fetchMore = false;
         }
-      })
-      .catch(err => console.error("Settings load error:", err));
+      }
+
+      if (allData.length > 0) {
+        let maxSr = 0;
+        allData.forEach(row => {
+          let num = parseInt(String(row.sr_no || '').trim());
+          if (!isNaN(num) && num > maxSr) {
+            maxSr = num;
+          }
+        });
+        return maxSr + 1;
+      }
+      return 1;
+    } catch (e) {
+      console.error("Sr No fetch error:", e);
+      return 1;
+    }
+  }
+
+  async function loadDropdownSettings() {
+    let croSelect = document.getElementById('cro');
+    let approvedSelect = document.getElementById('approvedBy');
+
+    croSelect.innerHTML = '<option value="">Select CRO...</option>';
+    approvedSelect.innerHTML = '<option value="">Select Approved By...</option>';
+
+    try {
+      let { data, error } = await _supabase.from('app_settings').select('*');
+      if (!error && data && data.length > 0) {
+        data.forEach(row => {
+          let cat = String(row.category || '').trim().toUpperCase();
+          let name = String(row.display_name || row.lookup_code || '').trim();
+
+          if (cat === 'CRO' && name) {
+            croSelect.innerHTML += `<option value="${name}">${name}</option>`;
+          } else if (cat === 'APPROVED_BY' && name) {
+            approvedSelect.innerHTML += `<option value="${name}">${name}</option>`;
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Settings load error:", e);
+    }
   }
 
   function showLoader(show) {
@@ -573,61 +598,55 @@
     }
   }
 
-  function saveCustomer() {
+  async function saveCustomer() {
+    let accNoVal = document.getElementById('accNo').value.trim();
+    let nextSrNo = await getNextSrNo();
+    
     let data = {
-      accountTitle: document.getElementById('accTitle').value.trim(),
-      approvedBy: document.getElementById('approvedBy').value,
-      cro: document.getElementById('cro').value,
-      mobileNo: document.getElementById('mobileNo').value.trim(),
-      sowdowo: document.getElementById('sowdowo').value.trim(),
-      cnicNo: document.getElementById('cnicNo').value.trim(),
+      account_no: accNoVal,
+      sr_no: nextSrNo,
+      account_title: document.getElementById('accTitle').value.trim(),
+      mobile_number: document.getElementById('mobileNo').value.trim(),
       address: document.getElementById('address').value.trim(),
+      approved_by: document.getElementById('approvedBy').value,
+      cro: document.getElementById('cro').value,
       department: document.getElementById('department').value.trim(),
-      salary: document.getElementById('salary').value.trim(),
+      "S/O D/O W/O": document.getElementById('sowdowo').value.trim(),
+      cnic_no: document.getElementById('cnicNo').value.trim(),
+      salary: parseFloat(document.getElementById('salary').value) || 0,
       designation: document.getElementById('designation').value.trim(),
-
-      g1Name: document.getElementById('g1Name').value.trim(),
-      g1Mobile: document.getElementById('g1Mobile').value.trim(),
-      g1Dept: document.getElementById('g1Dept').value.trim(),
-      g1Desig: document.getElementById('g1Desig').value.trim(),
-
-      g2Name: document.getElementById('g2Name').value.trim(),
-      g2Mobile: document.getElementById('g2Mobile').value.trim(),
-      g2Dept: document.getElementById('g2Dept').value.trim(),
-      g2Desig: document.getElementById('g2Desig').value.trim()
+      guarantor_1_name: document.getElementById('g1Name').value.trim(),
+      guarantor_1_mobile: document.getElementById('g1Mobile').value.trim(),
+      guarantor_1_dept: document.getElementById('g1Dept').value.trim(),
+      guarantor_1_designation: document.getElementById('g1Desig').value.trim(),
+      guarantor_2_name: document.getElementById('g2Name').value.trim(),
+      guarantor_2_mobile: document.getElementById('g2Mobile').value.trim(),
+      guarantor_2_dept: document.getElementById('g2Dept').value.trim(),
+      guarantor_2_designation: document.getElementById('g2Desig').value.trim()
     };
 
-    if (!data.accountTitle) {
+    if (!data.account_title) {
       alert("Account Title (Customer Name) is required!");
-      return;
-    }
-
-    if (!SCRIPT_URL) {
-      alert("Pehle Apps Script URL set karein (upar wale box mein).");
       return;
     }
 
     showLoader(true);
 
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveNewCustomer', data: data })
-    })
-      .then(res => res.json())
-      .then(res => {
-        showLoader(false);
-        if (res && res.success) {
-          alert("Customer Saved Successfully!");
-          clearForm();
-          loadNextAccountNo();
-        } else {
-          alert("Error: " + (res ? res.error : "Unknown error"));
-        }
-      })
-      .catch(err => {
-        showLoader(false);
-        alert("Server Error: " + err.message);
-      });
+    try {
+      let { error } = await _supabase.from('customers').insert([data]);
+      showLoader(false);
+
+      if (error) {
+        alert("Error saving: " + error.message);
+      } else {
+        alert("Customer Saved Successfully to Supabase!");
+        clearForm();
+        loadNextAccountNo();
+      }
+    } catch (err) {
+      showLoader(false);
+      alert("Server Error: " + err.message);
+    }
   }
 
   function clearForm() {
@@ -637,136 +656,112 @@
     selects.forEach(select => select.selectedIndex = 0);
   }
 
-    // ===== Deployment URL config =====
-    function showUrlConfig() {
-      var inp = document.getElementById('scriptUrlInput');
-      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
-      var box = document.getElementById('configBox');
-      if (box) box.classList.add('show');
-    }
-    function saveScriptUrl() {
-      var inp = document.getElementById('scriptUrlInput');
-      var val = inp ? inp.value.trim() : '';
-      if (!val) { alert("URL enter karein"); return; }
-      localStorage.setItem('erp_script_url', val);
-      location.reload();
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-      var savedUrl = localStorage.getItem('erp_script_url');
-      if (!savedUrl) {
-        var box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
+  // ================= UNIVERSAL MIC INPUT =================
+  (function() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let activeRec = null, activeBtn = null, activeInput = null;
+
+    function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
+
+    function stopActiveMic() {
+      if (activeRec) {
+        activeRec.onend = null; activeRec.onresult = null;
+        try { activeRec.abort(); } catch (e) {}
+        activeRec = null;
       }
+      if (activeBtn) activeBtn.classList.remove('listening');
+      if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
+      activeBtn = null; activeInput = null;
+    }
+
+    function toggleMic(input, btn) {
+      if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
+      const isNumeric = input.type === 'number';
+
+      if (btn.classList.contains('listening')) { stopActiveMic(); return; }
+      stopActiveMic();
+
+      const rec = new SR();
+      rec.lang = 'en-US';
+      rec.continuous = true;
+      rec.interimResults = true;
+      let finalText = '';
+
+      activeRec = rec; activeBtn = btn; activeInput = input;
+      btn.classList.add('listening');
+      input.dataset.origPh = input.placeholder || '';
+      input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
+
+      rec.onresult = function(ev) {
+        let interim = '';
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const t = ev.results[i][0].transcript;
+          if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+        }
+        let text = (finalText + interim).trim();
+        if (isNumeric) text = cleanNumeric(text);
+        input.value = text;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      rec.onerror = function(ev) {
+        if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
+      };
+      rec.onend = function() {
+        btn.classList.remove('listening');
+        input.placeholder = input.dataset.origPh || '';
+        if (isNumeric) input.value = cleanNumeric(input.value);
+        if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
+      };
+      try { rec.start(); } catch (e) {}
+    }
+
+    function attachMic(input) {
+      if (!input || input.dataset.autoMic) return;
+      if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
+          input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
+      if (input.closest('.input-with-mic')) return;
+      if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
+
+      input.dataset.autoMic = '1';
+
+      const wrap = document.createElement('span');
+      wrap.className = 'auto-mic-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+
+      input.style.paddingRight = '24px';
+      input.style.boxSizing = 'border-box';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'auto-mic-btn';
+      btn.title = 'Voice input';
+      btn.innerHTML = '&#127908;';
+      btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
+      wrap.appendChild(btn);
+    }
+
+    function scanAndAttach(root) {
+      root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      scanAndAttach(document);
     });
 
-    // ================= UNIVERSAL MIC INPUT =================
-    (function() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let activeRec = null, activeBtn = null, activeInput = null;
-
-      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-      function stopActiveMic() {
-        if (activeRec) {
-          activeRec.onend = null; activeRec.onresult = null;
-          try { activeRec.abort(); } catch (e) {}
-          activeRec = null;
-        }
-        if (activeBtn) activeBtn.classList.remove('listening');
-        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-        activeBtn = null; activeInput = null;
-      }
-
-      function toggleMic(input, btn) {
-        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-        const isNumeric = input.type === 'number';
-
-        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-        stopActiveMic();
-
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        let finalText = '';
-
-        activeRec = rec; activeBtn = btn; activeInput = input;
-        btn.classList.add('listening');
-        input.dataset.origPh = input.placeholder || '';
-        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-        rec.onresult = function(ev) {
-          let interim = '';
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+    const mo = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        m.addedNodes.forEach(function(node) {
+          if (node.nodeType !== 1) return;
+          if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
+            attachMic(node);
           }
-          let text = (finalText + interim).trim();
-          if (isNumeric) text = cleanNumeric(text);
-          input.value = text;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        rec.onerror = function(ev) {
-          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-        };
-        rec.onend = function() {
-          btn.classList.remove('listening');
-          input.placeholder = input.dataset.origPh || '';
-          if (isNumeric) input.value = cleanNumeric(input.value);
-          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-        };
-        try { rec.start(); } catch (e) {}
-      }
-
-      function attachMic(input) {
-        if (!input || input.dataset.autoMic) return;
-        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-        if (input.closest('#configBox')) return;
-        if (input.closest('.input-with-mic')) return;
-        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-        input.dataset.autoMic = '1';
-
-        const wrap = document.createElement('span');
-        wrap.className = 'auto-mic-wrap';
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-
-        const curPad = window.getComputedStyle(input).paddingRight;
-        input.style.paddingRight = '24px';
-        input.style.boxSizing = 'border-box';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'auto-mic-btn';
-        btn.title = 'Voice input';
-        btn.innerHTML = '&#127908;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-        wrap.appendChild(btn);
-      }
-
-      function scanAndAttach(root) {
-        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        scanAndAttach(document);
-      });
-
-      const mo = new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType !== 1) return;
-            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-              attachMic(node);
-            }
-            if (node.querySelectorAll) scanAndAttach(node);
-          });
+          if (node.querySelectorAll) scanAndAttach(node);
         });
       });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  })();
 </script>
 
 </body>
