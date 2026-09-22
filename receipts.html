@@ -23,71 +23,71 @@
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 6px;
-      font-size: 13px;
+      padding: 4px;
+      font-size: 12px;
     }
 
     .container {
       background: var(--surface);
-      border-radius: 8px;
-      padding: 10px 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      max-width: 1300px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      max-width: 1350px;
       margin: auto;
       position: relative;
     }
 
     .floating-mobile-toggle {
       position: absolute;
-      top: 8px;
-      right: 10px;
+      top: 6px;
+      right: 8px;
       background: var(--primary);
       color: white;
       border: none;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 12px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       z-index: 100;
     }
 
     body.mobile-mode { padding: 2px !important; }
-    body.mobile-mode .container { max-width: 100% !important; padding: 6px 8px !important; }
+    body.mobile-mode .container { max-width: 100% !important; padding: 4px 6px !important; }
 
     h2 {
       margin-top: 0;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       color: var(--primary);
       text-align: center;
-      font-size: 16px;
+      font-size: 15px;
       border-bottom: 2px solid var(--accent);
-      padding-bottom: 3px;
+      padding-bottom: 2px;
     }
 
     .nav-bar-container {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: 6px;
+      margin-bottom: 8px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
+      padding-bottom: 4px;
     }
 
     .tab {
       flex: 1;
-      padding: 8px;
+      padding: 6px;
       text-align: center;
       cursor: pointer;
       font-weight: bold;
       color: #666;
       background: #e0e0e0;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       transition: 0.3s;
     }
     .tab.active { background: var(--primary); color: #fff; }
@@ -95,30 +95,30 @@
     .form-section { display: none; }
     .form-section.active { display: block; }
 
-    label { display: block; margin-bottom: 2px; font-weight: 600; color: #444; font-size: 11px; }
+    label { display: block; margin-bottom: 1px; font-weight: 600; color: #444; font-size: 10.5px; }
 
     input, select {
       width: 100%;
-      padding: 5px 8px;
+      padding: 4px 6px;
       border: 1px solid var(--border);
-      border-radius: 4px;
+      border-radius: 3px;
       box-sizing: border-box;
-      font-size: 12px;
+      font-size: 11.5px;
     }
     input:focus, select:focus { border-color: var(--primary); outline: none; }
     input.listening-input { border-color: var(--danger) !important; background-color: #ffebee !important; }
     input[readonly] { background-color: #eaeded; color: #555; }
 
-    .input-with-mic { display: flex; gap: 3px; align-items: center; }
+    .input-with-mic { display: flex; gap: 2px; align-items: center; }
     .mic-btn {
       background-color: var(--primary);
       color: white;
       border: none;
-      border-radius: 4px;
-      padding: 0 6px;
+      border-radius: 3px;
+      padding: 0 5px;
       cursor: pointer;
-      height: 28px;
-      font-size: 11px;
+      height: 24px;
+      font-size: 10px;
     }
     .mic-btn.listening { background-color: var(--danger); animation: pulse 1s infinite; }
 
@@ -128,14 +128,14 @@
       100% { transform: scale(1); }
     }
 
-    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row { display: flex; gap: 6px; margin-top: 6px; }
     .action-btn {
-      padding: 6px 10px;
+      padding: 5px 8px;
       border: none;
-      border-radius: 4px;
+      border-radius: 3px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
       color: #fff;
     }
     .btn-primary { background-color: var(--primary); }
@@ -146,10 +146,10 @@
     .table-responsive {
       width: 100%;
       overflow-x: auto;
-      margin-top: 4px;
+      margin-top: 3px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      max-height: 260px;
+      max-height: 420px;
       overflow-y: auto;
     }
 
@@ -161,7 +161,7 @@
     table.edit-table th, table.batch-table th,
     table.edit-table td, table.batch-table td {
       border: 1px solid #ddd;
-      padding: 4px 6px;
+      padding: 3px 5px;
       text-align: center;
       vertical-align: middle;
     }
@@ -170,30 +170,106 @@
       color: var(--primary);
       position: sticky;
       top: 0;
-      z-index: 1;
+      z-index: 2;
+    }
+
+    /* Header Filter & Sort Styling */
+    .th-filter-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 2px;
+    }
+    .th-sort-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: bold;
+      cursor: pointer;
+      text-align: left;
+      flex: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 11px;
+    }
+    .th-filter-toggle {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 1px 3px;
+    }
+    .filter-dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #fff;
+      min-width: 180px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      z-index: 10;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      text-align: left;
+      left: 0;
+      top: 100%;
+    }
+    .filter-dropdown-content.show { display: block; }
+    .filter-search-input {
+      width: 100%;
+      padding: 3px 5px;
+      margin-bottom: 4px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+    .filter-dropdown-list {
+      max-height: 140px;
+      overflow-y: auto;
+      margin-bottom: 4px;
+    }
+    .filter-dropdown-content label {
+      font-weight: normal;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      margin-bottom: 3px;
+      cursor: pointer;
+      color: #333;
+      text-align: left;
+    }
+    .filter-dropdown-content input[type="checkbox"] {
+      width: auto !important;
+      margin: 0 !important;
+      cursor: pointer;
     }
 
     .recent-section {
-      margin-top: 16px;
+      margin-top: 10px;
       border-top: 2px solid var(--border);
-      padding-top: 10px;
+      padding-top: 6px;
     }
-    .recent-section h3 { margin: 0 0 8px 0; font-size: 14px; color: var(--primary); }
+    .recent-section h3 { margin: 0 0 4px 0; font-size: 13px; color: var(--primary); }
     
     .recent-filters-box {
       background: #f1f8e9;
       border: 1px solid #c8e6c9;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
     }
     .filter-row-vertical {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
     }
 
     tr.editing { background-color: #fffde7 !important; }
@@ -203,7 +279,7 @@
       .container { display: none !important; }
       #printArea { display: block !important; padding: 15px; }
       #printArea table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      #printArea th, #printArea td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+      #printArea th, #printArea td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
       #printArea h2 { text-align: center; margin-bottom: 4px; }
     }
   </style>
@@ -225,7 +301,7 @@
   <!-- SECTION 1: NEW RECEIPTS ENTRY -->
   <div id="sectionNew" class="form-section active">
     <div id="batchReceiptsSection">
-      <div style="display: flex; gap: 8px; margin-bottom: 6px;" class="form-group">
+      <div style="display: flex; gap: 6px; margin-bottom: 4px;" class="form-group">
         <div style="flex: 1.2;">
           <label for="batchReceiptDate">Receipt Date</label>
           <input type="date" id="batchReceiptDate">
@@ -244,15 +320,15 @@
           </select>
         </div>
         <div style="flex: 0.8; display: flex; align-items: flex-end;">
-          <button type="button" class="action-btn btn-secondary" style="padding: 5px 8px; font-size: 11px; width: 100%;" onclick="addBatchRow()"><i class="fas fa-plus"></i> Add Row</button>
+          <button type="button" class="action-btn btn-secondary" style="padding: 4px 6px; font-size: 11px; width: 100%;" onclick="addBatchRow()"><i class="fas fa-plus"></i> Add Row</button>
         </div>
       </div>
 
-      <div style="text-align: left; font-weight: bold; font-size: 12px; color: var(--primary); margin-bottom: 2px;">
+      <div style="text-align: left; font-weight: bold; font-size: 11.5px; color: var(--primary); margin-bottom: 2px;">
         Qty: <span id="totalReceiptsQty">0</span> &nbsp;|&nbsp; Amount: <span id="totalReceiptsAmount">0</span>
       </div>
 
-      <div class="table-responsive" id="batchTableWrapper">
+      <div class="table-responsive" id="batchTableWrapper" style="max-height: 180px;">
         <table class="batch-table" id="batchTable">
           <thead>
             <tr>
@@ -271,7 +347,7 @@
         </table>
       </div>
 
-      <div style="margin-top: 8px;">
+      <div style="margin-top: 6px;">
         <label for="batchRemarks">Remarks (Common for all entries)</label>
         <div class="input-with-mic">
           <input type="text" id="batchRemarks" placeholder="Enter remarks (optional)..." onkeydown="handleRemarksKey(event)" inputmode="text">
@@ -279,7 +355,7 @@
         </div>
       </div>
 
-      <div class="btn-row" style="margin-top: 6px;">
+      <div class="btn-row" style="margin-top: 4px;">
         <button id="saveBatchBtn" class="action-btn btn-primary" style="flex:1;" onclick="submitBatchReceipts()">Save All Receipts to Supabase</button>
         <button class="action-btn btn-secondary" style="flex:1;" onclick="clearBatchForm()">Reset</button>
       </div>
@@ -291,14 +367,14 @@
       
       <!-- Vertical Compact Filters -->
       <div class="recent-filters-box">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px;">
           <div class="filter-row-vertical">
             <label>FROM DATE</label>
-            <input type="date" id="filterFromDate" oninput="renderRecentReceipts()">
+            <input type="date" id="filterFromDate" oninput="onDateFilterChange()">
           </div>
           <div class="filter-row-vertical">
             <label>TO DATE</label>
-            <input type="date" id="filterToDate" oninput="renderRecentReceipts()">
+            <input type="date" id="filterToDate" oninput="onDateFilterChange()">
           </div>
           <div class="filter-row-vertical">
             <label>SEARCH ACCOUNT NO</label>
@@ -313,21 +389,21 @@
             <input type="text" id="filterReceiptNo" placeholder="Voucher No..." oninput="renderRecentReceipts()">
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 2px;">
-          <label style="display:flex; align-items:center; gap:5px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterDaybook" checked onchange="renderRecentReceipts()" style="width:auto; margin:0;"> Daybook</label>
-          <label style="display:flex; align-items:center; gap:5px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterBank" checked onchange="renderRecentReceipts()" style="width:auto; margin:0;"> Bank</label>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px;">
+          <label style="display:flex; align-items:center; gap:4px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterDaybook" checked onchange="onDateFilterChange()" style="width:auto; margin:0;"> Daybook</label>
+          <label style="display:flex; align-items:center; gap:4px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterBank" onchange="onDateFilterChange()" style="width:auto; margin:0;"> Bank</label>
         </div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <div style="font-weight: bold; font-size: 12px; color: var(--primary);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <div style="font-weight: bold; font-size: 11.5px; color: var(--primary);">
           Qty: <span id="recentTotalsQty">0</span> &nbsp;|&nbsp; Amount: <span id="recentTotalsAmount">0</span>
         </div>
         <div>
-          <button class="action-btn btn-secondary" style="height: 28px; font-size:11px;" onclick="resetRecentFilter()">Reset Filter</button>
-          <button class="action-btn btn-primary" style="height: 28px; font-size:11px;" onclick="loadRecentReceipts()"><i class="fas fa-sync-alt"></i> Refresh</button>
-          <button class="action-btn btn-danger" style="height: 28px; font-size:11px;" onclick="deleteSelectedRecentReceipts()"><i class="fas fa-trash"></i> Delete</button>
-          <button class="action-btn btn-secondary" style="height: 28px; font-size:11px; background:#37474f;" onclick="printRecentReceipts()"><i class="fas fa-print"></i> Print</button>
+          <button class="action-btn btn-secondary" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="resetRecentFilter()">Reset Filter</button>
+          <button class="action-btn btn-primary" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="loadRecentReceipts()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button class="action-btn btn-danger" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="deleteSelectedRecentReceipts()"><i class="fas fa-trash"></i> Delete</button>
+          <button class="action-btn btn-secondary" style="height: 24px; font-size:10.5px; padding:2px 6px; background:#37474f;" onclick="printRecentReceipts()"><i class="fas fa-print"></i> Print</button>
         </div>
       </div>
 
@@ -335,14 +411,97 @@
         <table class="edit-table" id="recentReceiptsTable">
           <thead>
             <tr>
-              <th style="width:30px;"><input type="checkbox" id="selectAllRecent" onclick="toggleSelectAllRecent(this)"></th>
-              <th>Date</th>
-              <th>Voucher No</th>
-              <th>Acc No</th>
-              <th style="text-align:left;">Customer Title</th>
-              <th>Account Head</th>
-              <th>Pay Mode</th>
-              <th style="text-align:right;">Amount</th>
+              <th style="width:25px;"><input type="checkbox" id="selectAllRecent" onclick="toggleSelectAllRecent(this)"></th>
+              
+              <!-- Date Header -->
+              <th>
+                <button type="button" class="th-sort-btn" onclick="sortTableData('date')">Date <i class="fas fa-sort-down" id="sortIcon_date"></i></button>
+              </th>
+
+              <!-- Voucher No Header -->
+              <th>
+                <div class="th-filter-wrapper">
+                  <button type="button" class="th-sort-btn" onclick="sortTableData('voucher_no')">Voucher No <i class="fas fa-sort" id="sortIcon_voucher_no"></i></button>
+                  <button type="button" class="th-filter-toggle" id="filterBtn_voucher" onclick="toggleHeaderDropdown(event, 'voucherDropdown')"><i class="fas fa-filter"></i></button>
+                  <div id="voucherDropdown" class="filter-dropdown-content">
+                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('voucher', this.value)">
+                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllVoucher" onchange="toggleSelectAllColumn('voucher', this)"> Select All</label>
+                    </div>
+                    <div class="filter-dropdown-list" id="voucherCheckboxesContainer"></div>
+                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('voucher')">Apply</button>
+                  </div>
+                </div>
+              </th>
+
+              <!-- Acc No Header -->
+              <th>
+                <div class="th-filter-wrapper">
+                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_no')">Acc No <i class="fas fa-sort" id="sortIcon_account_no"></i></button>
+                  <button type="button" class="th-filter-toggle" id="filterBtn_acc" onclick="toggleHeaderDropdown(event, 'accDropdown')"><i class="fas fa-filter"></i></button>
+                  <div id="accDropdown" class="filter-dropdown-content">
+                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('acc', this.value)">
+                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllAcc" onchange="toggleSelectAllColumn('acc', this)"> Select All</label>
+                    </div>
+                    <div class="filter-dropdown-list" id="accCheckboxesContainer"></div>
+                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('acc')">Apply</button>
+                  </div>
+                </div>
+              </th>
+
+              <!-- Customer Title Header -->
+              <th style="text-align:left;">
+                <div class="th-filter-wrapper">
+                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_title')">Customer Title <i class="fas fa-sort" id="sortIcon_account_title"></i></button>
+                  <button type="button" class="th-filter-toggle" id="filterBtn_title" onclick="toggleHeaderDropdown(event, 'titleDropdown')"><i class="fas fa-filter"></i></button>
+                  <div id="titleDropdown" class="filter-dropdown-content">
+                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('title', this.value)">
+                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllTitle" onchange="toggleSelectAllColumn('title', this)"> Select All</label>
+                    </div>
+                    <div class="filter-dropdown-list" id="titleCheckboxesContainer"></div>
+                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('title')">Apply</button>
+                  </div>
+                </div>
+              </th>
+
+              <!-- Account Head Header -->
+              <th>
+                <div class="th-filter-wrapper">
+                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_head')">Account Head <i class="fas fa-sort" id="sortIcon_account_head"></i></button>
+                  <button type="button" class="th-filter-toggle" id="filterBtn_head" onclick="toggleHeaderDropdown(event, 'headDropdown')"><i class="fas fa-filter"></i></button>
+                  <div id="headDropdown" class="filter-dropdown-content">
+                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('head', this.value)">
+                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllHead" onchange="toggleSelectAllColumn('head', this)"> Select All</label>
+                    </div>
+                    <div class="filter-dropdown-list" id="headCheckboxesContainer"></div>
+                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('head')">Apply</button>
+                  </div>
+                </div>
+              </th>
+
+              <!-- Pay Mode Header -->
+              <th>
+                <div class="th-filter-wrapper">
+                  <button type="button" class="th-sort-btn" onclick="sortTableData('pay_mode')">Pay Mode <i class="fas fa-sort" id="sortIcon_pay_mode"></i></button>
+                  <button type="button" class="th-filter-toggle" id="filterBtn_mode" onclick="toggleHeaderDropdown(event, 'modeDropdown')"><i class="fas fa-filter"></i></button>
+                  <div id="modeDropdown" class="filter-dropdown-content">
+                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('mode', this.value)">
+                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllMode" onchange="toggleSelectAllColumn('mode', this)"> Select All</label>
+                    </div>
+                    <div class="filter-dropdown-list" id="modeCheckboxesContainer"></div>
+                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('mode')">Apply</button>
+                  </div>
+                </div>
+              </th>
+
+              <!-- Amount Header -->
+              <th style="text-align:right;">
+                <button type="button" class="th-sort-btn" style="justify-content: flex-end;" onclick="sortTableData('amount')">Amount <i class="fas fa-sort" id="sortIcon_amount"></i></button>
+              </th>
             </tr>
           </thead>
           <tbody id="recentReceiptsBody">
@@ -355,46 +514,49 @@
 
   <!-- SECTION 2: EDIT & SEARCH RECEIPTS TAB -->
   <div id="sectionEdit" class="form-section">
-    <div class="search-box-card" style="background:#fff; border:1px solid var(--border); padding:10px; border-radius:6px; margin-bottom:10px;">
-      <h3 style="margin-top:0; color:var(--primary); font-size:13px;"><i class="fas fa-search"></i> Search Receipts for Edit / Bulk Delete</h3>
-      <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-        <div style="flex:1; min-width:180px;">
+    <div class="search-box-card" style="background:#fff; border:1px solid var(--border); padding:8px; border-radius:4px; margin-bottom:8px;">
+      <h3 style="margin-top:0; color:var(--primary); font-size:12px;"><i class="fas fa-search"></i> Search Receipts for Edit / Bulk Delete</h3>
+      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+        <div style="flex:1; min-width:160px;">
           <label>Search by Receipt Number</label>
-          <input type="text" id="editSearchReceiptNo" placeholder="Enter Receipt No..." onkeydown="if(event.key==='Enter') searchReceiptsForEditTab()" inputmode="numeric">
+          <input type="text" id="editSearchReceiptNo" placeholder="Enter Receipt No..." oninput="filterEditTabTable()" inputmode="numeric">
         </div>
-        <div style="flex:1; min-width:180px;">
+        <div style="flex:1; min-width:160px;">
           <label>Search by Account Number</label>
-          <input type="text" id="editSearchAccountNo" placeholder="Enter Account No (786...)" onkeydown="if(event.key==='Enter') searchReceiptsForEditTab()" inputmode="numeric">
+          <input type="text" id="editSearchAccountNo" placeholder="Enter Account No (786...)" oninput="filterEditTabTable()" inputmode="numeric">
         </div>
-        <div style="display:flex; gap:5px;">
-          <button class="action-btn btn-primary" style="height:30px;" onclick="searchReceiptsForEditTab()"><i class="fas fa-search"></i> Search</button>
-          <button class="action-btn btn-secondary" style="height:30px;" onclick="resetEditTabSearch()"><i class="fas fa-undo"></i> Reset</button>
-          <button class="action-btn btn-danger" style="height:30px;" onclick="bulkDeleteSelectedReceipts()"><i class="fas fa-trash"></i> Delete Selected</button>
+        <div style="flex:1; min-width:160px;">
+          <label>Search by Customer Name</label>
+          <input type="text" id="editSearchName" placeholder="Enter Name..." oninput="filterEditTabTable()">
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button class="action-btn btn-secondary" style="height:28px;" onclick="resetEditTabSearch()"><i class="fas fa-undo"></i> Reset</button>
+          <button class="action-btn btn-danger" style="height:28px;" onclick="bulkDeleteSelectedReceipts()"><i class="fas fa-trash"></i> Delete Selected</button>
         </div>
       </div>
     </div>
 
-    <div style="text-align: left; font-weight: bold; font-size: 12px; color: var(--primary); margin-bottom: 2px;">
+    <div style="text-align: left; font-weight: bold; font-size: 11.5px; color: var(--primary); margin-bottom: 2px;">
       Found Items: <span id="editTabTotalsQty">0</span> &nbsp;|&nbsp; Total Amount: <span id="editTabTotalsAmount">0</span>
     </div>
 
-    <div class="table-responsive" style="max-height: 400px;">
+    <div class="table-responsive" style="max-height: 380px;">
       <table class="edit-table" id="editTabTable">
         <thead>
           <tr>
-            <th style="width:30px;"><input type="checkbox" id="selectAllEditTab" onclick="toggleSelectAllEditTab(this)"></th>
+            <th style="width:25px;"><input type="checkbox" id="selectAllEditTab" onclick="toggleSelectAllEditTab(this)"></th>
             <th>Date</th>
             <th>Receipt No</th>
             <th>Acc No</th>
-            <th>Customer Name</th>
+            <th style="text-align:left;">Customer Name</th>
             <th>Account Head</th>
             <th>Pay Mode</th>
-            <th>Amount</th>
-            <th style="width:110px;">Actions</th>
+            <th style="text-align:right;">Amount</th>
+            <th style="width:100px;">Actions</th>
           </tr>
         </thead>
         <tbody id="editTabBody">
-          <tr><td colspan="9" style="text-align:center;">Enter search terms above and click Search.</td></tr>
+          <tr><td colspan="9" style="text-align:center;">Fetching all receipts from Supabase...</td></tr>
         </tbody>
       </table>
     </div>
@@ -417,13 +579,74 @@
   let customerCache = {}; 
   let recentReceiptsData = [];
   let editTabResultsData = [];
+  
+  let activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+  let tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+  
+  let isInitialLoad = true;
+  let currentSortColumn = 'date';
+  let currentSortAsc = false;
 
   window.onload = function() {
     document.getElementById('batchReceiptDate').value = new Date().toISOString().split('T')[0];
+
     addBatchRow();
     loadCustomersCache();
     loadRecentReceipts();
+    loadAllReceiptsForEditTab();
+
+    window.onclick = function(event) {
+      if (!event.target.closest('.th-filter-wrapper')) {
+        document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
+      }
+    };
   };
+
+  function toggleHeaderDropdown(event, dropdownId) {
+    event.stopPropagation();
+    document.querySelectorAll('.filter-dropdown-content').forEach(d => {
+      if (d.id !== dropdownId) d.classList.remove('show');
+    });
+    document.getElementById(dropdownId).classList.toggle('show');
+  }
+
+  function sortTableData(column) {
+    if (currentSortColumn === column) {
+      currentSortAsc = !currentSortAsc;
+    } else {
+      currentSortColumn = column;
+      currentSortAsc = true;
+    }
+
+    document.querySelectorAll('.th-sort-btn i').forEach(i => i.className = "fas fa-sort");
+    let icon = document.getElementById('sortIcon_' + column);
+    if (icon) {
+      icon.className = currentSortAsc ? "fas fa-sort-up" : "fas fa-sort-down";
+    }
+
+    executeSorting();
+    renderRecentReceiptsTableOnly();
+  }
+
+  function executeSorting() {
+    if (!currentSortColumn) return;
+    recentReceiptsData.sort((a, b) => {
+      let valA = a[currentSortColumn] !== undefined && a[currentSortColumn] !== null ? a[currentSortColumn] : '';
+      let valB = b[currentSortColumn] !== undefined && b[currentSortColumn] !== null ? b[currentSortColumn] : '';
+
+      if (currentSortColumn === 'amount') {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+
+      if (valA < valB) return currentSortAsc ? -1 : 1;
+      if (valA > valB) return currentSortAsc ? 1 : -1;
+      return 0;
+    });
+  }
 
   function switchTab(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -435,26 +658,51 @@
     } else {
       document.querySelectorAll('.tab')[1].classList.add('active');
       document.getElementById('sectionEdit').classList.add('active');
+      loadAllReceiptsForEditTab();
     }
   }
 
-  // Load Customer Cache with complete ledger details (Total Sale, Paid Amount, Balance, Installment)
   async function loadCustomersCache() {
     try {
-      let { data, error } = await _supabase.from('receipts').select('account_no, account_title, amount');
-      if (!error && data) {
-        let tempMap = {};
-        data.forEach(row => {
+      let tempMap = {};
+
+      let { data: salesData } = await _supabase.from('sales').select('account_no, account_title, total_amt, installment_per_month');
+      if (salesData) {
+        salesData.forEach(row => {
+          let acc = String(row.account_no || '').trim();
+          if (acc) {
+            if (!tempMap[acc]) {
+              tempMap[acc] = { accountNo: acc, accountTitle: row.account_title || 'Customer', totalSale: 0, paidAmount: 0, balance: 0, installment: 0 };
+            }
+            tempMap[acc].totalSale += Number(row.total_amt) || 0;
+            tempMap[acc].installment += Number(row.installment_per_month) || 0;
+            if (row.account_title) tempMap[acc].accountTitle = row.account_title;
+          }
+        });
+      }
+
+      let { data: receiptsData } = await _supabase.from('receipts').select('account_no, account_title, amount');
+      if (receiptsData) {
+        receiptsData.forEach(row => {
           let acc = String(row.account_no || '').trim();
           if (acc) {
             if (!tempMap[acc]) {
               tempMap[acc] = { accountNo: acc, accountTitle: row.account_title || 'Customer', totalSale: 0, paidAmount: 0, balance: 0, installment: 0 };
             }
             tempMap[acc].paidAmount += Number(row.amount) || 0;
+            if (!tempMap[acc].accountTitle || tempMap[acc].accountTitle === 'Customer') {
+              tempMap[acc].accountTitle = row.account_title || 'Customer';
+            }
           }
         });
-        customerCache = tempMap;
       }
+
+      Object.keys(tempMap).forEach(acc => {
+        let cust = tempMap[acc];
+        cust.balance = cust.totalSale - cust.paidAmount;
+      });
+
+      customerCache = tempMap;
     } catch (e) {
       console.error("Cache load error:", e);
     }
@@ -578,11 +826,37 @@
       if (customerCache[accNo]) {
         populateBatchRowDetails(row, customerCache[accNo]);
       } else {
-        let { data } = await _supabase.from('receipts').select('account_title, amount').eq('account_no', accNo);
-        if (data && data.length > 0) {
-          let title = data[0].account_title || 'Customer';
-          let paid = data.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-          let custObj = { accountTitle: title, paidAmount: paid, totalSale: 0, balance: 0, installment: 0 };
+        let { data: salesData } = await _supabase.from('sales').select('account_title, total_amt, installment_per_month').eq('account_no', accNo);
+        let { data: receiptsData } = await _supabase.from('receipts').select('account_title, amount').eq('account_no', accNo);
+
+        if ((salesData && salesData.length > 0) || (receiptsData && receiptsData.length > 0)) {
+          let title = 'Customer';
+          let totalSale = 0;
+          let inst = 0;
+          let paid = 0;
+
+          if (salesData && salesData.length > 0) {
+            title = salesData[0].account_title || 'Customer';
+            salesData.forEach(s => {
+              totalSale += Number(s.total_amt) || 0;
+              inst += Number(s.installment_per_month) || 0;
+            });
+          }
+
+          if (receiptsData && receiptsData.length > 0) {
+            if (title === 'Customer') title = receiptsData[0].account_title || 'Customer';
+            receiptsData.forEach(r => {
+              paid += Number(r.amount) || 0;
+            });
+          }
+
+          let custObj = {
+            accountTitle: title,
+            totalSale: totalSale,
+            paidAmount: paid,
+            balance: totalSale - paid,
+            installment: inst
+          };
           customerCache[accNo] = custObj;
           populateBatchRowDetails(row, custObj);
         }
@@ -601,10 +875,10 @@
 
   function populateBatchRowDetails(row, data) {
     row.querySelector('.batch-title').value = data.accountTitle || "";
-    row.querySelector('.batch-inst').value = data.installment ?? "0";
-    row.querySelector('.batch-total-sale').value = data.totalSale ?? "0";
-    row.querySelector('.batch-paid-amt').value = data.paidAmount ?? "0";
-    row.querySelector('.batch-bal').value = data.balance ?? "0";
+    row.querySelector('.batch-inst').value = (data.installment !== undefined ? data.installment : 0).toLocaleString();
+    row.querySelector('.batch-total-sale').value = (data.totalSale !== undefined ? data.totalSale : 0).toLocaleString();
+    row.querySelector('.batch-paid-amt').value = (data.paidAmount !== undefined ? data.paidAmount : 0).toLocaleString();
+    row.querySelector('.batch-bal').value = (data.balance !== undefined ? data.balance : 0).toLocaleString();
   }
 
   function removeBatchRow(btn) {
@@ -642,13 +916,13 @@
     });
   }
 
-  // Submit with Duplicate Receipt No Check against Database
   async function submitBatchReceipts() {
     let commonDate = document.getElementById('batchReceiptDate').value;
     let commonSuffix = document.getElementById('batchReceiptSuffix').value;
     let commonRemarks = document.getElementById('batchRemarks').value.trim();
     let recordsToInsert = [];
     let enteredVoucherNos = [];
+    let specialKeywords = ["processing fee", "advance", "1st installment"];
 
     document.querySelectorAll('#batchTableBody tr').forEach(row => {
       let accNo = row.querySelector('.batch-acc').value.trim();
@@ -656,7 +930,9 @@
       let amt = Number(row.querySelector('.batch-amt').value) || 0;
       let title = row.querySelector('.batch-title').value.trim();
       if (accNo && rctNo && amt > 0) {
-        enteredVoucherNos.push(rctNo);
+        if (!specialKeywords.includes(rctNo.toLowerCase())) {
+          enteredVoucherNos.push(rctNo);
+        }
         recordsToInsert.push({
           voucher_no: rctNo,
           date: commonDate,
@@ -675,16 +951,17 @@
       return;
     }
 
-    // Check duplicate voucher numbers in existing database records
-    let { data: existingData, error: checkError } = await _supabase
-      .from('receipts')
-      .select('voucher_no')
-      .in('voucher_no', enteredVoucherNos);
+    if (enteredVoucherNos.length > 0) {
+      let { data: existingData, error: checkError } = await _supabase
+        .from('receipts')
+        .select('voucher_no')
+        .in('voucher_no', enteredVoucherNos);
 
-    if (!checkError && existingData && existingData.length > 0) {
-      let duplicates = [...new Set(existingData.map(d => d.voucher_no))];
-      alert(`Duplicate Error! Ye Receipt Number(s) pehle se saved hain: ${duplicates.join(', ')}. Dobara enter nahi ho sakte.`);
-      return;
+      if (!checkError && existingData && existingData.length > 0) {
+        let duplicates = [...new Set(existingData.map(d => d.voucher_no))];
+        alert(`Duplicate Error! Ye Receipt Number(s) pehle se saved hain: ${duplicates.join(', ')}. Dobara enter nahi ho sakte.`);
+        return;
+      }
     }
 
     let saveBtn = document.getElementById('saveBatchBtn');
@@ -701,6 +978,8 @@
       alert("All Receipts Saved Successfully to Supabase!");
       clearBatchForm();
       loadRecentReceipts();
+      loadAllReceiptsForEditTab();
+      loadCustomersCache();
     }
   }
 
@@ -718,25 +997,224 @@
     const tbody = document.getElementById('recentReceiptsBody');
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Fetching receipts from Supabase...</td></tr>';
 
-    let { data, error } = await _supabase
-      .from('receipts')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(1000);
+    let allData = [];
+    let page = 0;
+    let pageSize = 1000;
+    let fetchMore = true;
 
-    if (error) {
-      console.error("Fetch error:", error.message);
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
-      return;
+    while (fetchMore) {
+      let { data, error } = await _supabase
+        .from('receipts')
+        .select('*')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        console.error("Fetch error:", error.message);
+        break;
+      }
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < pageSize) fetchMore = false;
+        else page++;
+      } else {
+        fetchMore = false;
+      }
     }
 
-    recentReceiptsData = data || [];
+    recentReceiptsData = allData;
+    
+    currentSortColumn = 'date';
+    currentSortAsc = false;
+    let icon = document.getElementById('sortIcon_date');
+    if (icon) icon.className = "fas fa-sort-down";
+    executeSorting();
+
+    isInitialLoad = true;
+    renderRecentReceipts();
+  }
+
+  function onDateFilterChange() {
+    activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+    tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+    isInitialLoad = true;
+    
+    ['voucher', 'acc', 'title', 'head', 'mode'].forEach(colKey => {
+      let btn = document.getElementById('filterBtn_' + colKey);
+      if (btn) {
+        btn.style.fontWeight = 'normal';
+        btn.style.color = 'var(--primary)';
+      }
+    });
+
+    renderRecentReceipts();
+  }
+
+  function updateHeaderFiltersDynamic() {
+    const fromVal = document.getElementById('filterFromDate').value.trim();
+    const toVal = document.getElementById('filterToDate').value.trim();
+    const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
+    const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
+    const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
+    const daybookChecked = document.getElementById('filterDaybook').checked;
+    const bankChecked = document.getElementById('filterBank').checked;
+
+    let baseFiltered = recentReceiptsData.filter(r => {
+      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
+      if (fromVal && toVal) {
+        if (rDate < fromVal || rDate > toVal) return false;
+      } else if (fromVal) {
+        if (rDate !== fromVal) return false;
+      } else if (toVal) {
+        if (rDate > toVal) return false;
+      }
+
+      let accNo = String(r.account_no || '').toLowerCase();
+      if (accQuery && !accNo.includes(accQuery)) return false;
+      let accTitle = String(r.account_title || '').toLowerCase();
+      if (nameQuery && !accTitle.includes(nameQuery)) return false;
+      let voucherNo = String(r.voucher_no || '').toLowerCase();
+      if (rctQuery && !voucherNo.includes(rctQuery)) return false;
+
+      let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
+      let isBank = /bank|online|cheque|allied/i.test(mode);
+      if (daybookChecked && bankChecked) {}
+      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
+      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
+      else { return false; }
+      return true;
+    });
+
+    updateSingleHeaderFilter('voucherCheckboxesContainer', baseFiltered.map(r => r.voucher_no || ''), 'voucher', activeColumnFilters.voucher, tempColumnFilters.voucher);
+    updateSingleHeaderFilter('accCheckboxesContainer', baseFiltered.map(r => r.account_no || ''), 'acc', activeColumnFilters.acc, tempColumnFilters.acc);
+    updateSingleHeaderFilter('titleCheckboxesContainer', baseFiltered.map(r => r.account_title || ''), 'title', activeColumnFilters.title, tempColumnFilters.title);
+    updateSingleHeaderFilter('headCheckboxesContainer', baseFiltered.map(r => r.account_head || ''), 'head', activeColumnFilters.head, tempColumnFilters.head);
+    updateSingleHeaderFilter('modeCheckboxesContainer', baseFiltered.map(r => r.pay_mode || ''), 'mode', activeColumnFilters.mode, tempColumnFilters.mode);
+
+    if (isInitialLoad) {
+      let selectAllVoucher = document.getElementById('selectAllVoucher');
+      let selectAllAcc = document.getElementById('selectAllAcc');
+      let selectAllTitle = document.getElementById('selectAllTitle');
+      let selectAllHead = document.getElementById('selectAllHead');
+      let selectAllMode = document.getElementById('selectAllMode');
+
+      if (selectAllVoucher) selectAllVoucher.checked = true;
+      if (selectAllAcc) selectAllAcc.checked = true;
+      if (selectAllTitle) selectAllTitle.checked = true;
+      if (selectAllHead) selectAllHead.checked = true;
+      if (selectAllMode) selectAllMode.checked = true;
+
+      isInitialLoad = false;
+    }
+  }
+
+  function updateSingleHeaderFilter(containerId, itemsArray, colKey, activeSet, tempSet) {
+    let container = document.getElementById(containerId);
+    if (!container) return;
+    let uniqueItems = [...new Set(itemsArray)].sort();
+    
+    if (activeSet.size === 0 && isInitialLoad) {
+      uniqueItems.forEach(item => {
+        activeSet.add(String(item));
+        tempSet.add(String(item));
+      });
+    }
+
+    renderCheckboxList(containerId, uniqueItems, colKey, tempSet, "");
+  }
+
+  function renderCheckboxList(containerId, items, colKey, tempSet, filterText) {
+    let container = document.getElementById(containerId);
+    if (!container) return;
+    let html = '';
+    items.forEach(item => {
+      let strItem = String(item);
+      if (filterText && !strItem.toLowerCase().includes(filterText.toLowerCase())) return;
+      let isChecked = tempSet.has(strItem) ? 'checked' : '';
+      html += `
+        <label><input type="checkbox" value="${strItem}" ${isChecked} onchange="onTempColumnFilterChange('${colKey}', '${strItem}', this.checked)"> <span>${strItem || '(Blank)'}</span></label>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  function filterDropdownOptions(colKey, query) {
+    const fromVal = document.getElementById('filterFromDate').value.trim();
+    const toVal = document.getElementById('filterToDate').value.trim();
+    const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
+    const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
+    const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
+    const daybookChecked = document.getElementById('filterDaybook').checked;
+    const bankChecked = document.getElementById('filterBank').checked;
+
+    let baseFiltered = recentReceiptsData.filter(r => {
+      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
+      if (fromVal && toVal) {
+        if (rDate < fromVal || rDate > toVal) return false;
+      } else if (fromVal) {
+        if (rDate !== fromVal) return false;
+      } else if (toVal) {
+        if (rDate > toVal) return false;
+      }
+
+      let accNo = String(r.account_no || '').toLowerCase();
+      if (accQuery && !accNo.includes(accQuery)) return false;
+      let accTitle = String(r.account_title || '').toLowerCase();
+      if (nameQuery && !accTitle.includes(nameQuery)) return false;
+      let voucherNo = String(r.voucher_no || '').toLowerCase();
+      if (rctQuery && !voucherNo.includes(rctQuery)) return false;
+
+      let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
+      let isBank = /bank|online|cheque|allied/i.test(mode);
+      if (daybookChecked && bankChecked) {}
+      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
+      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
+      else { return false; }
+      return true;
+    });
+
+    let mapKey = { voucher: 'voucher_no', acc: 'account_no', title: 'account_title', head: 'account_head', mode: 'pay_mode' }[colKey];
+    let uniqueItems = [...new Set(baseFiltered.map(r => r[mapKey] || ''))].sort();
+    renderCheckboxList(colKey + 'CheckboxesContainer', uniqueItems, colKey, tempColumnFilters[colKey], query);
+  }
+
+  function onTempColumnFilterChange(colKey, val, isChecked) {
+    if (isChecked) {
+      tempColumnFilters[colKey].add(String(val));
+    } else {
+      tempColumnFilters[colKey].delete(String(val));
+    }
+  }
+
+  function toggleSelectAllColumn(colKey, master) {
+    let containerId = colKey + 'CheckboxesContainer';
+    let checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
+    checkboxes.forEach(chk => {
+      chk.checked = master.checked;
+      let val = chk.value;
+      if (master.checked) {
+        tempColumnFilters[colKey].add(String(val));
+      } else {
+        tempColumnFilters[colKey].delete(String(val));
+      }
+    });
+  }
+
+  function applyColumnFilter(colKey) {
+    activeColumnFilters[colKey] = new Set(tempColumnFilters[colKey]);
+    document.getElementById(colKey + 'Dropdown').classList.remove('show');
+    
+    let btn = document.getElementById('filterBtn_' + colKey);
+    if (btn) {
+      btn.style.fontWeight = 'bold';
+      btn.style.color = '#c62828';
+    }
+
     renderRecentReceipts();
   }
 
   function getFilteredRecentReceipts() {
-    const fromVal = document.getElementById('filterFromDate').value;
-    const toVal = document.getElementById('filterToDate').value;
+    const fromVal = document.getElementById('filterFromDate').value.trim();
+    const toVal = document.getElementById('filterToDate').value.trim();
     const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
     const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
     const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
@@ -744,9 +1222,15 @@
     const bankChecked = document.getElementById('filterBank').checked;
 
     return recentReceiptsData.filter(r => {
-      let rDate = r.date ? String(r.date).trim() : '';
-      if (fromVal && rDate < fromVal) return false;
-      if (toVal && rDate > toVal) return false;
+      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
+      
+      if (fromVal && toVal) {
+        if (rDate < fromVal || rDate > toVal) return false;
+      } else if (fromVal) {
+        if (rDate !== fromVal) return false;
+      } else if (toVal) {
+        if (rDate > toVal) return false;
+      }
 
       let accNo = String(r.account_no || '').toLowerCase();
       if (accQuery && !accNo.includes(accQuery)) return false;
@@ -760,21 +1244,27 @@
       let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
       let isBank = /bank|online|cheque|allied/i.test(mode);
 
-      if (daybookChecked && bankChecked) {
-        // Show all
-      } else if (daybookChecked && !bankChecked) {
-        if (isBank) return false;
-      } else if (!daybookChecked && bankChecked) {
-        if (!isBank) return false;
-      } else {
-        return false;
-      }
+      if (daybookChecked && bankChecked) {}
+      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
+      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
+      else { return false; }
+
+      if (activeColumnFilters.voucher.size > 0 && !activeColumnFilters.voucher.has(String(r.voucher_no || ''))) return false;
+      if (activeColumnFilters.acc.size > 0 && !activeColumnFilters.acc.has(String(r.account_no || ''))) return false;
+      if (activeColumnFilters.title.size > 0 && !activeColumnFilters.title.has(String(r.account_title || ''))) return false;
+      if (activeColumnFilters.head.size > 0 && !activeColumnFilters.head.has(String(r.account_head || ''))) return false;
+      if (activeColumnFilters.mode.size > 0 && !activeColumnFilters.mode.has(String(r.pay_mode || ''))) return false;
 
       return true;
     });
   }
 
   function renderRecentReceipts() {
+    updateHeaderFiltersDynamic();
+    renderRecentReceiptsTableOnly();
+  }
+
+  function renderRecentReceiptsTableOnly() {
     const tbody = document.getElementById('recentReceiptsBody');
     const filtered = getFilteredRecentReceipts();
 
@@ -794,15 +1284,16 @@
 
     let html = '';
     filtered.forEach(row => {
+      let displayDate = row.date ? String(row.date).trim().substring(0, 10) : '';
       html += `
         <tr>
           <td><input type="checkbox" class="recent-row-chk" value="${row.id}"></td>
-          <td>${row.date || ''}</td>
+          <td>${displayDate}</td>
           <td><b>${row.voucher_no || ''}</b></td>
           <td>${row.account_no || ''}</td>
           <td style="text-align:left;">${row.account_title || ''}</td>
           <td>${row.account_head || 'Recovery'}</td>
-          <td><span style="background:#e8f5e9; color:#1b5e20; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:10.5px;">${row.pay_mode || ''}</span></td>
+          <td><span style="background:#e8f5e9; color:#1b5e20; padding:2px 5px; border-radius:3px; font-weight:bold; font-size:10px;">${row.pay_mode || ''}</span></td>
           <td style="text-align:right; font-weight:bold; color:var(--primary);">${(Number(row.amount) || 0).toLocaleString()}</td>
         </tr>
       `;
@@ -829,6 +1320,8 @@
     } else {
       alert("Selected receipts delete ho gayi hain.");
       loadRecentReceipts();
+      loadAllReceiptsForEditTab();
+      loadCustomersCache();
     }
   }
 
@@ -839,8 +1332,20 @@
     document.getElementById('filterAccName').value = '';
     document.getElementById('filterReceiptNo').value = '';
     document.getElementById('filterDaybook').checked = true;
-    document.getElementById('filterBank').checked = true;
-    renderRecentReceipts();
+    document.getElementById('filterBank').checked = false;
+    isInitialLoad = true;
+    activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+    tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
+    
+    ['voucher', 'acc', 'title', 'head', 'mode'].forEach(colKey => {
+      let btn = document.getElementById('filterBtn_' + colKey);
+      if (btn) {
+        btn.style.fontWeight = 'normal';
+        btn.style.color = 'var(--primary)';
+      }
+    });
+
+    loadRecentReceipts();
   }
 
   function printRecentReceipts() {
@@ -852,9 +1357,10 @@
     filtered.forEach(r => {
       total += Number(r.amount) || 0;
       if (r.voucher_no) uniquePrintReceipts.add(String(r.voucher_no).trim());
+      let dStr = r.date ? String(r.date).trim().substring(0, 10) : '';
       rowsHtml += `
         <tr>
-          <td>${r.date || ''}</td>
+          <td>${dStr}</td>
           <td>${r.voucher_no || ''}</td>
           <td>${r.account_no || ''}</td>
           <td>${r.account_title || ''}</td>
@@ -873,7 +1379,7 @@
         </thead>
         <tbody>${rowsHtml || '<tr><td colspan="7" style="text-align:center;">No records</td></tr>'}</tbody>
       </table>
-      <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:10px; font-size:13px;">
+      <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:10px; font-size:12px;">
         <span>Unique Receipt Qty: <b>${uniquePrintReceipts.size}</b> &nbsp;|&nbsp; Total Records: <b>${filtered.length}</b></span>
         <span>Total Amount: Rs <b>${total.toLocaleString()}</b></span>
       </div>
@@ -882,64 +1388,99 @@
   }
 
   // ================= EDIT & SEARCH TAB LOGIC =================
-  async function searchReceiptsForEditTab() {
-    let rctNo = document.getElementById('editSearchReceiptNo').value.trim();
-    let accNo = document.getElementById('editSearchAccountNo').value.trim();
+  async function loadAllReceiptsForEditTab() {
+    const tbody = document.getElementById('editTabBody');
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Fetching all receipts from Supabase...</td></tr>';
 
-    if (!rctNo && !accNo) {
-      alert("Kam az kam Receipt No ya Account No darj karein search ke liye.");
-      return;
+    let allData = [];
+    let page = 0;
+    let pageSize = 1000;
+    let fetchMore = true;
+
+    while (fetchMore) {
+      let { data, error } = await _supabase
+        .from('receipts')
+        .select('*')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
+        return;
+      }
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        if (data.length < pageSize) fetchMore = false;
+        else page++;
+      } else {
+        fetchMore = false;
+      }
     }
 
-    let query = _supabase.from('receipts').select('*');
-    if (rctNo) query = query.eq('voucher_no', rctNo);
-    if (accNo) query = query.eq('account_no', accNo);
+    allData.sort((a, b) => {
+      let dateA = a.date ? String(a.date) : '';
+      let dateB = b.date ? String(b.date) : '';
+      return dateB.localeCompare(dateA);
+    });
 
-    let { data, error } = await query;
-    if (error) {
-      alert("Search error: " + error.message);
-      return;
-    }
+    editTabResultsData = allData;
+    renderEditTabResults(editTabResultsData);
+  }
 
-    editTabResultsData = data || [];
-    renderEditTabResults();
+  function filterEditTabTable() {
+    let rctQuery = document.getElementById('editSearchReceiptNo').value.trim().toLowerCase();
+    let accQuery = document.getElementById('editSearchAccountNo').value.trim().toLowerCase();
+    let nameQuery = document.getElementById('editSearchName').value.trim().toLowerCase();
+
+    let filtered = editTabResultsData.filter(r => {
+      let rct = String(r.voucher_no || '').toLowerCase();
+      let acc = String(r.account_no || '').toLowerCase();
+      let name = String(r.account_title || '').toLowerCase();
+
+      if (rctQuery && !rct.includes(rctQuery)) return false;
+      if (accQuery && !acc.includes(accQuery)) return false;
+      if (nameQuery && !name.includes(nameQuery)) return false;
+      return true;
+    });
+
+    renderEditTabResults(filtered);
   }
 
   function resetEditTabSearch() {
     document.getElementById('editSearchReceiptNo').value = '';
     document.getElementById('editSearchAccountNo').value = '';
-    editTabResultsData = [];
-    renderEditTabResults();
+    document.getElementById('editSearchName').value = '';
+    renderEditTabResults(editTabResultsData);
   }
 
-  function renderEditTabResults() {
+  function renderEditTabResults(dataArray) {
     const tbody = document.getElementById('editTabBody');
     let total = 0;
-    editTabResultsData.forEach(r => { total += Number(r.amount) || 0; });
+    dataArray.forEach(r => { total += Number(r.amount) || 0; });
 
-    document.getElementById('editTabTotalsQty').innerText = editTabResultsData.length;
+    document.getElementById('editTabTotalsQty').innerText = dataArray.length;
     document.getElementById('editTabTotalsAmount').innerText = total.toLocaleString();
 
-    if (editTabResultsData.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Enter search terms above and click Search.</td></tr>';
+    if (dataArray.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No records found.</td></tr>';
       return;
     }
 
     let html = '';
-    editTabResultsData.forEach((entry, idx) => {
+    dataArray.forEach((entry, idx) => {
+      let dStr = entry.date ? String(entry.date).trim().substring(0, 10) : '';
       html += `
         <tr data-index="${idx}" data-id="${entry.id}">
           <td><input type="checkbox" class="edit-tab-chk" value="${entry.id}"></td>
-          <td class="edit-cell-date">${entry.date || ''}</td>
+          <td class="edit-cell-date">${dStr}</td>
           <td class="edit-cell-rct">${entry.voucher_no || ''}</td>
           <td class="edit-cell-acc">${entry.account_no || ''}</td>
           <td style="text-align:left;" class="edit-cell-title">${entry.account_title || ''}</td>
           <td class="edit-cell-head">${entry.account_head || ''}</td>
           <td class="edit-cell-mode">${entry.pay_mode || ''}</td>
-          <td class="edit-cell-amt">${(Number(entry.amount) || 0).toLocaleString()}</td>
+          <td style="text-align:right;" class="edit-cell-amt">${(Number(entry.amount) || 0).toLocaleString()}</td>
           <td style="white-space:nowrap;">
-            <button class="action-btn btn-secondary" style="padding:3px 7px; font-size:10px;" onclick="toggleEditTabRow(this)"><i class="fas fa-pen"></i> Edit</button>
-            <button class="action-btn btn-danger" style="padding:3px 7px; font-size:10px;" onclick="deleteEditTabSingleRow(${entry.id})"><i class="fas fa-trash"></i></button>
+            <button class="action-btn btn-secondary" style="padding:2px 5px; font-size:10px;" onclick="toggleEditTabRow(this)"><i class="fas fa-pen"></i> Edit</button>
+            <button class="action-btn btn-danger" style="padding:2px 5px; font-size:10px;" onclick="deleteEditTabSingleRow(${entry.id})"><i class="fas fa-trash"></i></button>
           </td>
         </tr>
       `;
@@ -961,14 +1502,15 @@
     tr.classList.add('editing');
     let idx = tr.getAttribute('data-index');
     let entry = editTabResultsData[idx];
+    let dStr = entry.date ? String(entry.date).trim().substring(0, 10) : '';
 
-    tr.querySelector('.edit-cell-date').innerHTML = `<input type="date" value="${entry.date || ''}" class="edit-date-input" style="padding:2px; width:110px;">`;
-    tr.querySelector('.edit-cell-rct').innerHTML = `<input type="text" value="${entry.voucher_no || ''}" class="edit-rct-input" style="padding:2px; width:65px; text-align:center;" inputmode="numeric">`;
-    tr.querySelector('.edit-cell-acc').innerHTML = `<input type="text" value="${entry.account_no || ''}" class="edit-acc-input" style="padding:2px; width:75px;" inputmode="numeric">`;
+    tr.querySelector('.edit-cell-date').innerHTML = `<input type="date" value="${dStr}" class="edit-date-input" style="padding:2px; width:100px;">`;
+    tr.querySelector('.edit-cell-rct').innerHTML = `<input type="text" value="${entry.voucher_no || ''}" class="edit-rct-input" style="padding:2px; width:60px; text-align:center;" inputmode="numeric">`;
+    tr.querySelector('.edit-cell-acc').innerHTML = `<input type="text" value="${entry.account_no || ''}" class="edit-acc-input" style="padding:2px; width:70px;" inputmode="numeric">`;
     tr.querySelector('.edit-cell-title').innerHTML = `<input type="text" value="${entry.account_title || ''}" class="edit-title-input" style="padding:2px; width:100%;">`;
     tr.querySelector('.edit-cell-head').innerHTML = `<input type="text" value="${entry.account_head || ''}" class="edit-head-input" style="padding:2px; width:100%;">`;
     tr.querySelector('.edit-cell-mode').innerHTML = `<input type="text" value="${entry.pay_mode || ''}" class="edit-mode-input" style="padding:2px; width:100%;">`;
-    tr.querySelector('.edit-cell-amt').innerHTML = `<input type="number" value="${entry.amount || 0}" class="edit-amt-input" style="padding:2px; width:70px; text-align:right;" inputmode="decimal">`;
+    tr.querySelector('.edit-cell-amt').innerHTML = `<input type="number" value="${entry.amount || 0}" class="edit-amt-input" style="padding:2px; width:65px; text-align:right;" inputmode="decimal">`;
 
     btn.innerHTML = '<i class="fas fa-save"></i> Save';
     btn.classList.remove('btn-secondary');
@@ -1001,8 +1543,9 @@
       alert("Update error: " + error.message);
     } else {
       alert("Updated successfully!");
-      searchReceiptsForEditTab();
+      loadAllReceiptsForEditTab();
       loadRecentReceipts();
+      loadCustomersCache();
     }
   }
 
@@ -1012,8 +1555,9 @@
     if (error) {
       alert("Delete error: " + error.message);
     } else {
-      searchReceiptsForEditTab();
+      loadAllReceiptsForEditTab();
       loadRecentReceipts();
+      loadCustomersCache();
     }
   }
 
@@ -1031,8 +1575,9 @@
       alert("Delete error: " + error.message);
     } else {
       alert("Selected receipts delete ho gayi hain.");
-      searchReceiptsForEditTab();
+      loadAllReceiptsForEditTab();
       loadRecentReceipts();
+      loadCustomersCache();
     }
   }
 
