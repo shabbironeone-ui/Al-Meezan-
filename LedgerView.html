@@ -6,6 +6,8 @@
   <title>Customer Ledger View</title>
   <!-- Include html2pdf library for clean PDF generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
     html { overflow-x: hidden; max-width: 100%; }
@@ -148,15 +150,8 @@
     .search-box-inline { display: flex; gap: 6px; margin-bottom: 8px; }
     .search-box-inline input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
 
-    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 11px; display: none; }
-    .config-box.show { display: block; }
-    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box; }
-    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
-
-    .change-url-link { cursor: pointer; color: #1a73e8; font-size: 11px; margin-bottom: 6px; display: inline-block; }
-
     @media print {
-      .btn, .search-box-inline, .config-box, .change-url-link, .floating-mobile-toggle { display: none; }
+      .btn, .search-box-inline, .floating-mobile-toggle { display: none; }
       body { background-color: #fff; margin: 0; max-width: 100%; }
       .table-container { max-height: none; box-shadow: none; }
     }
@@ -178,8 +173,8 @@
       70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
       100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
     }
-</style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
@@ -188,13 +183,6 @@
     <button class="floating-mobile-toggle" onclick="toggleMobileView()" id="mobileToggleBtn" title="Switch Mobile/Desktop View">
       📱
     </button>
-
-    <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
-    <div id="configBox" class="config-box">
-      <b>Setup:</b> Agar data load na ho to apna Apps Script URL neeche update karein.
-      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-      <button onclick="saveScriptUrl()">Save URL</button>
-    </div>
 
     <div class="top-header-container">
       <h2>Customer Account Ledger</h2>
@@ -247,7 +235,13 @@
   </div>
 
   <script>
-    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
+    // ============================================================
+    // SUPABASE CONFIGURATION
+    // ============================================================
+    const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     let currentLedgerData = null;
 
     let urlParams = new URLSearchParams(window.location.search);
@@ -273,7 +267,7 @@
       }
     }
 
-    function loadLedgerForAccount() {
+    async function loadLedgerForAccount() {
       accNo = document.getElementById('accNoInput').value.trim();
       if (!accNo) {
         document.getElementById('loading').style.display = 'block';
@@ -282,26 +276,114 @@
       }
 
       document.getElementById('loading').style.display = 'block';
-      document.getElementById('loading').innerHTML = 'Loading customer ledger details... Please wait.';
+      document.getElementById('loading').innerHTML = 'Loading customer ledger details from Supabase... Please wait.';
       document.getElementById('ledgerTable').style.display = 'none';
       currentLedgerData = null;
 
-      fetch(SCRIPT_URL + "?action=getCustomerLedgerData&accNo=" + encodeURIComponent(accNo))
-        .then(res => res.json())
-        .then(result => {
-          document.getElementById('loading').style.display = 'none';
-          if (!result || !result.success) {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('loading').innerHTML = '<span style="color:red;">Error: ' + (result ? result.message : 'Data not found') + '</span>';
-            return;
-          }
-          currentLedgerData = result;
-          renderLedger(result);
-        })
-        .catch(err => {
+      try {
+        // 1. Fetch Customer Data
+        let { data: custData, error: custErr } = await _supabase
+          .from('customers')
+          .select('*')
+          .eq('account_no', accNo)
+          .maybeSingle();
+
+        if (custErr) throw custErr;
+        if (!custData) {
           document.getElementById('loading').style.display = 'block';
-          document.getElementById('loading').innerHTML = '<span style="color:red;">Connection Error: ' + err.message + '</span>';
+          document.getElementById('loading').innerHTML = '<span style="color:red;">Error: Account Number "' + accNo + '" nahi mila!</span>';
+          return;
+        }
+
+        // 2. Fetch Sales Data for this Account
+        let { data: salesData, error: salesErr } = await _supabase
+          .from('sales')
+          .select('*')
+          .eq('account_no', accNo);
+
+        if (salesErr) throw salesErr;
+
+        // 3. Fetch Receipts Data for this Account
+        let { data: receiptsData, error: receiptsErr } = await _supabase
+          .from('receipts')
+          .select('*')
+          .eq('account_no', accNo);
+
+        if (receiptsErr) throw receiptsErr;
+
+        // Process Ledger Entries
+        let entries = [];
+        let grandTotalAmt = 0;
+        let totalMonths = 0;
+        let perMonthInst = 0;
+        let productFormatted = [];
+
+        // Add Sales records as initial debits / purchases
+        (salesData || []).forEach(s => {
+          let totAmt = parseFloat(s.total_amt || s.total_amount || s.amount || 0);
+          grandTotalAmt += totAmt;
+          if (s.plan_months) totalMonths = parseInt(s.plan_months, 10);
+          if (s.installment_per_month) perMonthInst = parseFloat(s.installment_per_month);
+          if (s.product_category || s.model || s.company_name) {
+            productFormatted.push([s.company_name, s.product_category, s.model].filter(Boolean).join(' '));
+          }
+
+          entries.push({
+            date: s.date ? s.date.substring(0, 10) : '',
+            voucherNo: s.po_num || s.bill_no || '-',
+            type: 'SALE',
+            particulars: [s.company_name, s.product_category, s.model].filter(Boolean).join(' ') || 'Sale Invoice',
+            debit: totAmt,
+            credit: 0
+          });
         });
+
+        // Add Receipts records as credits (payments)
+        (receiptsData || []).forEach(r => {
+          let recAmt = parseFloat(r.amount || 0);
+          entries.push({
+            date: r.date ? r.date.substring(0, 10) : '',
+            voucherNo: r.voucher_no || r.receipt_no || '-',
+            type: 'RECEIPT',
+            particulars: r.remarks || 'Customer Receipt / Installment',
+            debit: 0,
+            credit: recAmt
+          });
+        });
+
+        // Sort entries by date
+        entries.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+        // Calculate running balance and closing balance
+        let runningBal = 0;
+        entries.forEach(e => {
+          runningBal = runningBal + (e.debit || 0) - (e.credit || 0);
+          e.balance = runningBal;
+        });
+
+        let result = {
+          success: true,
+          accNo: custData.account_no,
+          accTitle: custData.account_title,
+          approvedBy: custData.approved_by || 'N/A',
+          cro: custData.cro || 'N/A',
+          mobile: custData.mobile_number || custData.mobile || 'N/A',
+          grandTotalAmt: grandTotalAmt || custData.total_amt || 0,
+          totalMonths: totalMonths || custData.plan_months || 0,
+          perMonthInst: perMonthInst || custData.installment_per_month || 0,
+          productFormatted: productFormatted.join(', '),
+          entries: entries,
+          closingBalance: runningBal
+        };
+
+        document.getElementById('loading').style.display = 'none';
+        currentLedgerData = result;
+        renderLedger(result);
+
+      } catch (err) {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('loading').innerHTML = '<span style="color:red;">Database Error: ' + err.message + '</span>';
+      }
     }
 
     function downloadLedgerPDF() {
@@ -508,142 +590,6 @@
       `;
       tbody.appendChild(totalTr);
     }
-    
-    // ===== Deployment URL config =====
-    function showUrlConfig() {
-      var inp = document.getElementById('scriptUrlInput');
-      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : '');
-      var box = document.getElementById('configBox');
-      if (box) box.classList.add('show');
-    }
-
-    function saveScriptUrl() {
-      var inp = document.getElementById('scriptUrlInput');
-      var val = inp ? inp.value.trim() : '';
-      if (!val) { alert("URL enter karein"); return; }
-      SCRIPT_URL = val;
-      localStorage.setItem('erp_script_url', val);
-      document.getElementById('configBox').classList.remove('show');
-      if (document.getElementById('accNoInput').value.trim()) {
-        loadLedgerForAccount();
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      var savedUrl = localStorage.getItem('erp_script_url');
-      if (!savedUrl) {
-        var box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
-      }
-    });
-
-    // ================= UNIVERSAL MIC INPUT =================
-    (function() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let activeRec = null, activeBtn = null, activeInput = null;
-
-      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-      function stopActiveMic() {
-        if (activeRec) {
-          activeRec.onend = null; activeRec.onresult = null;
-          try { activeRec.abort(); } catch (e) {}
-          activeRec = null;
-        }
-        if (activeBtn) activeBtn.classList.remove('listening');
-        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-        activeBtn = null; activeInput = null;
-      }
-
-      function toggleMic(input, btn) {
-        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-        const isNumeric = input.type === 'number';
-
-        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-        stopActiveMic();
-
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        let finalText = '';
-
-        activeRec = rec; activeBtn = btn; activeInput = input;
-        btn.classList.add('listening');
-        input.dataset.origPh = input.placeholder || '';
-        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-        rec.onresult = function(ev) {
-          let interim = '';
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-          }
-          let text = (finalText + interim).trim();
-          if (isNumeric) text = cleanNumeric(text);
-          input.value = text;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        rec.onerror = function(ev) {
-          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-        };
-        rec.onend = function() {
-          btn.classList.remove('listening');
-          input.placeholder = input.dataset.origPh || '';
-          if (isNumeric) input.value = cleanNumeric(input.value);
-          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-        };
-        try { rec.start(); } catch (e) {}
-      }
-
-      function attachMic(input) {
-        if (!input || input.dataset.autoMic) return;
-        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-        if (input.closest('#configBox')) return;
-        if (input.closest('.input-with-mic')) return; 
-        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-        input.dataset.autoMic = '1';
-
-        const wrap = document.createElement('span');
-        wrap.className = 'auto-mic-wrap';
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-
-        input.style.paddingRight = '24px';
-        input.style.boxSizing = 'border-box';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'auto-mic-btn';
-        btn.title = 'Voice input';
-        btn.innerHTML = '&#127908;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-        wrap.appendChild(btn);
-      }
-
-      function scanAndAttach(root) {
-        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        scanAndAttach(document);
-      });
-
-      const mo = new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType !== 1) return;
-            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-              attachMic(node);
-            }
-            if (node.querySelectorAll) scanAndAttach(node);
-          });
-        });
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
-</script>
+  </script>
 </body>
 </html>
