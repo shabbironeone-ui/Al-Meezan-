@@ -4,6 +4,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <base target="_top">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -25,7 +27,6 @@
       position: relative;
     }
     
-    /* Compact Mobile View Mode Styles (Only when mobile-mode class is active) */
     body.mobile-mode {
       margin: 2px !important;
       padding: 2px !important;
@@ -70,17 +71,6 @@
     body.mobile-mode h2 {
       font-size: 15px !important;
       margin-bottom: 8px !important;
-    }
-    body.mobile-mode .excel-popup {
-      width: 85vw !important;
-      max-width: 300px !important;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    body.mobile-mode .ledger-modal-content {
-      width: 94% !important;
-      margin: 4% auto !important;
-      padding: 10px !important;
     }
 
     .floating-mobile-toggle {
@@ -230,27 +220,27 @@
       font-weight: bold !important;
     }
     
-    th.col-accNo, td.col-accNo { width: 55px; }         /* Acct Num */
-    th.col-accTitle, td.col-accTitle { width: 120px; }  /* Acct Title */
-    th.col-approvedBy, td.col-approvedBy { width: 55px; } /* Aprv by */
-    th.col-cro, td.col-cro { width: 32px; }               /* CRO */
-    th.col-mobile, td.col-mobile { width: 75px; }       /* Mobile Nu */
-    th.col-monthlyInst, td.col-monthlyInst { width: 50px; } /* M Inst */
-    th.col-remarks, td.col-remarks { width: 120px; }    /* Remarks */
-    th.col-cmd, td.col-cmd { width: 55px; }               /* CMD */
-    th.col-plan, td.col-plan { width: 32px; text-align: center; } /* Plan */
-    th.col-totalSales, td.col-totalSales { width: 60px; } /* Total Sale */
-    th.col-totalReceived, td.col-totalReceived { width: 60px; } /* Total Paid */
-    th.col-balance, td.col-balance { width: 55px; }     /* T Balance */
-    th.col-lpd, td.col-lpd { width: 60px; }               /* LPD */
-    th.col-lpAmount, td.col-lpAmount { width: 55px; }   /* L.Pamount */
-    th.col-deliveryDate, td.col-deliveryDate { width: 60px; } /* Deliv Date */
-    th.col-endingMonth, td.col-endingMonth { width: 60px; } /* End */
-    th.col-product, td.col-product { width: 55px; }     /* Product */
-    th.col-m4, td.col-m4 { width: 45px; }                /* M-4 */
-    th.col-m3, td.col-m3 { width: 45px; }                /* M-3 */
-    th.col-m2, td.col-m2 { width: 52px; }                /* M-2 */
-    th.col-m1, td.col-m1 { width: 52px; }                /* M-1 */
+    th.col-accNo, td.col-accNo { width: 55px; }         
+    th.col-accTitle, td.col-accTitle { width: 120px; }   
+    th.col-approvedBy, td.col-approvedBy { width: 55px; } 
+    th.col-cro, td.col-cro { width: 32px; }                
+    th.col-mobile, td.col-mobile { width: 75px; }        
+    th.col-monthlyInst, td.col-monthlyInst { width: 50px; } 
+    th.col-remarks, td.col-remarks { width: 120px; }     
+    th.col-cmd, td.col-cmd { width: 55px; }                
+    th.col-plan, td.col-plan { width: 32px; text-align: center; } 
+    th.col-totalSales, td.col-totalSales { width: 60px; } 
+    th.col-totalReceived, td.col-totalReceived { width: 60px; } 
+    th.col-balance, td.col-balance { width: 55px; }      
+    th.col-lpd, td.col-lpd { width: 60px; }                
+    th.col-lpAmount, td.col-lpAmount { width: 55px; }    
+    th.col-deliveryDate, td.col-deliveryDate { width: 60px; } 
+    th.col-endingMonth, td.col-endingMonth { width: 60px; } 
+    th.col-product, td.col-product { width: 55px; }      
+    th.col-m4, td.col-m4 { width: 45px; }                 
+    th.col-m3, td.col-m3 { width: 45px; }                 
+    th.col-m2, td.col-m2 { width: 52px; }                 
+    th.col-m1, td.col-m1 { width: 52px; }                 
 
     .sticky-header {
       background-color: #1b5e20 !important;
@@ -261,7 +251,6 @@
       font-weight: bold;
       text-align: center;
       font-size: 9.5pt;
-      letter-spacing: 0.2px;
     }
     .sticky-header th {
       padding: 4px 2px;
@@ -291,10 +280,6 @@
       height: 18px;
       background: #fff;
     }
-    .col-filter:focus {
-      border-color: #1b5e20;
-      outline: none;
-    }
     .excel-filter-btn {
       background: #e8f5e9;
       border: 1px solid #81c784;
@@ -309,9 +294,6 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    .excel-filter-btn:hover {
-      background: #c8e6c9;
-    }
     .excel-filter-btn.active-filter {
       background: #0288d1 !important;
       color: #fff !important;
@@ -323,129 +305,6 @@
       font-weight: 500;
     }
 
-    .excel-popup {
-      display: none;
-      position: absolute;
-      background: #fff;
-      border: 1px solid #aaa;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      padding: 8px;
-      z-index: 100;
-      width: 260px;
-      border-radius: 4px;
-      font-size: 11px;
-      text-align: left;
-      color: #333;
-      box-sizing: border-box;
-    }
-    .excel-popup.active {
-      display: block;
-    }
-    .excel-popup input[type="text"], .excel-popup select {
-      width: 100%;
-      margin-bottom: 6px;
-      height: 26px;
-      font-size: 11px;
-      box-sizing: border-box;
-      padding: 2px 6px;
-    }
-    .excel-checkbox-list {
-      max-height: 160px;
-      overflow-y: auto;
-      border: 1px solid #ddd;
-      padding: 4px;
-      margin-bottom: 6px;
-      background: #fafafa;
-    }
-    .excel-checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 2px 0;
-      font-size: 11px;
-      cursor: pointer;
-    }
-    .excel-checkbox-item input {
-      cursor: pointer;
-    }
-
-    .excel-popup-buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 4px;
-    }
-    .excel-popup-buttons button {
-      flex: 1;
-      height: 26px;
-      font-size: 11px;
-      padding: 2px;
-      justify-content: center;
-    }
-
-    .ledger-modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
-    .ledger-modal-content {
-      background-color: #fff;
-      margin: 5% auto;
-      padding: 15px;
-      border: 1px solid #888;
-      width: 80%;
-      max-width: 700px;
-      border-radius: 6px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-    }
-    .ledger-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #1b5e20;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
-    }
-    .ledger-header h3 {
-      margin: 0;
-      color: #1b5e20;
-      font-size: 16px;
-    }
-    .close-ledger {
-      color: #aaa;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close-ledger:hover {
-      color: #000;
-    }
-    .ledger-table-container {
-      overflow-y: auto;
-      max-height: 60vh;
-    }
-    .ledger-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-    .ledger-table th, .ledger-table td {
-      border: 1px solid #ddd;
-      padding: 5px;
-      text-align: left;
-    }
-    .ledger-table th {
-      background-color: #1b5e20;
-      color: white;
-    }
     .account-link {
       color: #0d47a1;
       text-decoration: underline;
@@ -472,84 +331,19 @@
       border-top: 2px solid #1b5e20 !important;
       font-weight: bold !important;
       background-color: #dcedc8 !important;
-      overflow: visible !important;
-      text-overflow: clip !important;
-      white-space: normal !important;
       font-size: 8.5pt !important;
       padding: 3px 2px !important;
     }
-    
-    @media print {
-      @page {
-        size: A4 landscape;
-        margin: 5mm;
-      }
-      body {
-        background-color: #fff;
-        padding: 0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      button, .filters-grid, .filter-header-row, #loadingContainer, .excel-popup, .ledger-modal, .table-footer-row, .col-product, .col-m1, .floating-mobile-toggle { 
-        display: none !important; 
-      }
-      .container { 
-        max-width: 100%; 
-        box-shadow: none; 
-        padding: 0; 
-        margin: 0;
-      }
-      .table-container { 
-        max-height: none; 
-        overflow: visible; 
-        border: 1px solid #000 !important; 
-      }
-      table {
-        width: 100% !important;
-      }
-      th {
-        background-color: #1b5e20 !important;
-        color: white !important;
-        font-size: 9.5pt !important;
-        font-weight: bold !important;
-        padding: 3px 2px !important;
-        border: 1px solid #000 !important;
-        -webkit-print-color-adjust: exact;
-      }
-      td {
-        border: 1px solid #000 !important;
-        padding: 2px 4px !important;
-        font-size: 9.5pt !important;
-        font-weight: normal !important;
-        line-height: 1.1 !important;
-      }
-      .sticky-header {
-        position: static !important;
-      }
-    }
-  
-    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: none; }
-    .config-box.show { display: block; }
-    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
-    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .change-url-link { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; cursor: pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
-  <div id="configBox" class="config-box">
-    <b>Setup:</b> Apna Apps Script Deployment URL neeche daal kar Save karein.
-    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-    <button onclick="saveScriptUrl()">Save URL</button>
-  </div>
 
   <div class="container">
-    <!-- Floating View Toggle Button (Starts in Desktop View by default) -->
     <button class="floating-mobile-toggle" onclick="toggleMobileView()" id="mobileToggleBtn" title="Switch to Mobile View">
       <i class="fa fa-mobile-alt" id="toggleIcon"></i>
     </button>
 
-    <h2>Al-Meezan Electronics - Customer Aging Report</h2>
+    <h2>Al-Meezan Electronics - Customer Aging Report (Supabase)</h2>
     
     <div class="filters-grid">
       <div class="input-group">
@@ -566,7 +360,7 @@
       </div>
       <div class="input-group">
         <label>ACCOUNT TITLE / NAME</label>
-        <input type="text" id="searchTitleInput" placeholder="Name / Title..." inputmode="text" autocapitalize="words">
+        <input type="text" id="searchTitleInput" placeholder="Name / Title..." inputmode="text">
       </div>
       <div class="input-group">
         <label>MOBILE NO</label>
@@ -586,7 +380,7 @@
 
     <div id="loadingContainer">
       <div class="spinner"></div>
-      <div id="loadingMsg">Fetching aging records... Please wait.</div>
+      <div id="loadingMsg">Fetching aging records from Supabase... Please wait.</div>
     </div>
 
     <div class="table-container">
@@ -615,104 +409,23 @@
             <th class="col-m2" id="thM2">M-2</th>
             <th class="col-m1" id="thM1">M-1</th>
           </tr>
-          <tr class="filter-header-row">
-            <th class="col-accNo"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="accNo" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_accNo" onclick="toggleExcelPopup(event, 'accNo')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-accTitle"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="accTitle" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_accTitle" onclick="toggleExcelPopup(event, 'accTitle')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-approvedBy"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="approvedBy" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_approvedBy" onclick="toggleExcelPopup(event, 'approvedBy')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-cro"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="cro" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_cro" onclick="toggleExcelPopup(event, 'cro')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-mobile"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="mobile" placeholder="Filter..." inputmode="tel"><button class="excel-filter-btn" id="btn_mobile" onclick="toggleExcelPopup(event, 'mobile')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-monthlyInst"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="monthlyInst" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_monthlyInst" onclick="toggleExcelPopup(event, 'monthlyInst', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-remarks"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="remarks" placeholder="Filter..." inputmode="text"></div></th>
-            <th class="col-cmd"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="cmd" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_cmd" onclick="toggleExcelPopup(event, 'cmd', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-plan"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="plan" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_plan" onclick="toggleExcelPopup(event, 'plan', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-totalSales"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="totalSales" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_totalSales" onclick="toggleExcelPopup(event, 'totalSales', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-totalReceived"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="totalReceived" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_totalReceived" onclick="toggleExcelPopup(event, 'totalReceived', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-balance"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="balance" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_balance" onclick="toggleExcelPopup(event, 'balance', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-lpd"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="lpd" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_lpd" onclick="toggleExcelPopup(event, 'lpd')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-lpAmount"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="lpAmount" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_lpAmount" onclick="toggleExcelPopup(event, 'lpAmount', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-deliveryDate"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="deliveryDate" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_deliveryDate" onclick="toggleExcelPopup(event, 'deliveryDate')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-endingMonth"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="endingMonth" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_endingMonth" onclick="toggleExcelPopup(event, 'endingMonth')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-product"><div class="filter-cell-wrapper"><input type="text" class="col-filter" data-col="product" placeholder="Filter..." inputmode="text"><button class="excel-filter-btn" id="btn_product" onclick="toggleExcelPopup(event, 'product')"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-m4"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="m4Received" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_m4Received" onclick="toggleExcelPopup(event, 'm4Received', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-m3"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="m3Received" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_m3Received" onclick="toggleExcelPopup(event, 'm3Received', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-m2"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="m2Received" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_m2Received" onclick="toggleExcelPopup(event, 'm2Received', true)"><i class="fa fa-filter"></i></button></div></th>
-            <th class="col-m1"><div class="filter-cell-wrapper"><input type="text" class="col-filter numeric-filter" data-col="m1Received" placeholder="Filter..." inputmode="numeric"><button class="excel-filter-btn" id="btn_m1Received" onclick="toggleExcelPopup(event, 'm1Received', true)"><i class="fa fa-filter"></i></button></div></th>
-          </tr>
         </thead>
         <tbody id="tableBody">
           <tr>
-            <td colspan="21" style="text-align: center; color: #777; padding: 15px; font-weight: normal;">Loading aging report...</td>
+            <td colspan="21" style="text-align: center; color: #777; padding: 15px;">Loading aging report from Supabase...</td>
           </tr>
         </tbody>
-        <tfoot id="tableFooter">
-        </tfoot>
+        <tfoot id="tableFooter"></tfoot>
       </table>
     </div>
   </div>
 
-  <div id="excelPopupBox" class="excel-popup">
-    <div id="numericFilterSection" style="display:none;">
-      <label style="font-size:10px; font-weight:bold; color:#555; display:block; margin-bottom:2px;">Condition:</label>
-      <select id="numCondition" style="margin-bottom:4px;">
-        <option value="eq">Equals (=)</option>
-        <option value="gt">Greater Than (&gt;)</option>
-        <option value="gte">Greater Than or Equal (&gt;=)</option>
-        <option value="lt">Less Than (&lt;)</option>
-        <option value="lte">Less Than or Equal (&lt;=)</option>
-        <option value="between">Between</option>
-      </select>
-      <input type="text" id="numVal1" placeholder="Value..." style="margin-bottom:4px;" inputmode="decimal">
-      <input type="text" id="numVal2" placeholder="And Value (for Between)..." style="display:none; margin-bottom:4px;" inputmode="decimal">
-    </div>
-
-    <div id="universalFilterSection">
-      <input type="text" id="popupSearchInput" placeholder="Search (All)..." oninput="filterPopupCheckboxes()" inputmode="text">
-      <div class="excel-checkbox-item" style="border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 3px; font-weight: bold;">
-        <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAllCheckboxes(this)">
-        <label for="selectAllCheckbox" style="cursor: pointer; margin:0;">(Select All)</label>
-      </div>
-      <div id="popupCheckboxList" class="excel-checkbox-list"></div>
-    </div>
-
-    <div class="excel-popup-buttons" style="margin-top:4px;">
-      <button onclick="applyExcelPopupFilter()">Apply</button>
-      <button class="secondary" onclick="clearExcelPopupFilter()">Clear</button>
-    </div>
-  </div>
-
-  <div id="ledgerModal" class="ledger-modal">
-    <div class="ledger-modal-content">
-      <div class="ledger-header">
-        <h3 id="ledgerModalTitle">Account Ledger</h3>
-        <span class="close-ledger" onclick="closeLedgerModal()">&times;</span>
-      </div>
-      <div class="ledger-table-container">
-        <table class="ledger-table" id="ledgerTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Particulars</th>
-              <th style="text-align:right;">Debit</th>
-              <th style="text-align:right;">Credit</th>
-              <th style="text-align:right;">Balance</th>
-            </tr>
-          </thead>
-          <tbody id="ledgerTableBody">
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <script>
-    let globalResponse = null;
-    let activePopupCol = null;
-    let activePopupInput = null;
-    let activeIsNumeric = false;
-    let isDateCol = false;
-    let popupAllUniqueValues = [];
+    const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let WEB_APP_URL = localStorage.getItem('erp_script_url') || "";
+    let globalResponse = null;
 
     function toggleMobileView() {
       document.body.classList.toggle('mobile-mode');
@@ -731,76 +444,14 @@
     function parseCustomDate(dateString) {
       if (!dateString) return null;
       if (dateString instanceof Date) return isNaN(dateString.getTime()) ? null : dateString;
-      
       let str = String(dateString).trim();
       if (!str) return null;
-
       let isoMatch = str.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})/);
       if (isoMatch) {
-        let y = parseInt(isoMatch[1], 10);
-        let m = parseInt(isoMatch[2], 10) - 1;
-        let d = parseInt(isoMatch[3], 10);
-        return new Date(y, m, d);
+        return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
       }
-
-      let monthYearMatch = str.match(/^([A-Za-z]+)[\s\-\/\.]+(\d{2,4})$/);
-      if (monthYearMatch) {
-        let mStr = monthYearMatch[1].toLowerCase();
-        let yNum = parseInt(monthYearMatch[2], 10);
-        let year = yNum < 100 ? (yNum >= 50 ? 1900 + yNum : 2000 + yNum) : yNum;
-        
-        let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-        let monthIdx = months.findIndex(m => mStr.startsWith(m));
-        if (monthIdx !== -1) {
-          return new Date(year, monthIdx, 1);
-        }
-      }
-
-      let yearMonthMatch = str.match(/^(\d{2,4})[\s\-\/\.]+([A-Za-z]+)$/);
-      if (yearMonthMatch) {
-        let yNum = parseInt(yearMonthMatch[1], 10);
-        let year = yNum < 100 ? (yNum >= 50 ? 1900 + yNum : 2000 + yNum) : yNum;
-        let mStr = yearMonthMatch[2].toLowerCase();
-        let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-        let monthIdx = months.findIndex(m => mStr.startsWith(m));
-        if (monthIdx !== -1) {
-          return new Date(year, monthIdx, 1);
-        }
-      }
-
-      let dmyAlphaMatch = str.match(/^(\d{1,2})[\s\-\/\.]+([A-Za-z]+)[\s\-\/\.]+(\d{2,4})$/);
-      if (dmyAlphaMatch) {
-        let d = parseInt(dmyAlphaMatch[1], 10);
-        let mStr = dmyAlphaMatch[2].toLowerCase();
-        let yNum = parseInt(dmyAlphaMatch[3], 10);
-        let year = yNum < 100 ? (yNum >= 50 ? 1900 + yNum : 2000 + yNum) : yNum;
-        let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-        let monthIdx = months.findIndex(m => mStr.startsWith(m));
-        if (monthIdx !== -1) {
-          return new Date(year, monthIdx, d);
-        }
-      }
-
-      let parts = str.split(/[\/\-\.]/);
-      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-        let p1 = parseInt(parts[0], 10);
-        let p2 = parseInt(parts[1], 10) - 1;
-        let p3 = parseInt(parts[2], 10);
-        
-        let year = p3 < 100 ? (p3 >= 50 ? 1900 + p3 : 2000 + p3) : p3;
-        if (p1 > 31) {
-          return new Date(p1, p2, p3);
-        } else {
-          return new Date(year, p2, p1);
-        }
-      }
-
       let d = new Date(str);
-      if (!isNaN(d.getTime())) {
-        return d;
-      }
-
-      return null;
+      return isNaN(d.getTime()) ? null : d;
     }
 
     function formatDateDDMMYY(dateString) {
@@ -815,21 +466,10 @@
     function formatMonthYearName(dateObj) {
       if (!dateObj || isNaN(dateObj.getTime())) return '';
       let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      let m = months[dateObj.getMonth()];
-      let y = String(dateObj.getFullYear()).slice(-2);
-      return `${m}-${y}`;
+      return `${months[dateObj.getMonth()]}-${String(dateObj.getFullYear()).slice(-2)}`;
     }
 
-    function formatNextInstMonth(rawVal) {
-      if (!rawVal) return '';
-      let d = parseCustomDate(rawVal) || parseCustomDate('01 ' + rawVal);
-      if (d && !isNaN(d.getTime())) {
-        return formatMonthYearName(d);
-      }
-      return String(rawVal);
-    }
-
-    function fetchAndFilterData(forceReload = false) {
+    async function fetchAndFilterData(forceReload = false) {
       if (globalResponse !== null && !forceReload) {
         applySearchFilter();
         return;
@@ -838,109 +478,113 @@
       let loadingContainer = document.getElementById('loadingContainer');
       let loadingMsg = document.getElementById('loadingMsg');
       if (loadingContainer) loadingContainer.style.display = 'block';
-      if (loadingMsg) loadingMsg.innerText = "Fetching aging records... Please wait.";
+      if (loadingMsg) loadingMsg.innerText = "Fetching aging records from Supabase... Please wait.";
 
-      if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (loadingContainer) loadingContainer.style.display = 'none';
-            if (res && (res.data || Array.isArray(res))) {
-              globalResponse = res.data ? res : { data: res, monthHeaders: res.monthHeaders || {} };
-              applySearchFilter();
-            } else {
-              let tbody = document.getElementById('tableBody');
-              if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Error: ${(res && res.error) || "Could not load data."}</td></tr>`;
-            }
-          })
-          .withFailureHandler(function(err) {
-            if (loadingContainer) loadingContainer.style.display = 'none';
-            let tbody = document.getElementById('tableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Apps Script Error: ${err.message || err}</td></tr>`;
-          })
-          .getAgingReportData();
-        return;
-      }
+      try {
+        let [custRes, salesRes, receiptsRes] = await Promise.all([
+          _supabase.from('customers').select('*'),
+          _supabase.from('sales').select('*'),
+          _supabase.from('receipts').select('*')
+        ]);
 
-      let targetUrl = WEB_APP_URL ? (WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + "action=getAgingReportData") : "?action=getAgingReportData";
+        if (custRes.error) throw custRes.error;
+        if (salesRes.error) throw salesRes.error;
+        if (receiptsRes.error) throw receiptsRes.error;
 
-      if (!WEB_APP_URL) {
-        if (loadingContainer) loadingContainer.style.display = 'none';
-        let box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
-        let tbody = document.getElementById('tableBody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #b71c1c; padding: 15px;"><b>Apps Script URL not set.</b> Please paste your Deployment URL above and click Save URL.</td></tr>`;
-        return;
-      }
+        let customers = custRes.data || [];
+        let sales = salesRes.data || [];
+        let receipts = receiptsRes.data || [];
 
-      fetch(targetUrl, {
-        method: 'GET',
-        redirect: 'follow'
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error("HTTP error " + response.status + ": " + response.statusText);
-          }
-          return response.json();
-        })
-        .then(res => {
-          if (loadingContainer) loadingContainer.style.display = 'none';
-          if (res && (res.success !== false) && (res.data || Array.isArray(res))) {
-            globalResponse = res.data ? res : { data: res, monthHeaders: res.monthHeaders || {} };
-            applySearchFilter();
-          } else {
-            let tbody = document.getElementById('tableBody');
-            if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Error: ${(res && res.error) || "Could not load data from sheet."}</td></tr>`;
-          }
-        })
-        .catch(err => {
-          if (loadingContainer) loadingContainer.style.display = 'none';
-          let tbody = document.getElementById('tableBody');
-          if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Fetch Failure: ${err.message}. Please check Deployment URL or verify access permissions are set to 'Anyone'.</td></tr>`;
+        // Map sales by account number (handling all possible column names)
+        let salesMap = {};
+        sales.forEach(s => {
+          let acc = String(s.account_no || s.acc_no || s.accountNo || '').trim();
+          if (!salesMap[acc]) salesMap[acc] = [];
+          salesMap[acc].push(s);
         });
+
+        // Map receipts by account number
+        let receiptsMap = {};
+        receipts.forEach(r => {
+          let acc = String(r.account_no || r.acc_no || r.accountNo || '').trim();
+          if (!receiptsMap[acc]) receiptsMap[acc] = [];
+          receiptsMap[acc].push(r);
+        });
+
+        let agingRows = customers.map(cust => {
+          let accNo = String(cust.account_no || cust.acc_no || cust.accountNo || '').trim();
+          let custSales = salesMap[accNo] || [];
+          let custReceipts = receiptsMap[accNo] || [];
+
+          let primarySale = custSales[0] || {};
+          
+          // Total Sales calculation from sales table or customer table
+          let totalSales = custSales.reduce((sum, s) => sum + (parseFloat(s.total_amt || s.total_amount || s.amount || s.totalSales) || 0), 0);
+          if (totalSales === 0) {
+            totalSales = parseFloat(cust.total_amt || cust.total_amount || cust.totalSales || 0);
+          }
+
+          let planMonths = parseInt(primarySale.plan_months || primarySale.plan || cust.plan_months || cust.plan || 12, 10);
+          let monthlyInst = parseFloat(primarySale.installment_per_month || primarySale.monthlyInst || cust.installment_per_month || cust.monthlyInst || 0);
+          
+          if (monthlyInst === 0 && planMonths > 0 && totalSales > 0) {
+            monthlyInst = Math.round(totalSales / planMonths);
+          }
+
+          let deliveryDate = primarySale.date || primarySale.delivery_date || cust.delivery_date || cust.date || '';
+          let productDesc = [primarySale.company_name, primarySale.product_category, primarySale.model].filter(Boolean).join(' ') || cust.product || cust.model || '';
+
+          let lpd = '';
+          let lpAmount = 0;
+          if (custReceipts.length > 0) {
+            custReceipts.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            lpd = custReceipts[0].date || '';
+            lpAmount = parseFloat(custReceipts[0].amount || custReceipts[0].credit || 0);
+          }
+
+          return {
+            accNo: accNo,
+            accTitle: cust.account_title || cust.name || cust.accTitle || '',
+            approvedBy: cust.approved_by || cust.salesman || cust.approvedBy || '',
+            cro: cust.cro || cust.sub_salesman || '',
+            mobile: cust.mobile_number || cust.mobile || cust.phone || '',
+            monthlyInst: monthlyInst,
+            plan: planMonths,
+            totalSales: totalSales,
+            deliveryDate: deliveryDate,
+            product: productDesc,
+            lpd: lpd,
+            lpAmount: lpAmount,
+            ledger: custReceipts.map(r => ({
+              date: r.date,
+              credit: parseFloat(r.amount || r.credit || 0)
+            }))
+          };
+        });
+
+        globalResponse = { data: agingRows, monthHeaders: {} };
+        if (loadingContainer) loadingContainer.style.display = 'none';
+        applySearchFilter();
+
+      } catch (err) {
+        if (loadingContainer) loadingContainer.style.display = 'none';
+        let tbody = document.getElementById('tableBody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Supabase Error: ${err.message || err}</td></tr>`;
+      }
     }
 
     function getPlanMonthsCount(row) {
-      let planStr = String(row.plan || '').trim();
-      let num = parseInt(planStr.replace(/\D/g, ''), 10);
+      let num = parseInt(row.plan, 10);
       return isNaN(num) || num <= 0 ? 12 : num;
     }
 
     function calculateMonthlyInstallment(row) {
-      let totalSale = Number(row.totalSales) || 0;
-      let advVal = Number(row.advance !== undefined ? row.advance : (row.adv || 0));
-      let prosVal = Number(row.processingFee !== undefined ? row.processingFee : (row.processingfee || row.pros || 0));
-      let planMonths = getPlanMonthsCount(row);
-
-      let netPrincipal = totalSale - advVal - prosVal;
-      if (planMonths <= 0) return Number(row.monthlyInst) || 0;
-      return Math.round(netPrincipal / planMonths);
+      return Number(row.monthlyInst) || 0;
     }
 
     function calculateEndingMonthObject(row) {
-      let firstPaid = Number(row.firstInstPaid !== undefined ? row.firstInstPaid : (row['1st Instalment paid'] || row['1st Inst Paid'] || 0));
-      let firstMonthRaw = row.firstInstMonth !== undefined && row.firstInstMonth !== null ? row.firstInstMonth : (row['1st installment date'] || row['1st inst month'] || '');
-      let nextInstRaw = row.nextInstMonth !== undefined && row.nextInstMonth !== null ? row.nextInstMonth : (row.nextInst || row['Next Inst Month'] || '');
-
-      let baseDate = null;
-      if (firstPaid > 0 && firstMonthRaw) {
-        baseDate = parseCustomDate(firstMonthRaw);
-      } else if (nextInstRaw) {
-        baseDate = parseCustomDate(nextInstRaw);
-      }
-
-      if (!baseDate || isNaN(baseDate.getTime())) {
-        if (firstMonthRaw) {
-          baseDate = parseCustomDate(firstMonthRaw);
-        } else if (nextInstRaw) {
-          baseDate = parseCustomDate(nextInstRaw);
-        } else {
-          let dStr = row.deliveryDate || row['Delivery Date'] || '';
-          baseDate = parseCustomDate(dStr);
-        }
-      }
-
+      let baseDate = parseCustomDate(row.deliveryDate);
       if (!baseDate || isNaN(baseDate.getTime())) return null;
-
       let planMonths = getPlanMonthsCount(row);
       let endDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
       endDate.setMonth(endDate.getMonth() + (planMonths - 1));
@@ -949,8 +593,7 @@
 
     function calculateEndingMonth(row) {
       let endDate = calculateEndingMonthObject(row);
-      if (!endDate) return String(row.endingMonth || row.end || '');
-      return formatMonthYearName(endDate);
+      return !endDate ? '' : formatMonthYearName(endDate);
     }
 
     function getBenchmarkDate() {
@@ -972,710 +615,109 @@
 
       let m1Start = new Date(bYear, bMonth, 1, 0, 0, 0);
       let m1End = bench;
-
       let m2Start = new Date(bYear, bMonth - 1, 1, 0, 0, 0);
       let m2End = new Date(bYear, bMonth, 0, 23, 59, 59);
-
       let m3Start = new Date(bYear, bMonth - 2, 1, 0, 0, 0);
       let m3End = new Date(bYear, bMonth - 1, 0, 23, 59, 59);
-
       let m4Start = new Date(bYear, bMonth - 3, 1, 0, 0, 0);
       let m4End = new Date(bYear, bMonth - 2, 0, 23, 59, 59);
 
-      let ledger = row.ledger || row.payments || [];
+      let ledger = row.ledger || [];
       let m1Amt = 0, m2Amt = 0, m3Amt = 0, m4Amt = 0;
 
-      if (Array.isArray(ledger) && ledger.length > 0) {
-        ledger.forEach(p => {
-          let pDate = parseCustomDate(p.date || p.paymentDate);
-          let pAmt = Number(p.credit || p.amount || p.paid) || 0;
-          if (pDate && !isNaN(pDate.getTime())) {
-            if (pDate >= m1Start && pDate <= m1End) {
-              m1Amt += pAmt;
-            } else if (pDate >= m2Start && pDate <= m2End) {
-              m2Amt += pAmt;
-            } else if (pDate >= m3Start && pDate <= m3End) {
-              m3Amt += pAmt;
-            } else if (pDate >= m4Start && pDate <= m4End) {
-              m4Amt += pAmt;
-            }
-          }
-        });
-      } else {
-        m1Amt = Number(row.m1Received !== undefined ? row.m1Received : (row.currentMonthPaid || 0));
-        m2Amt = Number(row.m2Received !== undefined ? row.m2Received : (row.prevMonthPaid || 0));
-        m3Amt = Number(row.m3Received !== undefined ? row.m3Received : (row.prev2MonthPaid || 0));
-        m4Amt = Number(row.m4Received !== undefined ? row.m4Received : 0);
-      }
+      ledger.forEach(p => {
+        let pDate = parseCustomDate(p.date);
+        let pAmt = Number(p.credit) || 0;
+        if (pDate && !isNaN(pDate.getTime())) {
+          if (pDate >= m1Start && pDate <= m1End) m1Amt += pAmt;
+          else if (pDate >= m2Start && pDate <= m2End) m2Amt += pAmt;
+          else if (pDate >= m3Start && pDate <= m3End) m3Amt += pAmt;
+          else if (pDate >= m4Start && pDate <= m4End) m4Amt += pAmt;
+        }
+      });
 
       return { m4: m4Amt, m3: m3Amt, m2: m2Amt, m1: m1Amt };
     }
 
     function calculateDynamicTotalPaid(row) {
-      let ledger = row.ledger || row.payments || [];
+      let ledger = row.ledger || [];
       let bench = getBenchmarkDate();
-      
       let total = 0;
-      let hasLedgerPayments = false;
-
-      if (Array.isArray(ledger) && ledger.length > 0) {
-        ledger.forEach(p => {
-          let pDate = parseCustomDate(p.date || p.paymentDate);
-          let pAmt = Number(p.credit || p.amount || p.paid) || 0;
-          if (pDate && !isNaN(pDate.getTime())) {
-            if (pDate <= bench) {
-              total += pAmt;
-              hasLedgerPayments = true;
-            }
-          }
-        });
-      }
-
-      if (!hasLedgerPayments) {
-        return Number(row.totalPaid || row.totalReceived || row['Total Paid']) || 0;
-      }
-
+      ledger.forEach(p => {
+        let pDate = parseCustomDate(p.date);
+        let pAmt = Number(p.credit) || 0;
+        if (pDate && !isNaN(pDate.getTime()) && pDate <= bench) {
+          total += pAmt;
+        }
+      });
       return total;
     }
 
     function calculateDynamicBalance(row) {
-      let totalSales = Number(row.totalSales || row.totalsales || row['Total Sale']) || 0;
-      let dynamicPaid = calculateDynamicTotalPaid(row);
-      return Math.max(0, totalSales - dynamicPaid);
+      return Math.max(0, (Number(row.totalSales) || 0) - calculateDynamicTotalPaid(row));
     }
 
-    function calculateCMD(row, monthHeaders) {
+    function calculateCMD(row) {
       let tBal = calculateDynamicBalance(row);
       if (tBal <= 0) return 0;
-
       let inst = calculateMonthlyInstallment(row);
       if (inst <= 0) return tBal;
 
       let benchDate = getBenchmarkDate();
       let endDt = calculateEndingMonthObject(row);
+      if (!endDt) return Math.min(inst, tBal);
 
-      if (!endDt) {
-        return Math.min(inst, tBal);
-      }
+      let remainingMonths = ((endDt.getFullYear() - benchDate.getFullYear()) * 12) + (endDt.getMonth() - benchDate.getMonth()) + 1;
+      if (remainingMonths <= 1) return tBal;
 
-      let diffYears = endDt.getFullYear() - benchDate.getFullYear();
-      let diffMonths = endDt.getMonth() - benchDate.getMonth();
-      let remainingMonths = (diffYears * 12) + diffMonths + 1;
-
-      if (remainingMonths <= 1) {
-        return tBal;
-      }
-
-      let futureMonths = remainingMonths - 1;
-      let futureInstTotal = inst * futureMonths;
-      let cmd = tBal - futureInstTotal;
-
-      return cmd;
-    }
-
-    function getColumnValue(row, colName, monthHeaders) {
-      if(colName === 'remarks') {
-        return '';
-      } else if(colName === 'product') {
-        return row.product !== undefined && row.product !== null ? row.product : (row.model || row.productModel || row['PRODUCT CATEGOR'] || row['MODEL'] || '');
-      } else if(colName === 'cmd') {
-        return calculateCMD(row, monthHeaders);
-      } else if(colName === 'plan') {
-        return getPlanMonthsCount(row);
-      } else if(colName === 'balance') {
-        return calculateDynamicBalance(row);
-      } else if(colName === 'totalReceived') {
-        return calculateDynamicTotalPaid(row);
-      } else if(colName === 'deliveryDate') {
-        return formatDateDDMMYY(row[colName]);
-      } else if(colName === 'lpd') {
-        let rawLpd = row.lpd !== undefined && row.lpd !== null ? row.lpd : (row.lastPaymentDate || row['LPD'] || '');
-        return formatDateDDMMYY(rawLpd);
-      } else if(colName === 'lpAmount') {
-        let amt = row.lpAmount !== undefined && row.lpAmount !== null ? row.lpAmount : (row.lpamnt || row['L.PAmnt'] || 0);
-        return Number(amt) || 0;
-      } else if(colName === 'endingMonth') {
-        return calculateEndingMonth(row);
-      } else if(colName === 'monthlyInst') {
-        return calculateMonthlyInstallment(row);
-      } else if(colName === 'advance') {
-        return row.advance !== undefined && row.advance !== null ? row.advance : (row.adv || 0);
-      } else if(colName === 'processingFee') {
-        return row.processingFee !== undefined && row.processingFee !== null ? row.processingFee : (row.processingfee || row.pros || 0);
-      } else if(colName === 'firstInstPaid') {
-        return Number(row.firstInstPaid) || 0;
-      } else if(colName === 'firstInstMonth') {
-        return formatNextInstMonth(row.firstInstMonth);
-      } else if(colName === 'nextInst') {
-        let rawNext = row.nextInstMonth !== undefined && row.nextInstMonth !== null ? row.nextInstMonth : (row.nextInst || row['Next Inst Month'] || '');
-        return formatNextInstMonth(rawNext);
-      } else {
-        return row[colName] !== undefined && row[colName] !== null ? row[colName] : '';
-      }
-    }
-
-    function getFilteredRowsExcluding(targetCol) {
-      if (!globalResponse || !globalResponse.data) return [];
-
-      let startDate = document.getElementById('startDateInput').value;
-      let endDate = document.getElementById('endDateInput').value;
-      let accQuery = document.getElementById('searchAccInput').value.toLowerCase().trim();
-      let titleQuery = document.getElementById('searchTitleInput').value.toLowerCase().trim();
-      let mobileQuery = document.getElementById('searchMobileInput').value.toLowerCase().trim();
-      let startFromAcctQuery = document.getElementById('startFromAcctInput').value.toLowerCase().trim();
-      
-      let colFilters = [];
-      document.querySelectorAll('.col-filter').forEach(input => {
-        let val = input.value.trim();
-        let cName = input.getAttribute('data-col');
-        if(val !== "" && cName !== targetCol && cName !== 'remarks') {
-          colFilters.push({ 
-            col: cName, 
-            rawVal: val,
-            isNumeric: input.classList.contains('numeric-filter')
-          });
-        }
-      });
-
-      return globalResponse.data.filter(row => {
-        if (startDate || endDate) {
-          let dDateStr = row.deliveryDate ? String(row.deliveryDate).trim() : '';
-          if (!dDateStr) return false;
-          let dDate = parseCustomDate(dDateStr);
-          if (!dDate) return false;
-          
-          if (startDate) {
-            let sDate = parseCustomDate(startDate);
-            if (sDate && dDate < sDate) return false;
-          }
-          if (endDate) {
-            let eDate = parseCustomDate(endDate);
-            if (eDate && dDate > eDate) return false;
-          }
-        }
-
-        let acc = String(row.accNo || '').toLowerCase();
-        let title = String(row.accTitle || '').toLowerCase();
-        let mob = String(row.mobile || '').toLowerCase();
-        
-        if (accQuery && !acc.includes(accQuery)) return false;
-        if (titleQuery && !title.includes(titleQuery)) return false;
-        if (mobileQuery && !mob.includes(mobileQuery)) return false;
-
-        if (startFromAcctQuery) {
-          let currentAccNum = parseFloat(row.accNo) || 0;
-          let filterAccNum = parseFloat(startFromAcctQuery) || 0;
-          if (currentAccNum < filterAccNum) return false;
-        }
-
-        for(let f of colFilters) {
-          let rowValNum = Number(getColumnValue(row, f.col, globalResponse.monthHeaders)) || 0;
-          let rowValStr = String(getColumnValue(row, f.col, globalResponse.monthHeaders)).trim();
-
-          if (f.isNumeric) {
-            let filterStr = f.rawVal;
-            if (filterStr.startsWith('>=')) {
-              let target = Number(filterStr.replace('>=', '')) || 0;
-              if (!(rowValNum >= target)) return false;
-            } else if (filterStr.startsWith('>')) {
-              let target = Number(filterStr.replace('>', '')) || 0;
-              if (!(rowValNum > target)) return false;
-            } else if (filterStr.startsWith('<=')) {
-              let target = Number(filterStr.replace('<=', '')) || 0;
-              if (!(rowValNum <= target)) return false;
-            } else if (filterStr.startsWith('<')) {
-              let target = Number(filterStr.replace('<', '')) || 0;
-              if (!(rowValNum < target)) return false;
-            } else if (filterStr.startsWith('BETWEEN')) {
-              let parts = filterStr.replace('BETWEEN', '').split('AND');
-              let min = Number(parts[0]) || 0;
-              let max = Number(parts[1]) || 0;
-              if (!(rowValNum >= min && rowValNum <= max)) return false;
-            } else {
-              let target = Number(filterStr) || 0;
-              if (rowValNum !== target) return false;
-            }
-          } else {
-            let allowedVals = new Set(f.rawVal.split('|').map(v => v.trim()));
-            if (allowedVals.size === 1 && !f.rawVal.includes('|')) {
-              if (!rowValStr.toLowerCase().includes(f.rawVal.toLowerCase())) return false;
-            } else if (!allowedVals.has(rowValStr)) {
-              return false;
-            }
-          }
-        }
-        return true;
-      });
-    }
-
-    function toggleExcelPopup(event, colName, isNumeric = false) {
-      event.stopPropagation();
-      if (!globalResponse || !globalResponse.data) {
-        alert("Please wait until data is fully loaded!");
-        return;
-      }
-
-      let popup = document.getElementById('excelPopupBox');
-      let btn = event.currentTarget;
-      let input = btn.previousElementSibling;
-
-      activePopupCol = colName;
-      activePopupInput = input;
-      activeIsNumeric = isNumeric;
-      isDateCol = (colName === 'deliveryDate' || colName === 'lpd');
-
-      let rect = btn.getBoundingClientRect();
-      popup.style.top = (rect.bottom + window.scrollY + 2) + 'px';
-      popup.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 290) + 'px';
-
-      let numSec = document.getElementById('numericFilterSection');
-      let univSec = document.getElementById('universalFilterSection');
-
-      if (isNumeric) {
-        numSec.style.display = 'block';
-        univSec.style.display = 'none';
-        popup.style.width = '220px';
-      } else {
-        numSec.style.display = 'none';
-        univSec.style.display = 'block';
-        popup.style.width = '280px';
-
-        let relevantRows = getFilteredRowsExcluding(colName);
-
-        if (isDateCol) {
-          univSec.innerHTML = `
-            <input type="text" id="popupSearchInput" placeholder="Search dates..." oninput="filterDateTree(this.value)" inputmode="text">
-            <div class="excel-checkbox-item" style="border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 3px; font-weight: bold;">
-              <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAllCheckboxes(this)">
-              <label for="selectAllCheckbox" style="cursor: pointer; margin:0;">(Select All Years/Dates)</label>
-            </div>
-            <div id="popupCheckboxList" class="excel-checkbox-list" style="max-height: 200px;"></div>
-          `;
-
-          let dateMap = {};
-          relevantRows.forEach(row => {
-            let rawD = getColumnValue(row, colName, globalResponse.monthHeaders);
-            if (!rawD) return;
-            let dObj = parseCustomDate(rawD);
-            if (!dObj) return;
-
-            let year = String(dObj.getFullYear());
-            let monthName = dObj.toLocaleString('default', { month: 'short' }) + ' ' + year;
-            let monthKey = String(dObj.getMonth() + 1).padStart(2, '0') + '-' + year;
-            let fullDateStr = formatDateDDMMYY(dObj);
-
-            if (!dateMap[year]) dateMap[year] = {};
-            if (!dateMap[year][monthKey]) dateMap[year][monthKey] = { name: monthName, dates: new Set() };
-            dateMap[year][monthKey].dates.add(fullDateStr);
-          });
-
-          let currentFilterVal = input.value.trim();
-          let selectedDatesSet = new Set(currentFilterVal ? currentFilterVal.split('|').map(s => s.trim()) : []);
-
-          let listContainer = document.getElementById('popupCheckboxList');
-          let treeHtml = "";
-          let yearKeys = Object.keys(dateMap).sort().reverse();
-
-          yearKeys.forEach((yr, yIdx) => {
-            let mKeys = Object.keys(dateMap[yr]).sort().reverse();
-            treeHtml += `<div class="tree-year-group" style="margin-bottom: 4px;">
-              <div style="display:flex; align-items:center; background:#e8f5e9; padding:3px 6px; font-weight:bold; border-radius:3px;">
-                <input type="checkbox" class="tree-year-chk" data-year="${yr}" onchange="toggleYearGroup(this)" style="margin-right:6px;">
-                <span onclick="toggleSubTree('sub_${yIdx}')" style="cursor:pointer; flex:1;">📁 ${yr} (${Object.keys(dateMap[yr]).length} months)</span>
-              </div>
-              <div id="sub_${yIdx}" style="padding-left:15px; display:block; margin-top:2px;">`;
-
-            mKeys.forEach((mKey, mIdx) => {
-              let mData = dateMap[yr][mKey];
-              let dateArray = Array.from(mData.dates).sort();
-              treeHtml += `<div style="margin-bottom:2px;">
-                <div style="display:flex; align-items:center; background:#f1f8e9; padding:2px 4px; font-weight:600; border-radius:2px;">
-                  <input type="checkbox" class="tree-month-chk" data-year="${yr}" data-month="${mKey}" onchange="toggleMonthGroup(this)" style="margin-right:5px;">
-                  <span onclick="toggleSubTree('sub_m_${yIdx}_${mIdx}')" style="cursor:pointer; flex:1;">📂 ${mData.name}</span>
-                </div>
-                <div id="sub_m_${yIdx}_${mIdx}" style="padding-left:15px; display:block; margin-top:2px;">`;
-
-              dateArray.forEach(dStr => {
-                let isChecked = (selectedDatesSet.size === 0 || selectedDatesSet.has(dStr)) ? "checked" : "";
-                treeHtml += `<div class="excel-checkbox-item date-item-row" data-date="${dStr}" style="margin:0; padding:1px 0;">
-                  <input type="checkbox" value="${dStr}" ${isChecked} class="popup-item-chk val-chk date-leaf-chk" onchange="updateDateSelectAllState()">
-                  <label style="cursor:pointer; width:100%; font-weight:normal;" title="${dStr}">${dStr}</label>
-                </div>`;
-              });
-
-              treeHtml += `</div></div>`;
-            });
-            treeHtml += `</div></div>`;
-          });
-
-          listContainer.innerHTML = treeHtml;
-          updateDateSelectAllState();
-
-        } else {
-          univSec.innerHTML = `
-            <input type="text" id="popupSearchInput" placeholder="Search (All)..." oninput="filterPopupCheckboxes()" inputmode="text">
-            <div class="excel-checkbox-item" style="border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 3px; font-weight: bold;">
-              <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAllCheckboxes(this)">
-              <label for="selectAllCheckbox" style="cursor: pointer; margin:0;">(Select All)</label>
-            </div>
-            <div id="popupCheckboxList" class="excel-checkbox-list"></div>
-          `;
-
-          let listContainer = document.getElementById('popupCheckboxList');
-          let currentFilterVal = input.value.trim();
-
-          let valSet = new Set();
-          relevantRows.forEach(row => {
-            let val = String(getColumnValue(row, colName, globalResponse.monthHeaders)).trim();
-            if (val !== "") valSet.add(val);
-          });
-
-          popupAllUniqueValues = Array.from(valSet).sort();
-          let selectedSet = new Set();
-          if (currentFilterVal === "") {
-            popupAllUniqueValues.forEach(v => selectedSet.add(v));
-          } else {
-            currentFilterVal.split('|').forEach(v => selectedSet.add(v.trim()));
-          }
-
-          let html = "";
-          popupAllUniqueValues.forEach((val, idx) => {
-            let isChecked = selectedSet.has(val) ? "checked" : "";
-            html += `<div class="excel-checkbox-item" style="margin:0;">
-              <input type="checkbox" id="chk_${idx}" value="${val}" ${isChecked} class="popup-item-chk val-chk" onchange="updateMasterSelectAllState()">
-              <label for="chk_${idx}" style="cursor:pointer; width:100%; overflow:hidden; text-overflow:ellipsis;" title="${val}">${val}</label>
-            </div>`;
-          });
-
-          listContainer.innerHTML = html;
-          document.getElementById('popupSearchInput').value = "";
-          updateMasterSelectAllState();
-        }
-      }
-
-      popup.classList.add('active');
-    }
-
-    function toggleSubTree(id) {
-      let el = document.getElementById(id);
-      if (el) {
-        el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-      }
-    }
-
-    function toggleYearGroup(yearChk) {
-      let group = yearChk.closest('.tree-year-group');
-      if (!group) return;
-      group.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-        chk.checked = yearChk.checked;
-      });
-      updateDateSelectAllState();
-    }
-
-    function toggleMonthGroup(monthChk) {
-      let monthContainer = monthChk.closest('div').nextElementSibling;
-      if (!monthContainer) return;
-      monthContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-        chk.checked = monthChk.checked;
-      });
-      updateDateSelectAllState();
-    }
-
-    function updateDateSelectAllState() {
-      let allLeaves = document.querySelectorAll('.date-leaf-chk');
-      let checkedLeaves = Array.from(allLeaves).filter(chk => chk.checked);
-      let master = document.getElementById('selectAllCheckbox');
-      if (master) {
-        master.checked = (allLeaves.length > 0 && checkedLeaves.length === allLeaves.length);
-      }
-    }
-
-    function filterDateTree(query) {
-      query = query.toLowerCase().trim();
-      document.querySelectorAll('.date-item-row').forEach(row => {
-        let text = row.querySelector('label').innerText.toLowerCase();
-        row.style.display = text.includes(query) ? 'flex' : 'none';
-      });
-    }
-
-    function updateMasterSelectAllState() {
-      let visibleItems = Array.from(document.querySelectorAll('.excel-checkbox-item')).filter(item => {
-        let label = item.querySelector('label');
-        return label && label.getAttribute('for') !== 'selectAllCheckbox' && item.style.display !== 'none';
-      });
-      let checkedVisibleItems = visibleItems.filter(item => {
-        let chk = item.querySelector('.popup-item-chk');
-        return chk && chk.checked;
-      });
-      let master = document.getElementById('selectAllCheckbox');
-      if (master) {
-        master.checked = (visibleItems.length > 0 && checkedVisibleItems.length === visibleItems.length);
-      }
-    }
-
-    function filterPopupCheckboxes() {
-      let query = document.getElementById('popupSearchInput').value.toLowerCase().trim();
-      let items = document.querySelectorAll('.excel-checkbox-item');
-      
-      items.forEach(item => {
-        let label = item.querySelector('label');
-        if(label && label.getAttribute('for') !== 'selectAllCheckbox') {
-          let text = label.innerText.toLowerCase();
-          let isMatch = text.includes(query);
-          item.style.display = isMatch ? "flex" : "none";
-          
-          let chk = item.querySelector('.popup-item-chk');
-          if (chk) {
-            if (query !== "") {
-              chk.checked = isMatch;
-            }
-          }
-        }
-      });
-      updateMasterSelectAllState();
-    }
-
-    function toggleSelectAllCheckboxes(master) {
-      if (isDateCol) {
-        document.querySelectorAll('.date-item-row').forEach(row => {
-          if (row.style.display !== 'none') {
-            let chk = row.querySelector('.date-leaf-chk');
-            if (chk) chk.checked = master.checked;
-          }
-        });
-        document.querySelectorAll('.tree-year-chk, .tree-month-chk').forEach(chk => {
-          chk.checked = master.checked;
-        });
-        updateDateSelectAllState();
-      } else {
-        let visibleItems = document.querySelectorAll('.excel-checkbox-item');
-        visibleItems.forEach(item => {
-          let label = item.querySelector('label');
-          if (label && label.getAttribute('for') !== 'selectAllCheckbox' && item.style.display !== 'none') {
-            let chk = item.querySelector('.popup-item-chk');
-            if (chk) chk.checked = master.checked;
-          }
-        });
-      }
-    }
-
-    document.addEventListener('click', (e) => {
-      let popup = document.getElementById('excelPopupBox');
-      if (!popup.contains(e.target) && !e.target.closest('.excel-filter-btn')) {
-        popup.classList.remove('active');
-      }
-    });
-
-    function applyExcelPopupFilter() {
-      if (!activePopupInput) return;
-
-      if (activeIsNumeric) {
-        let cond = document.getElementById('numCondition').value;
-        let v1 = document.getElementById('numVal1').value.trim();
-        let v2 = document.getElementById('numVal2').value.trim();
-        if (v1 === '') activePopupInput.value = '';
-        else if (cond === 'eq') activePopupInput.value = v1;
-        else if (cond === 'gt') activePopupInput.value = '>' + v1;
-        else if (cond === 'gte') activePopupInput.value = '>=' + v1;
-        else if (cond === 'lt') activePopupInput.value = '<' + v1;
-        else if (cond === 'lte') activePopupInput.value = '<=' + v1;
-        else if (cond === 'between') activePopupInput.value = 'BETWEEN' + v1 + 'AND' + v2;
-      } else {
-        let selectedValues = [];
-        let leafCheckboxes = document.querySelectorAll('.val-chk');
-        leafCheckboxes.forEach(chk => {
-          let itemDiv = chk.closest('.excel-checkbox-item');
-          if (chk.checked && itemDiv && itemDiv.style.display !== 'none') {
-            selectedValues.push(chk.value);
-          }
-        });
-
-        if (isDateCol) {
-          let allLeafCheckboxes = document.querySelectorAll('.date-leaf-chk');
-          let allSelected = Array.from(allLeafCheckboxes).every(c => c.checked);
-          if (allSelected || selectedValues.length === 0) {
-            activePopupInput.value = "";
-          } else {
-            activePopupInput.value = selectedValues.join('|');
-          }
-        } else {
-          let selectedSet = new Set(selectedValues);
-          let allSelected = popupAllUniqueValues.every(v => selectedSet.has(v));
-
-          if (allSelected || selectedValues.length === 0) {
-            activePopupInput.value = "";
-          } else {
-            activePopupInput.value = selectedValues.join('|');
-          }
-        }
-      }
-
-      document.getElementById('excelPopupBox').classList.remove('active');
-      updateFilterButtonIndications();
-      applySearchFilter();
-    }
-
-    function clearExcelPopupFilter() {
-      if (activePopupInput) {
-        activePopupInput.value = "";
-      }
-      document.getElementById('excelPopupBox').classList.remove('active');
-      updateFilterButtonIndications();
-      applySearchFilter();
-    }
-
-    function updateFilterButtonIndications() {
-      document.querySelectorAll('.col-filter').forEach(input => {
-        let col = input.getAttribute('data-col');
-        let btn = document.getElementById('btn_' + col);
-        if (btn) {
-          if (input.value.trim() !== "") {
-            btn.classList.add('active-filter');
-          } else {
-            btn.classList.remove('active-filter');
-          }
-        }
-      });
+      return tBal - (inst * (remainingMonths - 1));
     }
 
     function applySearchFilter() {
       if (!globalResponse || !globalResponse.data) return;
-
       let startDate = document.getElementById('startDateInput').value;
       let endDate = document.getElementById('endDateInput').value;
       let accQuery = document.getElementById('searchAccInput').value.toLowerCase().trim();
       let titleQuery = document.getElementById('searchTitleInput').value.toLowerCase().trim();
       let mobileQuery = document.getElementById('searchMobileInput').value.toLowerCase().trim();
       let startFromAcctQuery = document.getElementById('startFromAcctInput').value.toLowerCase().trim();
-      
-      let colFilters = [];
-      document.querySelectorAll('.col-filter').forEach(input => {
-        let val = input.value.trim();
-        let cName = input.getAttribute('data-col');
-        if(val !== "" && cName !== 'remarks') {
-          colFilters.push({ 
-            col: cName, 
-            rawVal: val,
-            isNumeric: input.classList.contains('numeric-filter')
-          });
-        }
-      });
 
       let filtered = globalResponse.data.filter(row => {
         if (startDate || endDate) {
-          let dDateStr = row.deliveryDate ? String(row.deliveryDate).trim() : '';
-          if (!dDateStr) return false;
-          let dDate = parseCustomDate(dDateStr);
+          let dDate = parseCustomDate(row.deliveryDate);
           if (!dDate) return false;
-          
-          if (startDate) {
-            let sDate = parseCustomDate(startDate);
-            if (sDate && dDate < sDate) return false;
-          }
-          if (endDate) {
-            let eDate = parseCustomDate(endDate);
-            if (eDate && dDate > eDate) return false;
-          }
+          if (startDate && dDate < parseCustomDate(startDate)) return false;
+          if (endDate && dDate > parseCustomDate(endDate)) return false;
         }
 
-        let acc = String(row.accNo || '').toLowerCase();
-        let title = String(row.accTitle || '').toLowerCase();
-        let mob = String(row.mobile || '').toLowerCase();
-        
-        let matchesAcc = true;
-        if (accQuery) {
-          matchesAcc = acc.includes(accQuery);
-        }
+        if (accQuery && !String(row.accNo || '').toLowerCase().includes(accQuery)) return false;
+        if (titleQuery && !String(row.accTitle || '').toLowerCase().includes(titleQuery)) return false;
+        if (mobileQuery && !String(row.mobile || '').toLowerCase().includes(mobileQuery)) return false;
 
-        let matchesTitle = true;
-        if (titleQuery) {
-          matchesTitle = title.includes(titleQuery);
-        }
-
-        let matchesMobile = true;
-        if (mobileQuery) {
-          matchesMobile = mob.includes(mobileQuery);
-        }
-
-        let matchesStartFromAcct = true;
         if (startFromAcctQuery) {
-          let currentAccNum = parseFloat(row.accNo) || 0;
-          let filterAccNum = parseFloat(startFromAcctQuery) || 0;
-          if (currentAccNum < filterAccNum) {
-            return false;
-          }
+          if ((parseFloat(row.accNo) || 0) < (parseFloat(startFromAcctQuery) || 0)) return false;
         }
-
-        if (!matchesAcc || !matchesTitle || !matchesMobile || !matchesStartFromAcct) return false;
-
-        for(let f of colFilters) {
-          let rowValNum = Number(getColumnValue(row, f.col, globalResponse.monthHeaders)) || 0;
-          let rowValStr = String(getColumnValue(row, f.col, globalResponse.monthHeaders)).trim();
-
-          if (f.isNumeric) {
-            let filterStr = f.rawVal;
-            if (filterStr.startsWith('>=')) {
-              let target = Number(filterStr.replace('>=', '')) || 0;
-              if (!(rowValNum >= target)) return false;
-            } else if (filterStr.startsWith('>')) {
-              let target = Number(filterStr.replace('>', '')) || 0;
-              if (!(rowValNum > target)) return false;
-            } else if (filterStr.startsWith('<=')) {
-              let target = Number(filterStr.replace('<=', '')) || 0;
-              if (!(rowValNum <= target)) return false;
-            } else if (filterStr.startsWith('<')) {
-              let target = Number(filterStr.replace('<', '')) || 0;
-              if (!(rowValNum < target)) return false;
-            } else if (filterStr.startsWith('BETWEEN')) {
-              let parts = filterStr.replace('BETWEEN', '').split('AND');
-              let min = Number(parts[0]) || 0;
-              let max = Number(parts[1]) || 0;
-              if (!(rowValNum >= min && rowValNum <= max)) return false;
-            } else {
-              let target = Number(filterStr) || 0;
-              if (rowValNum !== target) return false;
-            }
-          } else {
-            let allowedVals = new Set(f.rawVal.split('|').map(v => v.trim()));
-            if (allowedVals.size === 1 && !f.rawVal.includes('|')) {
-              if (!rowValStr.toLowerCase().includes(f.rawVal.toLowerCase())) return false;
-            } else if (!allowedVals.has(rowValStr)) {
-              return false;
-            }
-          }
-        }
-
         return true;
       });
-      
-      updateFilterButtonIndications();
-      renderTableRows(filtered, globalResponse.monthHeaders);
+
+      renderTableRows(filtered);
     }
 
     function getDynamicMonthLabels() {
       let bench = getBenchmarkDate();
-      let bYear = bench.getFullYear();
-      let bMonth = bench.getMonth();
-
-      let m1Date = new Date(bYear, bMonth, 1);
-      let m2Date = new Date(bYear, bMonth - 1, 1);
-      let m3Date = new Date(bYear, bMonth - 2, 1);
-      let m4Date = new Date(bYear, bMonth - 3, 1);
-
       return {
-        m1: formatMonthYearName(m1Date),
-        m2: formatMonthYearName(m2Date),
-        m3: formatMonthYearName(m3Date),
-        m4: formatMonthYearName(m4Date)
+        m1: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth(), 1)),
+        m2: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 1, 1)),
+        m3: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 2, 1)),
+        m4: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 3, 1))
       };
     }
 
     let currentFilteredData = [];
 
-    function renderTableRows(data, monthHeaders) {
+    function renderTableRows(data) {
       let tbody = document.getElementById('tableBody');
       let tfoot = document.getElementById('tableFooter');
-      
       let dynLabels = getDynamicMonthLabels();
 
       document.getElementById('thM4').innerText = dynLabels.m4;
@@ -1684,7 +726,6 @@
       document.getElementById('thM1').innerText = dynLabels.m1;
 
       currentFilteredData = data;
-
       if (!data || data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #777; padding: 10px;">No records found.</td></tr>`;
         tfoot.innerHTML = ``;
@@ -1698,75 +739,50 @@
         let tBal = calculateDynamicBalance(row);
         let inst = calculateMonthlyInstallment(row);
         let planNum = getPlanMonthsCount(row);
-        let approvedVal = row.approvedBy !== undefined && row.approvedBy !== null ? row.approvedBy : '';
+        let approvedVal = row.approvedBy || '';
         let endVal = calculateEndingMonth(row);
-        let prodVal = getColumnValue(row, 'product', monthHeaders);
-        
-        let rawLpd = row.lpd !== undefined && row.lpd !== null ? row.lpd : (row.lastPaymentDate || row['LPD'] || '');
-        let lpdVal = formatDateDDMMYY(rawLpd);
-
-        let lpAmt = getColumnValue(row, 'lpAmount', monthHeaders);
-
+        let prodVal = row.product || '';
+        let lpdVal = formatDateDDMMYY(row.lpd);
+        let lpAmt = Number(row.lpAmount) || 0;
         let mPmts = getDynamicMonthPayments(row);
-        let m4 = mPmts.m4;
-        let m3 = mPmts.m3;
-        let m2 = mPmts.m2;
-        let m1 = mPmts.m1;
-
-        let totalSales = Number(row.totalSales || row.totalsales || row['Total Sale'] || 0);
+        let totalSales = Number(row.totalSales) || 0;
         let totalPaid = calculateDynamicTotalPaid(row);
-
         let formattedDate = formatDateDDMMYY(row.deliveryDate);
-        
-        let cmd = calculateCMD(row, monthHeaders);
-        let cmdStyle = cmd < 0 ? "text-align: right; background-color: #e3f2fd; color: #0d47a1;" : "text-align: right; background-color: #ffebee;";
+        let cmd = calculateCMD(row);
 
-        sumInst += inst;
-        sumSales += totalSales;
-        sumPaid += totalPaid;
-        sumBal += tBal;
-        sumLpAmt += Number(lpAmt) || 0;
-        sumM4 += m4;
-        sumM3 += m3;
-        sumM2 += m2;
-        sumM1 += m1;
-        sumCmd += cmd;
+        sumInst += inst; sumSales += totalSales; sumPaid += totalPaid; sumBal += tBal; sumLpAmt += lpAmt;
+        sumM4 += mPmts.m4; sumM3 += mPmts.m3; sumM2 += mPmts.m2; sumM1 += mPmts.m1; sumCmd += cmd;
 
         html += `<tr>
-          <td class="col-accNo" title="${row.accNo || ''}">
-            <span class="account-link" onclick="openLedgerNewTab('${row.accNo}')">${row.accNo || ''}</span>
-          </td>
-          <td class="col-accTitle" title="${row.accTitle || ''}">${row.accTitle || ''}</td>
-          <td class="col-approvedBy" title="${approvedVal}">${approvedVal}</td>
-          <td class="col-cro" title="${row.cro || ''}">${row.cro || ''}</td>
-          <td class="col-mobile" title="${row.mobile || ''}">${row.mobile || ''}</td>
-          <td class="col-monthlyInst" style="text-align: right;" title="${inst}">${inst}</td>
-          <td class="col-remarks" title=""></td>
-          <td class="col-cmd" style="${cmdStyle}" title="${cmd}">${cmd}</td>
-          <td class="col-plan" style="text-align: center;" title="${planNum}">${planNum}</td>
-          <td class="col-totalSales" style="text-align: right;" title="${totalSales}">${totalSales}</td>
-          <td class="col-totalReceived" style="text-align: right;" title="${totalPaid}">${totalPaid}</td>
-          <td class="col-balance" style="text-align: right; color: #b71c1c;" title="${tBal}">${tBal}</td>
-          <td class="col-lpd" title="${lpdVal}">${lpdVal}</td>
-          <td class="col-lpAmount" style="text-align: right;" title="${lpAmt}">${lpAmt ? lpAmt : ''}</td>
-          <td class="col-deliveryDate" title="${formattedDate}">${formattedDate}</td>
-          <td class="col-endingMonth" title="${endVal}">${endVal}</td>
-          <td class="col-product" title="${prodVal}">${prodVal}</td>
-          <td class="col-m4" style="text-align: right;" title="${m4}">${m4}</td>
-          <td class="col-m3" style="text-align: right;" title="${m3}">${m3}</td>
-          <td class="col-m2" style="text-align: right;" title="${m2}">${m2}</td>
-          <td class="col-m1" style="text-align: right;" title="${m1}">${m1}</td>
+          <td class="col-accNo"><span class="account-link" onclick="openLedgerNewTab('${row.accNo}')">${row.accNo || ''}</span></td>
+          <td class="col-accTitle">${row.accTitle || ''}</td>
+          <td class="col-approvedBy">${approvedVal}</td>
+          <td class="col-cro">${row.cro || ''}</td>
+          <td class="col-mobile">${row.mobile || ''}</td>
+          <td class="col-monthlyInst" style="text-align: right;">${inst || ''}</td>
+          <td class="col-remarks"></td>
+          <td class="col-cmd" style="text-align: right;">${cmd || ''}</td>
+          <td class="col-plan" style="text-align: center;">${planNum || ''}</td>
+          <td class="col-totalSales" style="text-align: right;">${totalSales || ''}</td>
+          <td class="col-totalReceived" style="text-align: right;">${totalPaid || ''}</td>
+          <td class="col-balance" style="text-align: right; color: #b71c1c;">${tBal || ''}</td>
+          <td class="col-lpd">${lpdVal}</td>
+          <td class="col-lpAmount" style="text-align: right;">${lpAmt || ''}</td>
+          <td class="col-deliveryDate">${formattedDate}</td>
+          <td class="col-endingMonth">${endVal}</td>
+          <td class="col-product">${prodVal}</td>
+          <td class="col-m4" style="text-align: right;">${mPmts.m4 || ''}</td>
+          <td class="col-m3" style="text-align: right;">${mPmts.m3 || ''}</td>
+          <td class="col-m2" style="text-align: right;">${mPmts.m2 || ''}</td>
+          <td class="col-m1" style="text-align: right;">${mPmts.m1 || ''}</td>
         </tr>`;
       });
 
       tbody.innerHTML = html;
-
-      let footerHtml = `<tr class="table-footer-row">
+      tfoot.innerHTML = `<tr class="table-footer-row">
         <td class="col-accNo" style="text-align:center;">Total</td>
         <td class="col-accTitle">(${data.length} Accts)</td>
-        <td class="col-approvedBy"></td>
-        <td class="col-cro"></td>
-        <td class="col-mobile"></td>
+        <td class="col-approvedBy"></td><td class="col-cro"></td><td class="col-mobile"></td>
         <td class="col-monthlyInst" style="text-align: right;">${sumInst}</td>
         <td class="col-remarks"></td>
         <td class="col-cmd" style="text-align: right;">${sumCmd}</td>
@@ -1775,278 +791,51 @@
         <td class="col-totalReceived" style="text-align: right;">${sumPaid}</td>
         <td class="col-balance" style="text-align: right;">${sumBal}</td>
         <td class="col-lpd"></td>
-        <td class="col-lpAmount" style="text-align: right;">${sumLpAmt ? sumLpAmt : ''}</td>
-        <td class="col-deliveryDate"></td>
-        <td class="col-endingMonth"></td>
-        <td class="col-product"></td>
+        <td class="col-lpAmount" style="text-align: right;">${sumLpAmt || ''}</td>
+        <td class="col-deliveryDate"></td><td class="col-endingMonth"></td><td class="col-product"></td>
         <td class="col-m4" style="text-align: right;">${sumM4}</td>
         <td class="col-m3" style="text-align: right;">${sumM3}</td>
         <td class="col-m2" style="text-align: right;">${sumM2}</td>
         <td class="col-m1" style="text-align: right;">${sumM1}</td>
       </tr>`;
-
-      tfoot.innerHTML = footerHtml;
     }
 
     function exportToExcel() {
-      if (!currentFilteredData || currentFilteredData.length === 0) {
-        alert("No data available to export!");
-        return;
-      }
-
+      if (!currentFilteredData.length) return alert("No data to export!");
       let dynLabels = getDynamicMonthLabels();
-
-      let excelHTML = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-          <meta charset="utf-8">
-          <style>
-            table { border-collapse: collapse; width: 100%; }
-            th { background-color: #1b5e20; color: #ffffff; font-weight: bold; border: 1px solid #000000; padding: 5px; text-align: center; }
-            td { border: 1px solid #000000; padding: 4px; text-align: left; font-size: 11pt; mso-number-format:"\\@"; }
-            .num { text-align: right; mso-number-format:"0"; }
-            .center { text-align: center; mso-number-format:"0"; }
-            .foot { background-color: #dcedc8; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <h2>Al-Meezan Electronics - Customer Aging Report</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Acct Num</th>
-                <th>Acct Title</th>
-                <th>Aprv by</th>
-                <th>CRO</th>
-                <th>Mobile Nu</th>
-                <th>M Inst</th>
-                <th>Remarks</th>
-                <th>CMD</th>
-                <th>Plan</th>
-                <th>Total Sale</th>
-                <th>Total Paid</th>
-                <th>T Balance</th>
-                <th>LPD</th>
-                <th>L.Pamount</th>
-                <th>Deliv Date</th>
-                <th>End</th>
-                <th>Product</th>
-                <th>${dynLabels.m4}</th>
-                <th>${dynLabels.m3}</th>
-                <th>${dynLabels.m2}</th>
-                <th>${dynLabels.m1}</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      let sumInst = 0, sumSales = 0, sumPaid = 0, sumBal = 0, sumLpAmt = 0, sumM4 = 0, sumM3 = 0, sumM2 = 0, sumM1 = 0, sumCmd = 0;
-
+      let excelHTML = `<table><thead><tr><th>Acct Num</th><th>Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th>M Inst</th><th>Remarks</th><th>CMD</th><th>Plan</th><th>Total Sale</th><th>Total Paid</th><th>T Balance</th><th>LPD</th><th>L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th><th>${dynLabels.m4}</th><th>${dynLabels.m3}</th><th>${dynLabels.m2}</th><th>${dynLabels.m1}</th></tr></thead><tbody>`;
+      
       currentFilteredData.forEach(row => {
-        let tBal = calculateDynamicBalance(row);
-        let inst = calculateMonthlyInstallment(row);
-        let planNum = getPlanMonthsCount(row);
-        let approvedVal = row.approvedBy !== undefined && row.approvedBy !== null ? row.approvedBy : '';
-        let endVal = calculateEndingMonth(row);
-        let prodVal = getColumnValue(row, 'product', globalResponse ? globalResponse.monthHeaders : null);
-        
-        let rawLpd = row.lpd !== undefined && row.lpd !== null ? row.lpd : (row.lastPaymentDate || row['LPD'] || '');
-        let lpdVal = formatDateDDMMYY(rawLpd);
-        let lpAmt = getColumnValue(row, 'lpAmount', globalResponse ? globalResponse.monthHeaders : null);
-
         let mPmts = getDynamicMonthPayments(row);
-        let m4 = mPmts.m4;
-        let m3 = mPmts.m3;
-        let m2 = mPmts.m2;
-        let m1 = mPmts.m1;
-
-        let totalSales = Number(row.totalSales || row.totalsales || row['Total Sale'] || 0);
-        let totalPaid = calculateDynamicTotalPaid(row);
-        let formattedDate = formatDateDDMMYY(row.deliveryDate);
-        let cmd = calculateCMD(row, globalResponse ? globalResponse.monthHeaders : null);
-
-        sumInst += inst;
-        sumSales += totalSales;
-        sumPaid += totalPaid;
-        sumBal += tBal;
-        sumLpAmt += Number(lpAmt) || 0;
-        sumM4 += m4;
-        sumM3 += m3;
-        sumM2 += m2;
-        sumM1 += m1;
-        sumCmd += cmd;
-
-        excelHTML += `<tr>
-          <td>${row.accNo || ''}</td>
-          <td>${row.accTitle || ''}</td>
-          <td>${approvedVal || ''}</td>
-          <td>${row.cro || ''}</td>
-          <td>${row.mobile || ''}</td>
-          <td class="num">${inst}</td>
-          <td></td>
-          <td class="num">${cmd}</td>
-          <td class="center">${planNum}</td>
-          <td class="num">${totalSales}</td>
-          <td class="num">${totalPaid}</td>
-          <td class="num">${tBal}</td>
-          <td>${lpdVal}</td>
-          <td class="num">${lpAmt || ''}</td>
-          <td>${formattedDate}</td>
-          <td>${endVal}</td>
-          <td>${prodVal || ''}</td>
-          <td class="num">${m4}</td>
-          <td class="num">${m3}</td>
-          <td class="num">${m2}</td>
-          <td class="num">${m1}</td>
-        </tr>`;
+        excelHTML += `<tr><td>${row.accNo || ''}</td><td>${row.accTitle || ''}</td><td>${row.approvedBy || ''}</td><td>${row.cro || ''}</td><td>${row.mobile || ''}</td><td>${calculateMonthlyInstallment(row)}</td><td></td><td>${calculateCMD(row)}</td><td>${getPlanMonthsCount(row)}</td><td>${row.totalSales || 0}</td><td>${calculateDynamicTotalPaid(row)}</td><td>${calculateDynamicBalance(row)}</td><td>${formatDateDDMMYY(row.lpd)}</td><td>${row.lpAmount || ''}</td><td>${formatDateDDMMYY(row.deliveryDate)}</td><td>${calculateEndingMonth(row)}</td><td>${row.product || ''}</td><td>${mPmts.m4}</td><td>${mPmts.m3}</td><td>${mPmts.m2}</td><td>${mPmts.m1}</td></tr>`;
       });
-
-      excelHTML += `
-              <tr class="foot">
-                <td>Total</td>
-                <td>(${currentFilteredData.length} Accts)</td>
-                <td></td><td></td><td></td>
-                <td class="num">${sumInst}</td>
-                <td></td>
-                <td class="num">${sumCmd}</td>
-                <td></td>
-                <td class="num">${sumSales}</td>
-                <td class="num">${sumPaid}</td>
-                <td class="num">${sumBal}</td>
-                <td></td>
-                <td class="num">${sumLpAmt || ''}</td>
-                <td></td><td></td><td></td>
-                <td class="num">${sumM4}</td>
-                <td class="num">${sumM3}</td>
-                <td class="num">${sumM2}</td>
-                <td class="num">${sumM1}</td>
-              </tr>
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
+      excelHTML += `</tbody></table>`;
 
       let blob = new Blob([excelHTML], { type: 'application/vnd.ms-excel' });
-      let url = URL.createObjectURL(blob);
       let a = document.createElement('a');
-      a.href = url;
-      a.download = 'Customer_Aging_Report_' + new Date().toISOString().slice(0, 10) + '.xls';
-      document.body.appendChild(a);
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Customer_Aging_Report.xls';
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     }
 
     function openLedgerNewTab(accNo) {
-      if (!accNo) {
-        alert('Account number is missing!');
-        return;
-      }
-
-      let directUrl = "LedgerView.html?accNo=" + encodeURIComponent(accNo);
-      let a = document.createElement('a');
-      a.href = directUrl;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      if (!accNo) return alert('Account number is missing!');
+      window.open(`CustomerLedgerView.html?accNo=${encodeURIComponent(accNo)}`, '_blank');
     }
-
-    function closeLedgerModal() {
-      document.getElementById('ledgerModal').style.display = 'none';
-    }
-
-    window.addEventListener('click', function(event) {
-      let modal = document.getElementById('ledgerModal');
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    });
-
-    function debounce(func, delay = 300) {
-      let timer;
-      return function(...args) {
-        clearTimeout(timer);
-        timer = setTimeout(() => { func.apply(this, args); }, delay);
-      };
-    }
-
-    const debouncedApplyFilter = debounce(() => {
-      applySearchFilter();
-    }, 300);
-
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchAndFilterData();
-
-      ['startDateInput', 'endDateInput'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) {
-          el.addEventListener('change', () => {
-            applySearchFilter();
-          });
-        }
-      });
-
-      ['searchAccInput', 'searchTitleInput', 'searchMobileInput', 'startFromAcctInput'].forEach(id => {
-        let el = document.getElementById(id);
-        if (el) {
-          el.addEventListener('input', debouncedApplyFilter);
-        }
-      });
-
-      document.querySelectorAll('.col-filter').forEach(input => {
-        input.addEventListener('input', debouncedApplyFilter);
-      });
-    });
 
     function resetFilters() {
-      document.getElementById('startDateInput').value = '';
-      document.getElementById('endDateInput').value = '';
-      document.getElementById('searchAccInput').value = '';
-      document.getElementById('searchTitleInput').value = '';
-      document.getElementById('searchMobileInput').value = '';
-      document.getElementById('startFromAcctInput').value = '';
-      document.querySelectorAll('.col-filter').forEach(input => {
-        input.value = '';
-      });
-      document.querySelectorAll('.excel-filter-btn').forEach(btn => {
-        btn.classList.remove('active-filter');
-      });
-      if (globalResponse && globalResponse.data) {
-        renderTableRows(globalResponse.data, globalResponse.monthHeaders);
-      }
+      ['startDateInput', 'endDateInput', 'searchAccInput', 'searchTitleInput', 'searchMobileInput', 'startFromAcctInput'].forEach(id => document.getElementById(id).value = '');
+      if (globalResponse && globalResponse.data) renderTableRows(globalResponse.data);
     }
 
     function printReport() {
-      let popup = document.getElementById('excelPopupBox');
-      if (popup) popup.classList.remove('active');
+      setTimeout(() => window.print(), 300);
+    }
 
-      setTimeout(() => {
-        window.print();
-      }, 300);
-    }
-  
-    function showUrlConfig() {
-      var inp = document.getElementById('scriptUrlInput');
-      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
-      var box = document.getElementById('configBox');
-      if (box) box.classList.add('show');
-    }
-    function saveScriptUrl() {
-      var inp = document.getElementById('scriptUrlInput');
-      var val = inp ? inp.value.trim() : '';
-      if (!val) { alert("URL enter karein"); return; }
-      localStorage.setItem('erp_script_url', val);
-      location.reload();
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-      var savedUrl = localStorage.getItem('erp_script_url');
-      if (!savedUrl) {
-        var box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchAndFilterData();
+      ['startDateInput', 'endDateInput'].forEach(id => document.getElementById(id).addEventListener('change', applySearchFilter));
+      ['searchAccInput', 'searchTitleInput', 'searchMobileInput', 'startFromAcctInput'].forEach(id => document.getElementById(id).addEventListener('input', applySearchFilter));
     });
   </script>
 </body>
