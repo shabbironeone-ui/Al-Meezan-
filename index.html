@@ -1,183 +1,113 @@
 <!DOCTYPE html>
-<html lang="ur">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Al Meezan ERP Professional</title>
-  <style>
-    :root {
-      --sidebar-bg: #1e293b;
-      --sidebar-hover: #334155;
-      --sidebar-text: #f8fafc;
-      --accent: #10b981;
-      --bg-main: #f1f5f9;
-      --header-bg: #ffffff;
-      --border-color: #e2e8f0;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-main);
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-      color: #334155;
-    }
-
-    /* Sidebar Styling */
-    .sidebar {
-      width: 260px;
-      background-color: var(--sidebar-bg);
-      color: var(--sidebar-text);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-      z-index: 100;
-      flex-shrink: 0;
-    }
-
-    .sidebar-header {
-      padding: 20px;
-      font-size: 16px;
-      font-weight: bold;
-      background-color: #0f172a;
-      border-bottom: 1px solid #334155;
-      text-align: center;
-      letter-spacing: 0.5px;
-      color: var(--accent);
-    }
-
-    .sidebar-menu {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .sidebar-menu li {
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .sidebar-menu a {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      color: var(--sidebar-text);
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background 0.2s;
-    }
-
-    .sidebar-menu a:hover {
-      background-color: var(--sidebar-hover);
-      border-left: 4px solid var(--accent);
-    }
-
-    /* Main Container */
-    .main-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .top-navbar {
-      height: 60px;
-      background-color: var(--header-bg);
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 25px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      flex-shrink: 0;
-    }
-
-    .top-navbar h1 {
-      font-size: 18px;
-      margin: 0;
-      color: #1e293b;
-    }
-
-    .user-badge {
-      font-size: 13px;
-      font-weight: 600;
-      color: #64748b;
-      background: #f1f5f9;
-      padding: 6px 12px;
-      border-radius: 20px;
-    }
-
-    .content-frame {
-      flex: 1;
-      background-color: var(--bg-main);
-      padding: 25px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .welcome-box {
-      text-align: center;
-      background: #ffffff;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      margin: auto;
-      width: 100%;
-      max-width: 700px;
-    }
-
-    .welcome-box h3 {
-      color: #0f172a;
-      margin-top: 0;
-    }
-
-    .welcome-box p {
-      color: #64748b;
-      line-height: 1.6;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e293b">
+<title>Al Meezan ERP</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  body{display:flex;height:100vh;height:100dvh;overflow:hidden}
+  .shell-nav{width:250px;background:var(--nav);color:#f8fafc;display:flex;flex-direction:column;flex-shrink:0;z-index:50}
+  .brand{padding:16px;background:var(--nav-deep);color:var(--brand);font-weight:700;border-bottom:1px solid var(--nav-hover)}
+  .menu{flex:1;overflow-y:auto;padding:6px 0}
+  .menu h4{margin:12px 16px 4px;font-size:12px;color:#94a3b8;font-weight:600}
+  .menu button{display:flex;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:8px 16px;background:none;border:0;border-left:4px solid transparent;color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
+  .menu button:hover{background:var(--nav-hover)}
+  .menu button[aria-current="page"]{background:var(--nav-hover);border-left-color:var(--brand)}
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:54px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 12px;flex-shrink:0}
+  .topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .burger{display:none;min-width:var(--tap)}
+  .who{font-size:12px;color:var(--muted);white-space:nowrap}
+  @media(max-width:700px){.who,#newtab{display:none}}
+  iframe{flex:1;width:100%;border:0;background:var(--bg)}
+  .home{padding:16px;overflow:auto;flex:1}
+  .tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);min-height:84px;padding:12px;font:inherit;text-align:left;cursor:pointer}
+  .tile:hover{border-color:var(--brand)} .tile b{display:block;font-size:22px}
+  .bottom-bar{display:none}
+  .scrim{display:none}
+  @media(max-width:899px){
+    .shell-nav{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);transition:transform .2s}
+    body.open .shell-nav{transform:none}
+    body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
+    .burger{display:inline-block}
+    .bottom-bar{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+    .bottom-bar button{flex:1;min-height:56px;background:none;border:0;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+    .bottom-bar button b{display:block;font-size:20px}
+  }
+</style>
 </head>
 <body>
+<nav class="shell-nav" id="nav" aria-label="Main menu">
+  <div class="brand">Al Meezan ERP</div>
+  <div class="menu" id="menu"></div>
+</nav>
+<div class="scrim" id="scrim"></div>
 
- <div class="sidebar">
-    <div class="sidebar-header">Al Meezan ERP Pro</div>
-    <ul class="sidebar-menu" id="sidebarMenu">
-      <!-- Screenshot ke exact file names ke mutabiq links -->
-      <li><a href="receipts.html" target="_blank">💵 Receipts</a></li>
-      <li><a href="voucher_entry.html" target="_blank">💵 Voucher Entry</a></li>
-      <li><a href="DailyRecoveryReport.html" target="_blank">💰 Daily Recovery Report</a></li>
-      <li><a href="AgingReport2.html" target="_blank">📈 Aging Report 2</a></li>
-      <li><a href="daybook.html" target="_blank">📖 Day Book / Bank Entries</a></li>
-      <li><a href="ProductForm.html" target="_blank">📦 Product Form</a></li>
-      <li><a href="PurchaseForm.html" target="_blank">🛒 Purchase Form</a></li>
-      <li><a href="customer.html" target="_blank">👤 Customer Register</a></li>
-      <li><a href="SalesForm.html" target="_blank">🛒 Sales Form</a></li>
-      <li><a href="DashboardView.html" target="_blank">📊 Dashboard View</a></li>
-      <li><a href="LedgerView.html" target="_blank">👤 Ledger View</a></li>
-      <li><a href="AgingReportModal.html" target="_blank">📈 Aging Report Modal</a></li>
-      <li><a href="ReconciliationView.html" target="_blank">🔄 Reconciliation View</a></li>
-      <li><a href="StockLedger.html" target="_blank">📦 Stock Ledger</a></li>
-      <li><a href="VenderLedger.html" target="_blank">👤 Vendor Ledger</a></li>
-      
-    </ul>
-  </div>
+<div class="main">
+  <header class="topbar">
+    <button class="btn ghost burger" id="burger" aria-label="Open menu">☰</button>
+    <h1 id="title">Home</h1>
+    <span class="who no-print" id="who"></span>
+    <button class="btn ghost" id="logout" hidden>Logout</button>
+    <button class="btn ghost" id="newtab" title="Open this page in a new tab">Open in tab</button>
+  </header>
+  <section class="home" id="home"></section>
+  <iframe id="frame" title="Page" hidden></iframe>
+  <div class="bottom-bar" id="bar"></div>
+</div>
 
-  <div class="main-container">
-    <div class="top-navbar">
-      <h1>Executive Dashboard</h1>
-      <div class="user-badge">Al Meezan Electronics</div>
-    </div>
-    <div class="content-frame">
-      <div class="welcome-box">
-        <h3>Al Meezan ERP Professional</h3>
-        <p>Aapke تمام folders aur files ab exact names ke sath map kar diye gaye hain. Sidebar se kisi bhi option par click karne par wo naye Chrome tab mein direct open ho jaye gi.</p>
-      </div>
-    </div>
-  </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script>
+/* Menu is data: add a page here and it appears in the sidebar, home tiles and routing. */
+const GROUPS = [
+  ["Sales & Customers", [["customer.html","👤","Customers"],["SalesForm.html","🛒","Sales"],["LedgerView.html","📒","Customer Ledger"]]],
+  ["Accounts", [["receipts.html","💵","Receipts"],["voucher_entry.html","🧾","Vouchers"],["daybook.html","📖","Day Book"],["ReconciliationView.html","🔄","Reconciliation"]]],
+  ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
+  ["Reports", [["DashboardView.html","📈","Dashboard"],["DailyRecoveryReport.html","💰","Daily Recovery"],["AgingReport2.html","⏳","Aging Report"],["AgingReportModal.html","⏳","Aging (Modal)"]]]
+];
+const QUICK = ["DashboardView.html","receipts.html","SalesForm.html","customer.html"];
+const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
+const $ = id => document.getElementById(id);
 
+function btn(p, cls) { const b = document.createElement("button"); b.dataset.p = p[0]; b.className = cls || ""; return b; }
+
+const bk = document.createElement("button"); bk.textContent = "💾  Backup all data (CSV)";
+bk.onclick = () => ERP.ui.busy(bk, async () => { try { await ERP.db.backupAll(t => ERP.ui.toast("Exporting " + t + "...")); ERP.ui.toast("Backup done"); } catch (e) { ERP.ui.toast(e.message, "err"); } });
+GROUPS.forEach(([name, pages]) => {
+  const h = document.createElement("h4"); h.textContent = name; $("menu").appendChild(h);
+  pages.forEach(p => { const b = btn(p); b.textContent = p[1] + "  " + p[2]; b.onclick = () => go(p[0]); $("menu").appendChild(b); });
+});
+{ const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h); $("menu").appendChild(bk); }
+QUICK.forEach(k => { const p = ALL[k], b = btn(p); b.innerHTML = "<b>" + p[1] + "</b>" + p[2]; b.onclick = () => go(k); $("bar").appendChild(b); });
+GROUPS.flatMap(g => g[1]).forEach(p => { const b = btn(p, "tile"); b.innerHTML = "<b>" + p[1] + "</b>" + p[2]; b.onclick = () => go(p[0]); $("home").appendChild(Object.assign(document.createElement("div"), {className: "tiles"})).appendChild(b); });
+/* merge tiles into one grid */
+const tiles = $("home").querySelectorAll(".tiles"); const first = tiles[0]; tiles.forEach((t, i) => { if (i) first.appendChild(t.firstChild), t.remove(); });
+
+function go(file) {
+  const p = ALL[file]; document.body.classList.remove("open");
+  if (!p) { $("frame").hidden = true; $("home").hidden = false; $("title").textContent = "Home"; history.replaceState(null, "", "#"); mark(null); return; }
+  $("home").hidden = true; $("frame").hidden = false; $("frame").src = file;
+  $("title").textContent = p[1] + " " + p[2]; history.replaceState(null, "", "#" + file); mark(file);
+  try { localStorage.setItem("erp_last", file); } catch (e) {}
+}
+function mark(file) { document.querySelectorAll("[data-p]").forEach(b => b.dataset.p === file ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
+
+$("burger").onclick = () => document.body.classList.add("open");
+$("scrim").onclick = () => document.body.classList.remove("open");
+$("newtab").onclick = () => { const f = location.hash.slice(1); if (ALL[f]) window.open(f, "_blank"); };
+$("title").onclick = () => go(null);
+$("logout").onclick = () => ERP.auth.signOut();
+ERP.auth.guard().then(p => {
+  if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
+  go(location.hash.slice(1) || null);
+});
+</script>
 </body>
 </html>

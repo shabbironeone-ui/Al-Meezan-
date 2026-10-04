@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - Al Meezan ERP</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  body{min-height:100vh;display:grid;place-items:center;padding:16px;background:var(--nav-deep)}
+  .box{width:100%;max-width:380px;background:#fff;border-radius:14px;padding:26px}
+  .box h1{font-size:22px;margin-bottom:2px} .box p{margin:0 0 18px;color:var(--muted)}
+  .box .btn{width:100%;margin-top:16px} .err{color:var(--danger);min-height:22px;margin-top:10px;font-size:14px}
+  .field+.field{margin-top:12px}
+</style>
+</head>
+<body>
+<main class="box">
+  <h1>Al Meezan ERP</h1>
+  <p>Sign in to continue</p>
+  <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="username" inputmode="email"></div>
+  <div class="field"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password"></div>
+  <button class="btn" id="go">Sign in</button>
+  <div class="err" id="err" role="alert"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  ERP.auth.session().then(s => { if (s) location.replace("index.html"); });
+  async function login() {
+    $("err").textContent = "";
+    if (!$("email").value || !$("pw").value) { $("err").textContent = "Enter email and password"; return; }
+    ERP.ui.busy($("go"), async () => {
+      try { await ERP.auth.signIn($("email").value, $("pw").value); location.replace("index.html"); }
+      catch (e) { $("err").textContent = e.message; }
+    });
+  }
+  $("go").onclick = login;
+  document.addEventListener("keydown", e => { if (e.key === "Enter") login(); });
+</script>
+</body>
+</html>
