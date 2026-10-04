@@ -1,0 +1,46 @@
+/* Al Meezan ERP - shared styles. Link this in every page. Mobile-first. */
+:root{
+  --ink:#1f2937; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#fff;
+  --nav:#1e293b; --nav-deep:#0f172a; --nav-hover:#334155; --brand:#10b981; --brand-dark:#059669;
+  --danger:#dc2626; --warn:#d97706; --radius:10px; --tap:44px;
+  font-family:'Segoe UI',system-ui,-apple-system,Tahoma,'Noto Naskh Arabic',sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+
+.page{max-width:1200px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+h1,h2,h3{margin:0 0 8px;line-height:1.25}
+
+/* forms: 16px font stops iOS zoom; 44px tap targets */
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;min-height:var(--tap);padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:16px;background:#fff}
+.grid{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:700px){.grid.cols-2{grid-template-columns:1fr 1fr}.grid.cols-3{grid-template-columns:repeat(3,1fr)}.grid.cols-4{grid-template-columns:repeat(4,1fr)}}
+
+.btn{min-height:var(--tap);padding:8px 16px;border:0;border-radius:8px;background:var(--brand);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--brand-dark)} .btn:disabled{opacity:.6;cursor:wait}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #cbd5e1} .btn.danger{background:var(--danger)}
+
+/* tables scroll sideways inside their own box on phones */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:#f8fafc;position:sticky;top:0;font-size:13px;color:var(--muted)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#e2e8f0}
+.badge.ok{background:#d1fae5;color:#065f46}.badge.bad{background:#fee2e2;color:#991b1b}.badge.warn{background:#fef3c7;color:#92400e}
+
+#toasts{position:fixed;left:12px;right:12px;bottom:76px;z-index:999;display:grid;gap:8px;pointer-events:none}
+@media(min-width:900px){#toasts{left:auto;right:20px;bottom:20px;width:340px}}
+.toast{padding:12px 14px;border-radius:8px;color:#fff;background:#065f46;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.toast.err{background:#991b1b}
+
+.skeleton{height:14px;border-radius:6px;background:linear-gradient(90deg,#e2e8f0,#f1f5f9,#e2e8f0);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+
+@media print{.no-print,.shell-nav,.bottom-bar,#toasts{display:none!important}body{background:#fff}.card{border:0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
