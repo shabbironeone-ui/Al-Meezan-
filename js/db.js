@@ -71,10 +71,19 @@ ERP.db = (function () {
     },
 
     sales: {
-      list: ({ accNo } = {}) => fetchAll("sales", { order: "date", ascending: false, build: q => accNo ? q.eq("account_no", String(accNo).trim()) : q }),
-      /* sale: {date, approved_by, account_no, account_title, next_inst_month, remarks}  items: [{product_id, qty, sales_amt, ...}]
-         Saves sale rows AND stock-out together, or neither. (sales table has no 'cro' column.) */
-      async save(sale, items) { return must(await sb.rpc("save_sale", { p_sale: sale, p_items: items })); }
+      list: ({ accNo } = {}) => fetchAll("sales", { order: "id", build: q => accNo ? q.eq("account_no", String(accNo).trim()) : q }),
+      async recent({ from, to } = {}) {
+        let q = sb.from("sales").select("*").order("date", { ascending: false }).order("id", { ascending: false });
+        if (from) q = q.gte("date", from); if (to) q = q.lte("date", to);
+        return must(await q.limit(500));
+      },
+      async exists(accNo) {
+        const { count, error } = await sb.from("sales").select("id", { count: "exact", head: true }).eq("account_no", String(accNo).trim());
+        if (error) throw new Error(error.message); return count > 0;
+      },
+      nextInvoiceNo: async () => must(await sb.rpc("next_invoice_no")),
+      /* One CAF = one sale. replace=true edits an existing sale (old rows + stock-out are replaced atomically). */
+      async save(sale, items, replace = false) { return must(await sb.rpc("save_sale", { p_sale: sale, p_items: items, p_replace: replace })); }
     },
 
     stock: { balance: () => fetchAll("v_stock_balance", { order: "product_id" }) },
