@@ -79,6 +79,7 @@ ERP.db = (function () {
 
     stock: { balance: () => fetchAll("v_stock_balance", { order: "product_id" }) },
 
+    async monthly(n = 6) { return must(await sb.from("v_monthly_summary").select("*").order("m", { ascending: false }).limit(n)); },
     async kpis() { return must(await sb.from("v_dashboard_kpis").select("*").single()); },
 
     vouchers: {
