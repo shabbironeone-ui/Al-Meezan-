@@ -9,12 +9,9 @@ jobs:
     steps:
       - name: Ping Supabase
         env:
-          URL: ${{ secrets.SUPABASE_URL }}
-          KEY: ${{ secrets.SUPABASE_KEY }}
+          URL: https://ofplfqawiupcmqvzkhfp.supabase.co
+          KEY: sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_
         run: |
-          if [ -z "$URL" ] || [ -z "$KEY" ]; then
-            echo "Missing secrets: add SUPABASE_URL and SUPABASE_KEY in Settings > Secrets and variables > Actions"; exit 1
-          fi
           code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/rest/v1/app_settings?select=id&limit=1" -H "apikey: $KEY")
           echo "Supabase answered HTTP $code"
           [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
