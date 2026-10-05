@@ -46,6 +46,16 @@ ERP.db = (function () {
       },
       /* Uses the DB sequence from 01_foundation.sql (no duplicates). */
       async nextAccountNo() { return must(await sb.rpc("next_customer_account_no")); },
+      /* new customer: CAF + sr_no assigned by the database (create_customer in 05_customers.sql) */
+      async create(c) { return must(await sb.rpc("create_customer", { p: c })); },
+      async update(accNo, fields) {
+        const r = must(await sb.from("customers").update(fields).eq("account_no", String(accNo).trim()).select());
+        if (!r.length) throw new Error("Not saved: customer not found or you do not have permission"); return r;
+      },
+      async remove(accNo) {
+        const r = must(await sb.from("customers").delete().eq("account_no", String(accNo).trim()).select());
+        if (!r.length) throw new Error("Not deleted: you do not have permission"); return r;
+      },
       balances: () => fetchAll("v_customer_balance", { order: "account_no" }),
       sowdowoOf: c => c[SOWDOWO]
     },
