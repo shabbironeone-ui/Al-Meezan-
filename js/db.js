@@ -69,15 +69,21 @@ ERP.db = (function () {
 
     products: {
       list: () => fetchAll("product_master", { order: "product_id" }),
-      async save(p) { return must(await sb.from("product_master").upsert(p, { onConflict: "product_id" }).select()); }
+      async save(p) { return must(await sb.from("product_master").upsert(p, { onConflict: "product_id" }).select()); },
+      newId: () => "PRD-" + Date.now().toString(36).toUpperCase()
     },
 
     purchases: {
-      /* NOTE: real column is po_num (the old erp-backend.js wrongly used purchase_id). */
-      list: ({ supplier } = {}) => fetchAll("purchase_detail", { order: "purchase_date", ascending: false,
-        build: q => supplier && supplier !== "All" ? q.eq("supplier", supplier) : q }),
-      /* head: {purchase_date, supplier, po_num?}  items: [{product_id, company_name, ..., qty, cost_price, line_total}] */
-      async save(head, items) { return must(await sb.rpc("save_purchase", { p_head: head, p_items: items })); }
+      /* newest first, max 1500 lines. {from,to,supplier,po} */
+      async recent({ from, to, supplier, po } = {}) {
+        let q = sb.from("purchase_detail").select("*").order("purchase_date", { ascending: false }).order("id", { ascending: true });
+        if (from) q = q.gte("purchase_date", from); if (to) q = q.lte("purchase_date", to);
+        if (supplier) q = q.eq("supplier", supplier); if (po) q = q.eq("po_num", po);
+        return must(await q.limit(1500));
+      },
+      /* head: {purchase_date, supplier, warehouse, po_num?}  replace=true edits an existing PO (lines and stock-in replaced together) */
+      async save(head, items, replace = false) { return must(await sb.rpc("save_purchase", { p_head: head, p_items: items, p_replace: replace })); },
+      async remove(po) { return must(await sb.rpc("delete_purchase", { p_po: po })); }
     },
 
     sales: {
