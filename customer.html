@@ -1,768 +1,224 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Al Meezan ERP - Customer Register</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --primary: #1b5e20;
-      --primary-hover: #2e7d32;
-      --accent: #81c784;
-      --danger: #c62828;
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --text: #333333;
-      --border: #cccccc;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 25px 15px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 90vh;
-      box-sizing: border-box;
-      font-size: 12px;
-    }
-
-    .container {
-      background: var(--surface);
-      border-radius: 10px;
-      padding: 22px 25px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-      width: 100%;
-      max-width: 900px;
-    }
-
-    h2 {
-      margin-top: 0;
-      color: var(--primary);
-      text-align: center;
-      font-size: 17px;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 8px;
-      margin-bottom: 15px;
-    }
-
-    fieldset {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      background: #fafafa;
-    }
-
-    legend {
-      font-weight: bold;
-      color: var(--primary);
-      background: #e8f5e9;
-      padding: 3px 10px;
-      border: 1px solid var(--accent);
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
-    .form-row {
-      display: flex;
-      gap: 14px;
-      margin-bottom: 10px;
-    }
-
-    .form-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .form-group {
-      flex: 1;
-      margin-bottom: 0;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 600;
-      color: #444;
-      font-size: 11px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 7px 10px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 12px;
-      background: #fff;
-    }
-
-    input:focus, select:focus {
-      border-color: var(--primary);
-      outline: none;
-      box-shadow: 0 0 4px rgba(27, 94, 32, 0.2);
-    }
-
-    /* MIC BUTTON WRAPPER */
-    .input-with-mic {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .input-with-mic input {
-      flex: 1;
-    }
-    .mic-btn {
-      width: 30px;
-      height: 30px;
-      flex-shrink: 0;
-      border: none;
-      border-radius: 50%;
-      background: #1b5e20;
-      color: #fff;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    .mic-btn:hover { background: #2e7d32; }
-    .mic-btn.listening {
-      background: #c62828;
-      animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
-      70% { box-shadow: 0 0 0 8px rgba(198,40,40,0); }
-      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 14px;
-      margin-top: 15px;
-    }
-
-    .action-btn {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 13px;
-      color: #fff;
-      flex: 1;
-      transition: background 0.2s;
-    }
-    .action-btn:disabled {
-      background-color: #9e9e9e !important;
-      cursor: not-allowed;
-    }
-
-    .btn-primary { background-color: var(--primary); }
-    .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
-    .btn-secondary { background-color: #546e7a; }
-    .btn-secondary:hover { background-color: #455a64; }
-
-    /* FULLSCREEN DIM OVERLAY & SPINNING BOWL LOADER */
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      z-index: 9999;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .loading-overlay.show {
-      display: flex;
-    }
-    .spinning-bowl {
-      width: 50px;
-      height: 50px;
-      border: 5px solid #e8f5e9;
-      border-top: 5px solid #1b5e20;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    .loading-text {
-      color: #ffffff;
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  
-    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
-    .auto-mic-btn {
-      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
-      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
-      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auto-mic-btn:hover { opacity: 1; }
-    .auto-mic-btn.listening {
-      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
-      animation: autoMicPulse 1s infinite;
-    }
-    @keyframes autoMicPulse {
-      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
-      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
-      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customers</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .head,.row{display:grid;align-items:center;gap:10px;grid-template-columns:44px minmax(150px,2.2fr) 1fr 1.1fr 1fr 1.1fr 100px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .head span:first-child{grid-column:1/3}
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow)}
+  .row:hover,.row:focus-visible{border-color:var(--brand)}
+  .who b{display:block;line-height:1.25}.who small,.meta{color:var(--muted);font-size:13px}
+  .meta{display:contents}
+  .bal{font-weight:700;font-variant-numeric:tabular-nums}.bal.due{color:var(--warn)}.bal.ok{color:#047857}
+  .act{display:flex;gap:6px;justify-content:flex-end}
+  .act button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:16px}
+  .act button:disabled{opacity:.35;cursor:default}
+  .balbox{border-radius:var(--radius);padding:14px;margin-bottom:12px;color:#fff;background:#047857}
+  .balbox.due{background:var(--warn)}.balbox small{opacity:.85}.balbox b{display:block;font-size:28px}.balbox span{font-size:12px;opacity:.9}
+  .gcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}
+  @media(max-width:759px){
+    .head{display:none}
+    .row{grid-template-columns:44px 1fr auto;grid-template-areas:"av who bal" "av meta act"}
+    .row .av{grid-area:av}.row .who{grid-area:who}.row .bal{grid-area:bal;text-align:right}
+    .row .meta{grid-area:meta;display:flex;gap:4px 10px;flex-wrap:wrap;align-self:start}
+    .row .act{grid-area:act}.meta .cro:empty{display:none}
+  }
+</style>
 </head>
 <body>
+<main class="page">
+  <header class="appbar">
+    <div><h1>Customers</h1><p id="sub">Loading...</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnExport">Export</button><button class="btn" id="btnNew">＋ New customer</button></div>
+  </header>
 
-<!-- SCREEN DIM & SPINNING BOWL LOADER OVERLAY -->
-<div id="loadingOverlay" class="loading-overlay">
-  <div class="spinning-bowl"></div>
-  <div class="loading-text">Saving customer data to Supabase, please wait...</div>
-</div>
+  <section class="stats" id="stats"></section>
 
-<div class="container">
-  <h2>Al Meezan ERP - Customer Register (COA)[cite: 13]</h2>
+  <section class="card toolbar">
+    <div class="search"><input id="q" type="search" placeholder="Search name, account, mobile or CNIC" autocomplete="off"></div>
+    <select id="fCro" aria-label="CRO"></select>
+    <select id="fSort" aria-label="Sort"><option value="new">Newest first</option><option value="name">Name A-Z</option><option value="bal">Highest balance</option></select>
+    <button class="chip" id="chipDue" aria-pressed="false">Balance due</button>
+  </section>
 
-  <!-- BASIC INFORMATION -->
-  <fieldset>
-    <legend>Customer Basic Information</legend>
-    <div class="form-row">
-      <div class="form-group" style="flex: 1;">
-        <label for="accNo">Account No *</label>
-        <input type="text" id="accNo" placeholder="Auto..." readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: #1b5e20;">
-      </div>
-      <div class="form-group" style="flex: 2;">
-        <label for="accTitle">Account Title (Customer Name) *</label>
-        <div class="input-with-mic">
-          <input type="text" id="accTitle" placeholder="Full name...">
-          <button type="button" class="mic-btn" data-target="accTitle" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="mobileNo">Mobile Number</label>
-        <div class="input-with-mic">
-          <input type="text" id="mobileNo" placeholder="Mobile no...">
-          <button type="button" class="mic-btn" data-target="mobileNo" data-type="number" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-    </div>
+  <div class="head"><span>Customer</span><span>Account</span><span>Mobile</span><span>CRO</span><span style="text-align:right">Balance</span><span></span></div>
+  <section id="list"></section>
+  <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
+</main>
 
-    <div class="form-row">
-      <div class="form-group" style="flex: 1.5;">
-        <label for="sowdowo">S/O D/O W/O</label>
-        <div class="input-with-mic">
-          <input type="text" id="sowdowo" placeholder="Father/Husband name...">
-          <button type="button" class="mic-btn" data-target="sowdowo" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="cnicNo">CNIC #</label>
-        <input type="text" id="cnicNo" placeholder="XXXXX-XXXXXXX-X">
-      </div>
-      <div class="form-group" style="flex: 2;">
-        <label for="address">Address</label>
-        <div class="input-with-mic">
-          <input type="text" id="address" placeholder="Address...">
-          <button type="button" class="mic-btn" data-target="address" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-    </div>
+<dialog id="profile" class="sheet"></dialog>
 
-    <div class="form-row">
-      <div class="form-group" style="flex: 1;">
-        <label for="approvedBy">Approved By</label>
-        <select id="approvedBy">
-          <option value="">Select Approved By...</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label for="cro">CRO</label>
-        <select id="cro">
-          <option value="">Select CRO...</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label for="department">Department</label>
-        <input type="text" id="department" placeholder="Department...">
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group" style="flex: 1;">
-        <label for="salary">Salary</label>
-        <input type="number" id="salary" placeholder="Monthly salary...">
-      </div>
-      <div class="form-group" style="flex: 2;">
-        <label for="designation">Designation</label>
-        <input type="text" id="designation" placeholder="Designation...">
-      </div>
-    </div>
-  </fieldset>
-
-  <!-- GUARANTOR 1 -->
-  <fieldset>
-    <legend>Guarantor 1 Details</legend>
-    <div class="form-row">
-      <div class="form-group" style="flex: 2;">
-        <label for="g1Name">Guarantor 1 Name</label>
-        <div class="input-with-mic">
-          <input type="text" id="g1Name" placeholder="Name...">
-          <button type="button" class="mic-btn" data-target="g1Name" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="g1Mobile">Mobile Number</label>
-        <input type="text" id="g1Mobile" placeholder="Mobile...">
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label for="g1Dept">Department</label>
-        <input type="text" id="g1Dept" placeholder="Department...">
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="g1Desig">Designation</label>
-        <input type="text" id="g1Desig" placeholder="Designation...">
-      </div>
-    </div>
-  </fieldset>
-
-  <!-- GUARANTOR 2 -->
-  <fieldset>
-    <legend>Guarantor 2 Details</legend>
-    <div class="form-row">
-      <div class="form-group" style="flex: 2;">
-        <label for="g2Name">Guarantor 2 Name</label>
-        <div class="input-with-mic">
-          <input type="text" id="g2Name" placeholder="Name...">
-          <button type="button" class="mic-btn" data-target="g2Name" onclick="toggleMic(this)">🎤</button>
-        </div>
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="g2Mobile">Mobile Number</label>
-        <input type="text" id="g2Mobile" placeholder="Mobile...">
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label for="g2Dept">Department</label>
-        <input type="text" id="g2Dept" placeholder="Department...">
-      </div>
-      <div class="form-group" style="flex: 1.5;">
-        <label for="g2Desig">Designation</label>
-        <input type="text" id="g2Desig" placeholder="Designation...">
-      </div>
-    </div>
-  </fieldset>
-
-  <div class="btn-row">
-    <button id="saveBtn" class="action-btn btn-primary" onclick="saveCustomer()">Save Customer</button>
-    <button class="action-btn btn-secondary" onclick="clearForm()">Reset</button>
+<dialog id="formDlg" class="sheet">
+  <div class="sh-head"><div><h2 id="fTitle">New customer</h2><p id="fAcc"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <form id="frm" class="sh-body" novalidate onsubmit="return false"></form>
+  <div class="sh-foot">
+    <button class="btn danger" id="btnDel" hidden style="margin-right:auto">Delete</button>
+    <button class="btn ghost" data-close>Cancel</button>
+    <button class="btn" id="btnSave">Save customer</button>
   </div>
-</div>
+</dialog>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
-  // Supabase Configuration
-  const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SO = "S/O D/O W/O", $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money;
+const digits = s => String(s || "").replace(/\D/g, ""), key = c => String(c.account_no || "").trim();
+let ALL = [], BAL = new Map(), shown = 50, editing = null, dueOnly = false;
+const bal = c => Number((BAL.get(key(c)) || {}).balance) || 0;
 
-  window.onload = function() {
-    loadNextAccountNo();
-    loadDropdownSettings();
-  };
+/* ---------- form definition ---------- */
+const SECT = [
+  ["Customer details", [["account_title","Full name *","text",{mic:1,wide:1}],[SO,"S/O, D/O or W/O","text",{mic:1}],["cnic_no","CNIC","text",{m:"cnic",ph:"35202-1234567-1"}],
+    ["mobile_number","Mobile","text",{m:"mob",ph:"0300-1234567"}],["address","Address","text",{mic:1,wide:1}]]],
+  ["Employment", [["department","Department","text",{mic:1}],["designation","Designation","text",{mic:1}],["salary","Monthly salary (Rs)","number",{}]]],
+  ["Guarantor 1", [["guarantor_1_name","Name","text",{mic:1}],["guarantor_1_mobile","Mobile","text",{m:"mob",ph:"0300-1234567"}],["guarantor_1_dept","Department","text",{mic:1}],["guarantor_1_designation","Designation","text",{mic:1}]]],
+  ["Guarantor 2", [["guarantor_2_name","Name","text",{mic:1}],["guarantor_2_mobile","Mobile","text",{m:"mob",ph:"0300-1234567"}],["guarantor_2_dept","Department","text",{mic:1}],["guarantor_2_designation","Designation","text",{mic:1}]]]
+];
+const fld = ([k, label, type, o]) => `<div class="fld${o.wide ? " wide" : ""}"><label>${label}</label><div class="inp"><input data-k="${k}" type="${type}" ${o.m ? `data-mask="${o.m}" inputmode="numeric"` : ""} ${type === "number" ? 'inputmode="decimal" min="0"' : ""} ${o.ph ? `placeholder="${o.ph}"` : ""} autocomplete="off">${o.mic ? '<button type="button" class="mic" aria-label="Voice input" tabindex="-1">🎤</button>' : ""}</div><small class="err"></small></div>`;
+function buildForm() {
+  $("frm").innerHTML = SECT.map(([t, fs]) => `<fieldset class="fsec" style="border:1px solid var(--line)"><legend>${t}</legend><div class="fgrid">${fs.map(fld).join("")}</div></fieldset>`).join("")
+    + `<fieldset class="fsec" style="border:1px solid var(--line)"><legend>Approval</legend><div class="fgrid"><div class="fld"><label>CRO</label><select data-k="cro"></select></div><div class="fld"><label>Approved by</label><select data-k="approved_by"></select></div></div></fieldset>`;
+  $("frm").addEventListener("input", e => { const m = e.target.dataset.mask; if (m) e.target.value = fmt(m, e.target.value); e.target.classList.remove("bad"); const er = e.target.closest(".fld"); if (er) er.querySelector(".err").textContent = ""; });
+  ERP.voice.wire($("frm"));
+}
+function fmt(m, v) {
+  const d = digits(v);
+  if (m === "cnic") return [d.slice(0, 5), d.slice(5, 12), d.slice(12, 13)].filter(Boolean).join("-");
+  return d.length > 4 ? d.slice(0, 4) + "-" + d.slice(4, 11) : d;
+}
 
-  // ============================================================
-  // VOICE INPUT (Mic Button) Logic
-  // ============================================================
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let activeRecognition = null;
-  let activeBtn = null;
+/* ---------- data ---------- */
+async function load() {
+  $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(4);
+  try {
+    const [c, b, s] = await Promise.all([ERP.db.customers.list(), ERP.db.customers.balances(), ERP.db.settings()]);
+    ALL = c; BAL = new Map(b.map(x => [String(x.account_no).trim(), x]));
+    const names = cat => s.rows.filter(r => String(r.category || "").trim().toUpperCase() === cat).map(r => String(r.display_name || r.lookup_code || "").trim()).filter(Boolean);
+    window.CRO = names("CRO"); window.APP = names("APPROVED_BY");
+    const all = [...new Set([...CRO, ...ALL.map(x => x.cro).filter(Boolean)])].sort();
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + all.map(x => `<option>${E(x)}</option>`).join("");
+    render();
+  } catch (e) { $("list").innerHTML = `<div class="empty">Could not load customers.<br><small>${E(e.message)}</small></div>`; }
+}
 
-  function cleanNumericText(text) {
-    return text.replace(/[^\d\-]/g, '').trim();
-  }
+function render() {
+  const q = $("q").value.trim().toLowerCase(), qd = digits(q), cro = $("fCro").value, sort = $("fSort").value;
+  let rows = ALL.filter(c => (!cro || c.cro === cro) && (!dueOnly || bal(c) > 0) && (!q ||
+    String(c.account_title || "").toLowerCase().includes(q) || key(c).includes(q) || String(c[SO] || "").toLowerCase().includes(q) ||
+    (qd && (digits(c.mobile_number).includes(qd) || digits(c.cnic_no).includes(qd)))));
+  const num = c => Number(digits(c.account_no)) || 0;
+  rows.sort(sort === "name" ? (a, b) => String(a.account_title).localeCompare(String(b.account_title)) : sort === "bal" ? (a, b) => bal(b) - bal(a) : (a, b) => num(b) - num(a));
 
-  function toggleMic(btn) {
-    if (!SpeechRecognition) {
-      alert("Ye browser voice input support nahi karta. Chrome use karein.");
-      return;
-    }
+  const due = ALL.filter(c => bal(c) > 0);
+  $("stats").innerHTML = `<div class="stat"><small>Customers</small><b>${M(ALL.length)}</b></div><div class="stat due"><small>With balance due</small><b>${M(due.length)}</b></div><div class="stat"><small>Total outstanding</small><b>Rs ${M(due.reduce((s, c) => s + bal(c), 0))}</b></div>`;
+  $("sub").textContent = rows.length === ALL.length ? `${M(ALL.length)} customers` : `${M(rows.length)} of ${M(ALL.length)} customers`;
 
-    const targetId = btn.getAttribute('data-target');
-    const inputEl = document.getElementById(targetId);
-    const isNumeric = btn.getAttribute('data-type') === 'number';
+  $("list").innerHTML = rows.slice(0, shown).map(c => {
+    const b = bal(c), ini = String(c.account_title || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+    return `<article class="row" data-a="${E(key(c))}" tabindex="0">
+      <div class="av" style="background:hsl(${(num(c) * 47) % 360} 45% 38%)">${E(ini)}</div>
+      <div class="who"><b>${E(c.account_title)}</b><small>${E(c[SO])}</small></div>
+      <div class="meta"><span>${E(key(c))}</span><span>${E(c.mobile_number)}</span><span class="cro">${E(c.cro)}</span></div>
+      <div class="bal ${b > 0 ? "due" : "ok"}">${b > 0 ? "Rs " + M(b) : "Clear"}</div>
+      <div class="act"><button data-act="wa" title="WhatsApp" ${digits(c.mobile_number) ? "" : "disabled"}>💬</button><button data-act="call" title="Call" ${digits(c.mobile_number) ? "" : "disabled"}>📞</button></div></article>`;
+  }).join("") || '<div class="empty">No customers match your search.</div>';
+  $("more").hidden = rows.length <= shown; $("more").textContent = `Show more (${M(rows.length - shown)} remaining)`;
+}
 
-    if (btn.classList.contains('listening')) {
-      forceStopMic(btn, inputEl, isNumeric);
-      return;
-    }
+/* ---------- actions ---------- */
+function waUrl(c) {
+  let d = digits(c.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const b = bal(c);
+  const msg = `Assalam o Alaikum ${c.account_title}, ` + (b > 0 ? `aap ka CAF ${key(c)} ka baqaya Rs ${M(b)} hai. Meherbani karke ada kar dein. Shukriya - Al Meezan` : `Al Meezan ki taraf se salam.`);
+  return `https://wa.me/${d}?text=${encodeURIComponent(msg)}`;
+}
+const find = acc => ALL.find(c => key(c) === acc);
+$("list").onclick = e => {
+  const row = e.target.closest(".row"); if (!row) return; const c = find(row.dataset.a), act = e.target.closest("[data-act]");
+  if (act) { e.stopPropagation(); return act.dataset.act === "wa" ? window.open(waUrl(c), "_blank", "noopener") : (location.href = "tel:" + digits(c.mobile_number)); }
+  openProfile(c);
+};
+$("list").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) openProfile(find(e.target.dataset.a)); };
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
-    if (activeRecognition && activeBtn) {
-      forceStopMic(activeBtn, document.getElementById(activeBtn.getAttribute('data-target')), activeBtn.getAttribute('data-type') === 'number');
-    }
+const kv = (l, v) => `<div><dt>${l}</dt><dd>${E(v) || "—"}</dd></div>`;
+function openProfile(c) {
+  const b = BAL.get(key(c)) || {}, bl = bal(c), ini = String(c.account_title || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const g = n => c["guarantor_" + n + "_name"] ? `<div class="gcard"><b>Guarantor ${n}</b><dl class="kv" style="margin-top:8px">${kv("Name", c["guarantor_" + n + "_name"])}${kv("Mobile", c["guarantor_" + n + "_mobile"])}${kv("Department", c["guarantor_" + n + "_dept"])}${kv("Designation", c["guarantor_" + n + "_designation"])}</dl></div>` : "";
+  $("profile").innerHTML = `<div class="sh-head"><div class="av lg" style="background:hsl(${(Number(digits(c.account_no)) * 47) % 360} 45% 38%)">${E(ini)}</div>
+      <div><h2>${E(c.account_title)}</h2><p>CAF ${E(key(c))}${c[SO] ? " · " + E(c[SO]) : ""}</p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="sh-body"><div class="balbox ${bl > 0 ? "due" : ""}"><small>Outstanding balance</small><b>${bl > 0 ? "Rs " + M(bl) : "Clear"}</b>
+      <span>Sale ${M(b.total_sale)} · Advance ${M(b.advance)} · Received ${M(b.received)}</span></div>
+      <div class="fsec"><dl class="kv">${kv("Mobile", c.mobile_number)}${kv("CNIC", c.cnic_no)}${kv("Address", c.address)}${kv("CRO", c.cro)}${kv("Approved by", c.approved_by)}${kv("Department", c.department)}${kv("Designation", c.designation)}${kv("Salary", c.salary ? "Rs " + M(c.salary) : "")}</dl></div>${g(1)}${g(2)}</div>
+    <div class="sh-foot"><a class="btn ghost" style="display:inline-grid;place-items:center;text-decoration:none" href="LedgerView.html?accNo=${encodeURIComponent(key(c))}">Ledger</a>
+      <button class="btn ghost" id="pWa" ${digits(c.mobile_number) ? "" : "disabled"}>WhatsApp</button>
+      ${ERP.auth.can("edit") ? '<button class="btn" id="pEdit">Edit</button>' : ""}</div>`;
+  $("pWa").onclick = () => window.open(waUrl(c), "_blank", "noopener");
+  if ($("pEdit")) $("pEdit").onclick = () => { $("profile").close(); openForm(c); };
+  $("profile").showModal();
+}
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+function fillSel(el, list, cur) { el.innerHTML = '<option value="">Select...</option>' + [...new Set([...list, ...(cur ? [cur] : [])])].map(x => `<option>${E(x)}</option>`).join(""); el.value = cur || ""; }
+function nextPreview() { return String(Math.max(7860000, ...ALL.map(c => Number(digits(c.account_no)) || 0)) + 1); }
+function openForm(c) {
+  editing = c ? key(c) : null;
+  $("fTitle").textContent = c ? "Edit customer" : "New customer";
+  $("fAcc").textContent = c ? "CAF " + key(c) : "CAF number is assigned when you save (next: " + nextPreview() + ")";
+  document.querySelectorAll("#frm [data-k]").forEach(el => {
+    const k = el.dataset.k, v = c ? (c[k] ?? "") : "";
+    if (k === "cro") fillSel(el, window.CRO || [], v); else if (k === "approved_by") fillSel(el, window.APP || [], v);
+    else { el.value = v; if (el.dataset.mask) el.value = fmt(el.dataset.mask, el.value); }
+    el.classList.remove("bad"); el.closest(".fld").querySelector(".err") && (el.closest(".fld").querySelector(".err").textContent = "");
+  });
+  $("btnDel").hidden = !(c && ERP.auth.can("delete"));
+  $("formDlg").showModal(); $("frm").scrollTop = 0;
+}
 
-    let finalTranscript = '';
-
-    activeRecognition = recognition;
-    activeBtn = btn;
-    btn.classList.add('listening');
-    inputEl.dataset.origPlaceholder = inputEl.placeholder;
-    inputEl.placeholder = "🎧 Sun raha hoon... rokne ke liye mic dobara dabayein";
-
-    recognition.onresult = function(event) {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
-        } else {
-          interim += transcript;
-        }
-      }
-      let combined = (finalTranscript + interim).trim();
-      inputEl.value = isNumeric ? cleanNumericText(combined) : combined;
-    };
-
-    recognition.onerror = function(event) {
-      if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        alert("Mic Error: " + event.error);
-      }
-    };
-
-    recognition.onend = function() {
-      btn.classList.remove('listening');
-      inputEl.placeholder = inputEl.dataset.origPlaceholder || '';
-      if (isNumeric) {
-        inputEl.value = cleanNumericText(inputEl.value);
-      }
-      if (activeBtn === btn) {
-        activeRecognition = null;
-        activeBtn = null;
-      }
-    };
-
-    recognition.start();
-  }
-
-  function forceStopMic(btn, inputEl, isNumeric) {
-    if (activeRecognition) {
-      activeRecognition.onend = null;
-      activeRecognition.onresult = null;
-      try { activeRecognition.abort(); } catch (e) {}
-      activeRecognition = null;
-    }
-    btn.classList.remove('listening');
-    if (inputEl) {
-      inputEl.placeholder = inputEl.dataset.origPlaceholder || '';
-      if (isNumeric) {
-        inputEl.value = cleanNumericText(inputEl.value);
-      }
-    }
-    activeBtn = null;
-  }
-
-  // ============================================================
-  // SUPABASE BACKEND CALLS (CUSTOMERS TABLE)
-  // ============================================================
-
-  async function loadNextAccountNo() {
+function collect() {
+  const d = {};
+  document.querySelectorAll("#frm [data-k]").forEach(el => { let v = el.value.trim(); const k = el.dataset.k;
+    if (el.dataset.mask === "mob") v = digits(v); if (k === "salary") v = v === "" ? null : Number(v); d[k] = v; });
+  return d;
+}
+function validate(d) {
+  let ok = true; const bad = (k, m) => { const el = document.querySelector(`#frm [data-k="${k}"]`); el.classList.add("bad"); el.closest(".fld").querySelector(".err").textContent = m; ok = false; };
+  if (!d.account_title || d.account_title.length < 3) bad("account_title", "Please enter the customer's name");
+  if (d.cnic_no && digits(d.cnic_no).length !== 13) bad("cnic_no", "CNIC must be 13 digits");
+  ["mobile_number", "guarantor_1_mobile", "guarantor_2_mobile"].forEach(k => { if (d[k] && !/^03\d{9}$/.test(d[k])) bad(k, "Mobile must be 11 digits starting with 03"); });
+  if (d.salary != null && (isNaN(d.salary) || d.salary < 0)) bad("salary", "Invalid amount");
+  const first = document.querySelector("#frm .bad"); if (first) { first.scrollIntoView({ block: "center" }); first.focus(); }
+  return ok;
+}
+$("btnSave").onclick = async () => {
+  const d = collect(); if (!validate(d)) return;
+  const dup = d.cnic_no && ALL.find(x => digits(x.cnic_no) === digits(d.cnic_no) && key(x) !== editing);
+  if (dup && !confirm(`This CNIC already belongs to ${dup.account_title} (CAF ${key(dup)}).\nSave anyway?`)) return;
+  await ERP.ui.busy($("btnSave"), async () => {
     try {
-      let allData = [];
-      let page = 0;
-      let pageSize = 1000;
-      let fetchMore = true;
+      if (editing) { await ERP.db.customers.update(editing, d); ERP.ui.toast("Customer updated"); }
+      else { const r = await ERP.db.customers.create(d); ERP.ui.toast("Saved. CAF number: " + r.account_no); }
+      $("formDlg").close(); await load();
+    } catch (e) { ERP.ui.toast(e.message, "err"); }
+  });
+};
+$("btnDel").onclick = async () => {
+  const c = find(editing), b = BAL.get(editing) || {};
+  if (Number(b.total_sale) > 0 || Number(b.received) > 0) return ERP.ui.toast("This customer has sales/receipts, so it cannot be deleted.", "err");
+  if (!confirm(`Delete ${c.account_title} (CAF ${editing})? This cannot be undone.`)) return;
+  try { await ERP.db.customers.remove(editing); ERP.ui.toast("Customer deleted"); $("formDlg").close(); await load(); } catch (e) { ERP.ui.toast(e.message, "err"); }
+};
 
-      while (fetchMore) {
-        let { data, error } = await _supabase
-          .from('customers')
-          .select('account_no')
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (error) {
-          console.error("Account No load error:", error);
-          break;
-        }
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          if (data.length < pageSize) fetchMore = false;
-          else page++;
-        } else {
-          fetchMore = false;
-        }
-      }
-
-      if (allData.length > 0) {
-        let maxAcc = 786000;
-        allData.forEach(row => {
-          let num = parseInt(String(row.account_no || '').trim());
-          if (!isNaN(num) && num > maxAcc) {
-            maxAcc = num;
-          }
-        });
-        document.getElementById('accNo').value = maxAcc + 1;
-      } else {
-        document.getElementById('accNo').value = "786001";
-      }
-    } catch (err) {
-      console.error("Account No load catch error:", err);
-      document.getElementById('accNo').value = "786001";
-    }
-  }
-
-  async function getNextSrNo() {
-    try {
-      let allData = [];
-      let page = 0;
-      let pageSize = 1000;
-      let fetchMore = true;
-
-      while (fetchMore) {
-        let { data, error } = await _supabase
-          .from('customers')
-          .select('sr_no')
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (error) break;
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          if (data.length < pageSize) fetchMore = false;
-          else page++;
-        } else {
-          fetchMore = false;
-        }
-      }
-
-      if (allData.length > 0) {
-        let maxSr = 0;
-        allData.forEach(row => {
-          let num = parseInt(String(row.sr_no || '').trim());
-          if (!isNaN(num) && num > maxSr) {
-            maxSr = num;
-          }
-        });
-        return maxSr + 1;
-      }
-      return 1;
-    } catch (e) {
-      console.error("Sr No fetch error:", e);
-      return 1;
-    }
-  }
-
-  async function loadDropdownSettings() {
-    let croSelect = document.getElementById('cro');
-    let approvedSelect = document.getElementById('approvedBy');
-
-    croSelect.innerHTML = '<option value="">Select CRO...</option>';
-    approvedSelect.innerHTML = '<option value="">Select Approved By...</option>';
-
-    try {
-      let { data, error } = await _supabase.from('app_settings').select('*');
-      if (!error && data && data.length > 0) {
-        data.forEach(row => {
-          let cat = String(row.category || '').trim().toUpperCase();
-          let name = String(row.display_name || row.lookup_code || '').trim();
-
-          if (cat === 'CRO' && name) {
-            croSelect.innerHTML += `<option value="${name}">${name}</option>`;
-          } else if (cat === 'APPROVED_BY' && name) {
-            approvedSelect.innerHTML += `<option value="${name}">${name}</option>`;
-          }
-        });
-      }
-    } catch (e) {
-      console.error("Settings load error:", e);
-    }
-  }
-
-  function showLoader(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    const saveBtn = document.getElementById('saveBtn');
-    if (show) {
-      overlay.classList.add('show');
-      saveBtn.disabled = true;
-    } else {
-      overlay.classList.remove('show');
-      saveBtn.disabled = false;
-    }
-  }
-
-  async function saveCustomer() {
-    let accNoVal = document.getElementById('accNo').value.trim();
-    let nextSrNo = await getNextSrNo();
-    
-    let data = {
-      account_no: accNoVal,
-      sr_no: nextSrNo,
-      account_title: document.getElementById('accTitle').value.trim(),
-      mobile_number: document.getElementById('mobileNo').value.trim(),
-      address: document.getElementById('address').value.trim(),
-      approved_by: document.getElementById('approvedBy').value,
-      cro: document.getElementById('cro').value,
-      department: document.getElementById('department').value.trim(),
-      "S/O D/O W/O": document.getElementById('sowdowo').value.trim(),
-      cnic_no: document.getElementById('cnicNo').value.trim(),
-      salary: parseFloat(document.getElementById('salary').value) || 0,
-      designation: document.getElementById('designation').value.trim(),
-      guarantor_1_name: document.getElementById('g1Name').value.trim(),
-      guarantor_1_mobile: document.getElementById('g1Mobile').value.trim(),
-      guarantor_1_dept: document.getElementById('g1Dept').value.trim(),
-      guarantor_1_designation: document.getElementById('g1Desig').value.trim(),
-      guarantor_2_name: document.getElementById('g2Name').value.trim(),
-      guarantor_2_mobile: document.getElementById('g2Mobile').value.trim(),
-      guarantor_2_dept: document.getElementById('g2Dept').value.trim(),
-      guarantor_2_designation: document.getElementById('g2Desig').value.trim()
-    };
-
-    if (!data.account_title) {
-      alert("Account Title (Customer Name) is required!");
-      return;
-    }
-
-    showLoader(true);
-
-    try {
-      let { error } = await _supabase.from('customers').insert([data]);
-      showLoader(false);
-
-      if (error) {
-        alert("Error saving: " + error.message);
-      } else {
-        alert("Customer Saved Successfully to Supabase!");
-        clearForm();
-        loadNextAccountNo();
-      }
-    } catch (err) {
-      showLoader(false);
-      alert("Server Error: " + err.message);
-    }
-  }
-
-  function clearForm() {
-    const inputs = document.querySelectorAll('input:not(#accNo)');
-    inputs.forEach(input => input.value = '');
-    const selects = document.querySelectorAll('select');
-    selects.forEach(select => select.selectedIndex = 0);
-  }
-
-  // ================= UNIVERSAL MIC INPUT =================
-  (function() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let activeRec = null, activeBtn = null, activeInput = null;
-
-    function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-    function stopActiveMic() {
-      if (activeRec) {
-        activeRec.onend = null; activeRec.onresult = null;
-        try { activeRec.abort(); } catch (e) {}
-        activeRec = null;
-      }
-      if (activeBtn) activeBtn.classList.remove('listening');
-      if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-      activeBtn = null; activeInput = null;
-    }
-
-    function toggleMic(input, btn) {
-      if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-      const isNumeric = input.type === 'number';
-
-      if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-      stopActiveMic();
-
-      const rec = new SR();
-      rec.lang = 'en-US';
-      rec.continuous = true;
-      rec.interimResults = true;
-      let finalText = '';
-
-      activeRec = rec; activeBtn = btn; activeInput = input;
-      btn.classList.add('listening');
-      input.dataset.origPh = input.placeholder || '';
-      input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-      rec.onresult = function(ev) {
-        let interim = '';
-        for (let i = ev.resultIndex; i < ev.results.length; i++) {
-          const t = ev.results[i][0].transcript;
-          if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-        }
-        let text = (finalText + interim).trim();
-        if (isNumeric) text = cleanNumeric(text);
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      rec.onerror = function(ev) {
-        if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-      };
-      rec.onend = function() {
-        btn.classList.remove('listening');
-        input.placeholder = input.dataset.origPh || '';
-        if (isNumeric) input.value = cleanNumeric(input.value);
-        if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-      };
-      try { rec.start(); } catch (e) {}
-    }
-
-    function attachMic(input) {
-      if (!input || input.dataset.autoMic) return;
-      if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-          input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-      if (input.closest('.input-with-mic')) return;
-      if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-      input.dataset.autoMic = '1';
-
-      const wrap = document.createElement('span');
-      wrap.className = 'auto-mic-wrap';
-      input.parentNode.insertBefore(wrap, input);
-      wrap.appendChild(input);
-
-      input.style.paddingRight = '24px';
-      input.style.boxSizing = 'border-box';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'auto-mic-btn';
-      btn.title = 'Voice input';
-      btn.innerHTML = '&#127908;';
-      btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-      wrap.appendChild(btn);
-    }
-
-    function scanAndAttach(root) {
-      root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      scanAndAttach(document);
-    });
-
-    const mo = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        m.addedNodes.forEach(function(node) {
-          if (node.nodeType !== 1) return;
-          if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-            attachMic(node);
-          }
-          if (node.querySelectorAll) scanAndAttach(node);
-        });
-      });
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-  })();
+/* ---------- wiring ---------- */
+$("btnNew").onclick = () => openForm(null);
+$("more").onclick = () => { shown += 50; render(); };
+$("q").oninput = ERP.ui.debounce(() => { shown = 50; render(); }, 200);
+$("fCro").onchange = $("fSort").onchange = () => { shown = 50; render(); };
+$("chipDue").onclick = e => { dueOnly = !dueOnly; e.currentTarget.setAttribute("aria-pressed", dueOnly); shown = 50; render(); };
+$("btnExport").onclick = () => ERP.ui.downloadCSV("customers_" + ERP.ui.today() + ".csv", ALL.map(c => ({ ...c, balance: bal(c) })));
+(async () => { await ERP.auth.guard(); if (!ERP.auth.can("write")) $("btnNew").hidden = true; buildForm(); load(); })();
 </script>
-
 </body>
 </html>
