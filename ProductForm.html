@@ -1,487 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Product Master Registration</title>
-  <style>
-    :root {
-      --primary-color: #1e293b;
-      --accent-color: #10b981;
-      --bg-color: #f1f5f9;
-      --border-color: #cbd5e1;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-color);
-      margin: 0;
-      padding: 20px;
-      color: #334155;
-    }
-    .form-container {
-      background: #ffffff;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-    h2 {
-      margin-top: 0;
-      color: var(--primary-color);
-      border-bottom: 2px solid var(--accent-color);
-      padding-bottom: 10px;
-      font-size: 20px;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 5px;
-      font-size: 13px;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 14px;
-      text-transform: uppercase; 
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    }
-    textarea {
-      resize: vertical;
-      height: 70px;
-    }
-    .mobile-fields {
-      background: #f8fafc;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px dashed #cbd5e1;
-      margin-bottom: 15px;
-      display: none;
-    }
-    .row-fields {
-      display: flex;
-      gap: 10px;
-    }
-    .btn-submit {
-      background-color: var(--accent-color);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 15px;
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s;
-    }
-    .btn-submit:hover {
-      background-color: #059669;
-    }
-    #statusMsg {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 4px;
-      text-align: center;
-      font-weight: 500;
-      display: none;
-    }
-    .success { background-color: #d1fae5; color: #065f46; }
-    .error { background-color: #fee2e2; color: #b91c1c; }
-
-    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 11px; display: none; }
-    .config-box.show { display: block; }
-    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box; text-transform: none; }
-    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; }
-  
-    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
-    .auto-mic-btn {
-      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
-      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
-      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auto-mic-btn:hover { opacity: 1; }
-    .auto-mic-btn.listening {
-      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
-      animation: autoMicPulse 1s infinite;
-    }
-    @keyframes autoMicPulse {
-      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
-      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
-      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Products</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .head,.row{display:grid;align-items:center;gap:10px;grid-template-columns:minmax(200px,2.4fr) 1.2fr 1fr 1fr 90px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow)}
+  .row:hover,.row:focus-visible{border-color:var(--brand)}
+  .row b{display:block;line-height:1.25}.row small{color:var(--muted)}
+  .stk{justify-self:end;font-weight:700;min-width:60px;text-align:center}
+  .num{font-variant-numeric:tabular-nums}
+  @media(max-width:759px){.head{display:none}.row{grid-template-columns:1fr auto;grid-template-areas:"n s" "m s" "p p"}
+    .row .n{grid-area:n}.row .m{grid-area:m}.row .stk{grid-area:s}.row .p{grid-area:p;display:flex;gap:14px;font-size:13px;color:var(--muted)}.row .p span:empty{display:none}.row .hide-m{display:none}}
+  .row .p{display:contents}@media(max-width:759px){.row .p{display:flex}}
 </style>
 </head>
 <body>
+<main class="page">
+  <header class="appbar"><div><h1>Products</h1><p id="sub">Loading...</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnExport">Export</button><button class="btn" id="btnNew">＋ New product</button></div></header>
+  <section class="stats" id="stats"></section>
+  <section class="card toolbar">
+    <div class="search"><input id="q" type="search" placeholder="Search brand, model, color or ID" autocomplete="off"></div>
+    <select id="fCat" aria-label="Category"></select>
+    <select id="fSort" aria-label="Sort"><option value="new">Newest first</option><option value="name">Brand / model A-Z</option><option value="stock">Most stock</option></select>
+    <button class="chip" id="chipStock" aria-pressed="false">In stock only</button>
+  </section>
+  <div class="head"><span>Product</span><span>Brand / Category</span><span style="text-align:right">Cost</span><span style="text-align:right">MRP</span><span style="text-align:right">Stock</span></div>
+  <section id="list"></section>
+  <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
+</main>
 
-  <div class="form-container">
-      <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
-  <div id="configBox" class="config-box">
-      <b>Setup:</b> Agar data load na ho to apna Apps Script URL neeche update karein.
-      <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-      <button onclick="saveScriptUrl()">Save URL</button>
-    </div>
+<dialog id="dlg" class="sheet">
+  <div class="sh-head"><div><h2 id="dTitle">New product</h2><p id="dSub"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <form id="frm" class="sh-body" novalidate onsubmit="return false"><div class="fsec"><div class="fgrid">
+    <div class="fld"><label>Category *</label><input id="fCategory" list="dCat" autocomplete="off" placeholder="e.g. MOBILE"><small class="err"></small></div>
+    <div class="fld"><label>Brand / Company *</label><input id="fBrand" list="dBrand" autocomplete="off" placeholder="e.g. SAMSUNG"><small class="err"></small></div>
+    <div class="fld"><label>Model *</label><input id="fModel" list="dModel" autocomplete="off"><small class="err"></small></div>
+    <div class="fld"><label>Color</label><input id="fColor" list="dColor" autocomplete="off"></div>
+    <div class="fld mob"><label>RAM (GB)</label><input id="fRam" inputmode="numeric" list="dRam" autocomplete="off"></div>
+    <div class="fld mob"><label>Storage / ROM (GB)</label><input id="fRom" inputmode="numeric" list="dRom" autocomplete="off"></div>
+    <div class="fld"><label>Cost price (Rs)</label><input id="fCost" type="number" inputmode="decimal" min="0"><small class="err"></small></div>
+    <div class="fld"><label>MRP / sale price (Rs)</label><input id="fMrp" type="number" inputmode="decimal" min="0"><small class="err"></small></div>
+    <div class="fld wide"><label>Remarks</label><input id="fRem" autocomplete="off"></div></div></div>
+    <p style="font-size:12px;color:var(--muted);margin:0">Cost and MRP are optional. They pre-fill automatically when you add this product to a purchase.</p></form>
+  <div class="sh-foot"><button class="btn danger" id="btnDel" hidden style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="btnSave">Save product</button></div>
+  <datalist id="dCat"></datalist><datalist id="dBrand"></datalist><datalist id="dModel"></datalist><datalist id="dColor"></datalist><datalist id="dRam"></datalist><datalist id="dRom"></datalist>
+</dialog>
 
-    <h2>📦 Product Master Registration</h2>
-    <form id="productForm" onsubmit="handleFormSubmit(event)">
-      
-      <div class="form-group">
-        <label for="product_category">Product Category</label>
-        <input type="text" id="product_category" name="product_category" list="catList" placeholder="e.g. Mobile, Ref, LED" required oninput="checkCategory(this.value)" onkeydown="handleEnter(event, 'company_name')">
-        <datalist id="catList"></datalist>
-      </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase();
+let ALL = [], STK = new Map(), shown = 50, editing = null, onlyStock = false;
+const stock = p => STK.get(String(p.product_id)) || 0;
+const gb = v => { v = String(v || "").trim(); return v ? (/gb/i.test(v) ? v : v + " GB") : ""; };
+const num = v => String(v || "").replace(/\D/g, "");
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
-      <div class="form-group">
-        <label for="company_name">Company Name / Brand</label>
-        <input type="text" id="company_name" name="company_name" list="companyList" placeholder="e.g. Samsung, Apple, Dawlance" required onkeydown="handleEnter(event, 'model')">
-        <datalist id="companyList"></datalist>
-      </div>
+async function load() {
+  $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(4);
+  try {
+    const [pr, st] = await Promise.all([ERP.db.products.list(), ERP.db.stock.balance()]);
+    ALL = pr; STK = new Map();
+    st.forEach(r => STK.set(String(r.product_id), (STK.get(String(r.product_id)) || 0) + Number(r.in_stock || 0)));
+    const u = k => [...new Set(ALL.map(p => up(p[k])).filter(Boolean))].sort();
+    const dl = (id, k, f) => $(id).innerHTML = u(k).map(v => `<option value="${E(f ? f(v) : v)}">`).join("");
+    dl("dCat", "product_category"); dl("dBrand", "company_name"); dl("dModel", "model"); dl("dColor", "color");
+    $("dRam").innerHTML = [...new Set(ALL.map(p => num(p.ram)).filter(Boolean))].sort((a, b) => a - b).map(v => `<option value="${v}">`).join("");
+    $("dRom").innerHTML = [...new Set(ALL.map(p => num(p.memory)).filter(Boolean))].sort((a, b) => a - b).map(v => `<option value="${v}">`).join("");
+    $("fCat").innerHTML = '<option value="">All categories</option>' + u("product_category").map(v => `<option>${E(v)}</option>`).join("");
+    render();
+  } catch (e) { $("list").innerHTML = `<div class="empty">Could not load products.<br><small>${E(e.message)}</small></div>`; }
+}
+function title(p) { const r = num(p.ram), m = num(p.memory); let t = up(p.model); if ((r || m) && !t.includes(r || "~") && !t.includes(m || "~")) t += " " + (r && m ? r + "/" + m : r || m); return t; }
+function render() {
+  const q = $("q").value.trim().toLowerCase(), cat = $("fCat").value, sort = $("fSort").value;
+  const rows = ALL.filter(p => (!cat || up(p.product_category) === cat) && (!onlyStock || stock(p) > 0) &&
+    (!q || [p.product_id, p.company_name, p.model, p.color, p.product_category, p.ram, p.memory].join(" ").toLowerCase().includes(q)));
+  rows.sort(sort === "name" ? (a, b) => (up(a.company_name) + up(a.model)).localeCompare(up(b.company_name) + up(b.model))
+    : sort === "stock" ? (a, b) => stock(b) - stock(a) : (a, b) => String(b.created_date || "").localeCompare(String(a.created_date || "")) || String(b.product_id).localeCompare(String(a.product_id)));
+  const tot = [...STK.values()].reduce((s, v) => s + Math.max(v, 0), 0);
+  $("stats").innerHTML = `<div class="stat"><small>Products</small><b>${M(ALL.length)}</b></div><div class="stat"><small>In stock (items)</small><b>${M(ALL.filter(p => stock(p) > 0).length)}</b></div><div class="stat"><small>Total pieces</small><b>${M(tot)}</b></div>`;
+  $("sub").textContent = rows.length === ALL.length ? `${M(ALL.length)} products` : `${M(rows.length)} of ${M(ALL.length)} products`;
+  $("list").innerHTML = rows.slice(0, shown).map(p => { const s = stock(p);
+    return `<article class="row" data-id="${E(p.product_id)}" tabindex="0">
+      <div class="n"><b>${E(title(p))}</b><small>${E(up(p.color))}${p.color ? " · " : ""}${E(p.product_id)}</small></div>
+      <div class="m"><span>${E(up(p.company_name))}</span><br><small>${E(up(p.product_category))}</small></div>
+      <div class="p"><span class="num hide-m" style="text-align:right">${Number(p.cost_price) ? "Rs " + M(p.cost_price) : "—"}</span><span class="num" style="text-align:right">${Number(p.mrp) ? "MRP " + M(p.mrp) : ""}</span></div>
+      <div class="stk badge ${s > 0 ? "ok" : s < 0 ? "bad" : ""}">${M(s)}</div></article>`; }).join("") || '<div class="empty">No products match your search.</div>';
+  $("more").hidden = rows.length <= shown; $("more").textContent = `Show more (${M(rows.length - shown)} remaining)`;
+}
 
-      <div class="form-group">
-        <label for="model">Model</label>
-        <input type="text" id="model" name="model" list="modelList" placeholder="e.g. Galaxy S23, 9170 WB LVS" required onkeydown="handleModelEnter(event)">
-        <datalist id="modelList"></datalist>
-      </div>
+const isMob = () => /MOBILE|PHONE/.test(up($("fCategory").value));
+const syncMob = () => document.querySelectorAll(".mob").forEach(x => x.style.display = isMob() ? "" : "none");
+$("fCategory").addEventListener("input", syncMob);
+$("frm").addEventListener("input", e => { e.target.classList.remove("bad"); const er = e.target.closest(".fld"); er && er.querySelector(".err") && (er.querySelector(".err").textContent = ""); });
+function open(p) {
+  editing = p ? String(p.product_id) : null;
+  $("dTitle").textContent = p ? "Edit product" : "New product"; $("dSub").textContent = p ? "ID " + p.product_id + " · stock " + M(stock(p)) : "A product ID is created automatically";
+  $("fCategory").value = p ? up(p.product_category) : ""; $("fBrand").value = p ? up(p.company_name) : ""; $("fModel").value = p ? up(p.model) : ""; $("fColor").value = p ? up(p.color) : "";
+  $("fRam").value = p ? num(p.ram) : ""; $("fRom").value = p ? num(p.memory) : ""; $("fCost").value = p && Number(p.cost_price) ? p.cost_price : ""; $("fMrp").value = p && Number(p.mrp) ? p.mrp : ""; $("fRem").value = p ? up(p.remarks) : "";
+  document.querySelectorAll("#frm .bad").forEach(x => x.classList.remove("bad")); document.querySelectorAll("#frm .err").forEach(x => x.textContent = "");
+  $("btnDel").hidden = !(p && ERP.auth.can("delete")); syncMob(); $("dlg").showModal(); $("frm").scrollTop = 0;
+}
+$("list").onclick = e => { const r = e.target.closest(".row"); if (r) open(ALL.find(p => String(p.product_id) === r.dataset.id)); };
+$("list").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) open(ALL.find(p => String(p.product_id) === e.target.dataset.id)); };
 
-      <!-- Color field -->
-      <div class="form-group">
-        <label for="color">Color</label>
-        <input type="text" id="color" name="color" list="colorList" placeholder="e.g. Black, Blue, Silver" onkeydown="handleColorEnter(event)">
-        <datalist id="colorList"></datalist>
-      </div>
-
-      <!-- Dynamic Mobile Extra Fields (RAM & ROM) -->
-      <div id="mobileExtraSection" class="mobile-fields">
-        <label style="color: #0d9488; margin-bottom: 8px;">📱 Mobile Specifications</label>
-        <div class="row-fields">
-          <div style="flex: 1;">
-            <label for="ram">RAM</label>
-            <input type="text" id="ram" name="ram" list="ramList" placeholder="e.g. 8GB, 12GB" onkeydown="handleEnter(event, 'memory')">
-            <datalist id="ramList"></datalist>
-          </div>
-          <div style="flex: 1;">
-            <label for="memory">Memory (ROM)</label>
-            <input type="text" id="memory" name="memory" list="romList" placeholder="e.g. 128GB, 256GB" onkeydown="handleEnter(event, 'remarks')">
-            <datalist id="romList"></datalist>
-          </div>
-        </div>
-      </div>
-
-      <!-- Remarks field -->
-      <div class="form-group">
-        <label for="remarks">Remarks</label>
-        <textarea id="remarks" name="remarks" placeholder="Optional notes or specifications..."></textarea>
-      </div>
-
-      <button type="submit" class="btn-submit" id="submitBtn">Save Product</button>
-      
-      <div id="statusMsg"></div>
-    </form>
-  </div>
-
-  <script>
-    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
-
-    function saveScriptUrl() {
-      const val = document.getElementById('scriptUrlInput').value.trim();
-      if (!val) { alert("URL enter karein"); return; }
-      SCRIPT_URL = val;
-      localStorage.setItem('erp_script_url', val);
-      document.getElementById('configBox').classList.remove('show');
-      loadDropdownSuggestions();
-    }
-
-    // Page load hote hi backend se dropdown lists load karna
-    window.onload = function() {
-      loadDropdownSuggestions();
-    };
-
-    function loadDropdownSuggestions() {
-      fetch(SCRIPT_URL + "?action=getProductDropdownData")
-        .then(res => res.json())
-        .then(data => {
-          if (!data) return;
-          populateDatalist('catList', data.categories);
-          populateDatalist('companyList', data.companies);
-          populateDatalist('modelList', data.models);
-          populateDatalist('colorList', data.colors);
-          populateDatalist('ramList', data.rams);
-          populateDatalist('romList', data.roms);
-        })
-        .catch(err => console.error("Dropdown load error:", err));
-    }
-
-    function populateDatalist(listId, items) {
-      var list = document.getElementById(listId);
-      list.innerHTML = '';
-      if (items && items.length > 0) {
-        items.forEach(function(item) {
-          if (item) {
-            var opt = document.createElement('option');
-            opt.value = item;
-            list.appendChild(opt);
-          }
-        });
-      }
-    }
-
-    function handleEnter(event, nextFieldId) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        var nextField = document.getElementById(nextFieldId);
-        if (nextField) {
-          nextField.focus();
-          nextField.select();
-        }
-      }
-    }
-
-    function handleModelEnter(event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        var mobileSection = document.getElementById('mobileExtraSection');
-        var nextField;
-        
-        if (mobileSection.style.display === 'block') {
-          nextField = document.getElementById('ram');
-        } else {
-          nextField = document.getElementById('color');
-        }
-        
-        if (nextField) {
-          nextField.focus();
-          nextField.select();
-        }
-      }
-    }
-
-    function handleColorEnter(event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        var mobileSection = document.getElementById('mobileExtraSection');
-        var nextField;
-        
-        if (mobileSection.style.display === 'block') {
-          nextField = document.getElementById('ram');
-        } else {
-          nextField = document.getElementById('remarks');
-        }
-        
-        if (nextField) {
-          nextField.focus();
-          nextField.select();
-        }
-      }
-    }
-
-    function checkCategory(val) {
-      var cat = val.trim().toLowerCase();
-      var mobileSection = document.getElementById('mobileExtraSection');
-      if (cat.indexOf('mobile') !== -1 || cat.indexOf('phone') !== -1 || cat.indexOf('smartphone') !== -1) {
-        mobileSection.style.display = 'block';
-      } else {
-        mobileSection.style.display = 'none';
-        document.getElementById('memory').value = '';
-        document.getElementById('ram').value = '';
-      }
-    }
-
-    function handleFormSubmit(event) {
-      event.preventDefault();
-      
-      var btn = document.getElementById('submitBtn');
-      var statusMsg = document.getElementById('statusMsg');
-      
-      btn.disabled = true;
-      btn.innerText = "Saving...";
-      statusMsg.style.display = "none";
-      
-      var rawMemory = document.getElementById('memory').value.trim();
-      var rawRam = document.getElementById('ram').value.trim();
-      
-      var formattedMemory = rawMemory ? (rawMemory.toLowerCase().includes('gb') ? rawMemory : rawMemory + " GB") : "";
-      var formattedRam = rawRam ? (rawRam.toLowerCase().includes('gb') ? rawRam : rawRam + " GB") : "";
-      
-      var formData = {
-        product_category: document.getElementById('product_category').value.trim().toUpperCase(),
-        company_name: document.getElementById('company_name').value.trim().toUpperCase(),
-        model: document.getElementById('model').value.trim().toUpperCase(),
-        color: document.getElementById('color').value.trim().toUpperCase(),
-        memory: formattedMemory.toUpperCase(),
-        ram: formattedRam.toUpperCase(),
-        remarks: document.getElementById('remarks').value.trim().toUpperCase()
-      };
-      
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveProductMaster', data: formData })
-      })
-        .then(res => res.json())
-        .then(response => {
-          btn.disabled = false;
-          btn.innerText = "Save Product";
-          statusMsg.style.display = "block";
-
-          if (response.success) {
-            statusMsg.className = "success";
-            statusMsg.innerText = response.message + " (ID: " + response.product_id + ")";
-            document.getElementById('productForm').reset();
-            document.getElementById('mobileExtraSection').style.display = 'none';
-            loadDropdownSuggestions();
-          } else {
-            statusMsg.className = "error";
-            statusMsg.innerText = "Error: " + response.error;
-          }
-        })
-        .catch(err => {
-          btn.disabled = false;
-          btn.innerText = "Save Product";
-          statusMsg.style.display = "block";
-          statusMsg.className = "error";
-          statusMsg.innerText = "Server Error: " + err.message;
-        });
-    }
-  
-    // ===== Deployment URL config (auto-added) =====
-    function showUrlConfig() {
-      var inp = document.getElementById('scriptUrlInput');
-      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
-      var box = document.getElementById('configBox');
-      if (box) box.classList.add('show');
-    }
-    function saveScriptUrl() {
-      var inp = document.getElementById('scriptUrlInput');
-      var val = inp ? inp.value.trim() : '';
-      if (!val) { alert("URL enter karein"); return; }
-      localStorage.setItem('erp_script_url', val);
-      location.reload();
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-      var savedUrl = localStorage.getItem('erp_script_url');
-      if (!savedUrl) {
-        var box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
-      }
-    });
-
-    // ================= UNIVERSAL MIC INPUT (auto-added) =================
-    (function() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let activeRec = null, activeBtn = null, activeInput = null;
-
-      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-      function stopActiveMic() {
-        if (activeRec) {
-          activeRec.onend = null; activeRec.onresult = null;
-          try { activeRec.abort(); } catch (e) {}
-          activeRec = null;
-        }
-        if (activeBtn) activeBtn.classList.remove('listening');
-        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-        activeBtn = null; activeInput = null;
-      }
-
-      function toggleMic(input, btn) {
-        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-        const isNumeric = input.type === 'number';
-
-        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-        stopActiveMic();
-
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        let finalText = '';
-
-        activeRec = rec; activeBtn = btn; activeInput = input;
-        btn.classList.add('listening');
-        input.dataset.origPh = input.placeholder || '';
-        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-        rec.onresult = function(ev) {
-          let interim = '';
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-          }
-          let text = (finalText + interim).trim();
-          if (isNumeric) text = cleanNumeric(text);
-          input.value = text;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        rec.onerror = function(ev) {
-          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-        };
-        rec.onend = function() {
-          btn.classList.remove('listening');
-          input.placeholder = input.dataset.origPh || '';
-          if (isNumeric) input.value = cleanNumeric(input.value);
-          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-        };
-        try { rec.start(); } catch (e) {}
-      }
-
-      function attachMic(input) {
-        if (!input || input.dataset.autoMic) return;
-        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-        if (input.closest('#configBox')) return;
-        if (input.closest('.input-with-mic')) return; // already has a manual mic button
-        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-        input.dataset.autoMic = '1';
-
-        const wrap = document.createElement('span');
-        wrap.className = 'auto-mic-wrap';
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-
-        const curPad = window.getComputedStyle(input).paddingRight;
-        input.style.paddingRight = '24px';
-        input.style.boxSizing = 'border-box';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'auto-mic-btn';
-        btn.title = 'Voice input';
-        btn.innerHTML = '&#127908;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-        wrap.appendChild(btn);
-      }
-
-      function scanAndAttach(root) {
-        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        scanAndAttach(document);
-      });
-
-      const mo = new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType !== 1) return;
-            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-              attachMic(node);
-            }
-            if (node.querySelectorAll) scanAndAttach(node);
-          });
-        });
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
+$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
+  const err = (id, m) => { const el = $(id); el.classList.add("bad"); el.closest(".fld").querySelector(".err").textContent = m; };
+  const p = { product_id: editing || ERP.db.products.newId(), product_category: up($("fCategory").value), company_name: up($("fBrand").value), model: up($("fModel").value), color: up($("fColor").value),
+    ram: isMob() ? gb($("fRam").value).toUpperCase() : "", memory: isMob() ? gb($("fRom").value).toUpperCase() : "", remarks: up($("fRem").value),
+    cost_price: $("fCost").value === "" ? 0 : Number($("fCost").value), mrp: $("fMrp").value === "" ? 0 : Number($("fMrp").value) };
+  let ok = true;
+  if (!p.product_category) { err("fCategory", "Required"); ok = false; } if (!p.company_name) { err("fBrand", "Required"); ok = false; } if (!p.model) { err("fModel", "Required"); ok = false; }
+  if (p.cost_price < 0 || isNaN(p.cost_price)) { err("fCost", "Invalid amount"); ok = false; } if (p.mrp < 0 || isNaN(p.mrp)) { err("fMrp", "Invalid amount"); ok = false; }
+  if (!ok) return;
+  const key = x => [up(x.company_name), up(x.model), up(x.color), num(x.ram), num(x.memory)].join("|");
+  const dup = ALL.find(x => key(x) === key(p) && String(x.product_id) !== p.product_id);
+  if (dup && !confirm(`The same product already exists (${dup.product_id}).\nSave this as a duplicate?`)) return;
+  try { await ERP.db.products.save(p); ERP.ui.toast(editing ? "Product updated" : "Product saved: " + p.product_id); $("dlg").close(); await load(); }
+  catch (e) { ERP.ui.toast(e.message, "err"); }
+});
+$("btnDel").onclick = async () => {
+  const p = ALL.find(x => String(x.product_id) === editing);
+  if (STK.has(editing)) return ERP.ui.toast("This product has stock/sales/purchase history, so it cannot be deleted.", "err");
+  if (!confirm(`Delete ${title(p)} (${editing})?`)) return;
+  try { await ERP.db.products.remove(editing); ERP.ui.toast("Product deleted"); $("dlg").close(); await load(); } catch (e) { ERP.ui.toast(e.message, "err"); }
+};
+$("btnNew").onclick = () => open(null);
+$("more").onclick = () => { shown += 50; render(); };
+$("q").oninput = ERP.ui.debounce(() => { shown = 50; render(); }, 200);
+$("fCat").onchange = $("fSort").onchange = () => { shown = 50; render(); };
+$("chipStock").onclick = e => { onlyStock = !onlyStock; e.currentTarget.setAttribute("aria-pressed", onlyStock); shown = 50; render(); };
+$("btnExport").onclick = () => ERP.ui.downloadCSV("products_" + ERP.ui.today() + ".csv", ALL.map(p => ({ ...p, stock: stock(p) })));
+(async () => { await ERP.auth.guard(); if (!ERP.auth.can("write")) $("btnNew").hidden = true; load(); })();
 </script>
-
 </body>
 </html>
