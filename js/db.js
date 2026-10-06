@@ -64,12 +64,15 @@ ERP.db = (function () {
       list: ({ from, to, accNo } = {}) => fetchAll("receipts", { order: "date", ascending: false, build: q => {
         if (from) q = q.gte("date", from); if (to) q = q.lte("date", to); if (accNo) q = q.eq("account_no", String(accNo).trim()); return q; } }),
       async add(rows) { return must(await sb.from("receipts").insert(rows).select()); },
-      async remove(ids) { must(await sb.from("receipts").delete().in("id", ids)); }
+      async update(id, fields) { const r = must(await sb.from("receipts").update(fields).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r; },
+      async existing(vouchers) { return must(await sb.from("receipts").select("voucher_no").in("voucher_no", vouchers)).map(x => x.voucher_no); },
+      async remove(ids) { const r = must(await sb.from("receipts").delete().in("id", ids).select("id")); if (r.length !== ids.length) throw new Error("Only " + r.length + " of " + ids.length + " deleted (permission)"); }
     },
 
     products: {
       list: () => fetchAll("product_master", { order: "product_id" }),
       async save(p) { return must(await sb.from("product_master").upsert(p, { onConflict: "product_id" }).select()); },
+      async remove(id) { const r = must(await sb.from("product_master").delete().eq("product_id", id).select()); if (!r.length) throw new Error("Not deleted: you do not have permission"); return r; },
       newId: () => "PRD-" + Date.now().toString(36).toUpperCase()
     },
 
@@ -102,7 +105,30 @@ ERP.db = (function () {
       async save(sale, items, replace = false) { return must(await sb.rpc("save_sale", { p_sale: sale, p_items: items, p_replace: replace })); }
     },
 
-    stock: { balance: () => fetchAll("v_stock_balance", { order: "product_id" }) },
+    /* ONE cash book: v_daybook merges receipts, sale advances, income, expenses, payments and transfers. */
+    accounts: {
+      TABLE: { receipts: "receipts", general_receipts: "general_receipts", expenses: "expenses", payments: "payments", contra: "contra" },
+      HEADCOL: { receipts: "account_head", general_receipts: "account_head", expenses: "expense_head", payments: "payment_head", contra: "head" },
+      entries: ({ from, to }) => fetchAll("v_daybook", { order: "created_at", build: q => q.gte("date", from).lte("date", to).order("date", { ascending: true }) }),
+      async opening(from) { return must(await sb.rpc("daybook_opening", { p_from: from })); },
+      async create(v) { return must(await sb.rpc("create_voucher", { p: v })); },
+      async deleteTransfer(voucherNo) { must(await sb.rpc("delete_transfer", { p_voucher: voucherNo })); },
+      async update(src, id, f) {
+        const t = this.TABLE[src]; if (!t) throw new Error("This entry cannot be edited here");
+        const row = { date: f.date, pay_mode: f.account, account_title: f.party, amount: f.amount, remarks: f.remarks }; row[this.HEADCOL[src]] = f.head;
+        const r = must(await sb.from(t).update(row).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r;
+      },
+      async remove(src, id) {
+        const t = this.TABLE[src]; if (!t) throw new Error("This entry cannot be deleted here");
+        const r = must(await sb.from(t).delete().eq("id", id).select("id")); if (!r.length) throw new Error("Not deleted: you do not have permission");
+      }
+    },
+
+    stock: {
+      /* every stock movement up to a date (oldest first). Used by the Stock Ledger page. */
+      ledger: ({ to } = {}) => fetchAll("stock_ledger", { order: "transaction_id", build: q => { if (to) q = q.lte("date", to); return q.order("date", { ascending: true }).order("created_date", { ascending: true }); } }),
+      balance: () => fetchAll("v_stock_balance", { order: "product_id" })
+    },
 
     async monthly(n = 6) { return must(await sb.from("v_monthly_summary").select("*").order("m", { ascending: false }).limit(n)); },
     async kpis() { return must(await sb.from("v_dashboard_kpis").select("*").single()); },
