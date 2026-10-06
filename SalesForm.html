@@ -1,1208 +1,222 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    :root {
-      --primary: #1b5e20;
-      --primary-hover: #2e7d32;
-      --accent: #81c784;
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --text: #333333;
-      --border: #cccccc;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      font-size: 13px;
-    }
-
-    .container {
-      background: var(--surface);
-      border-radius: 10px;
-      padding: 24px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-      max-width: 1300px;
-      margin: auto;
-      width: 100%;
-    }
-
-    .top-header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 8px;
-      margin-bottom: 16px;
-    }
-
-    h2 {
-      margin: 0;
-      color: var(--primary);
-      font-size: 18px;
-    }
-
-    .section-card {
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 14px;
-      background: #fafafa;
-    }
-
-    .section-header-flex {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 16px;
-      border-bottom: 1px dashed var(--accent);
-      padding-bottom: 6px;
-      margin-bottom: 10px;
-    }
-
-    .section-title {
-      font-weight: bold;
-      color: var(--primary);
-      font-size: 13px;
-      margin: 0;
-    }
-
-    .btn-header-search {
-      background-color: #6366f1;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 5px 10px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .btn-header-search:hover { background-color: #4f46e5; }
-
-    .row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .col {
-      flex: 1;
-      min-width: 0;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 600;
-      color: #444;
-      font-size: 11px;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      font-size: 12px;
-      background: #fff;
-    }
-
-    input:focus, select:focus {
-      border-color: var(--primary);
-      outline: none;
-    }
-
-    input[readonly] { 
-      background-color: #eaeded; 
-      color: #555; 
-      pointer-events: none;
-    }
-
-    .product-table-wrapper {
-      overflow-x: auto;
-    }
-
-    .product-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 5px;
-      min-width: 1300px;
-    }
-
-    .product-table th, .product-table td {
-      border: 1px solid var(--border);
-      padding: 7px 8px;
-      text-align: left;
-    }
-
-    .product-table th {
-      background-color: #e8f5e9;
-      color: var(--primary);
-      font-size: 11px;
-      font-weight: bold;
-    }
-
-    .recent-scroll-container {
-      max-height: 380px;
-      overflow-y: auto;
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 6px;
-      border-bottom-right-radius: 6px;
-    }
-
-    .recent-table {
-      min-width: 1100px !important;
-      width: 100%;
-      margin-top: 0 !important;
-    }
-
-    .recent-table th {
-      position: sticky;
-      top: 0;
-      background-color: #e2f0d9;
-      z-index: 10;
-    }
-
-    .recent-table th, .recent-table td {
-      padding: 4px 6px;
-      white-space: nowrap;
-      font-size: 10px;
-    }
-
-    .sortable-th {
-      cursor: pointer;
-      user-select: none;
-    }
-    .sortable-th:hover {
-      background-color: #d4e8c1 !important;
-    }
-    .sort-arrow {
-      font-size: 9px;
-      color: var(--primary);
-    }
-
-    .recent-totals-bar {
-      display: flex;
-      background: #f8fafc;
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-top-left-radius: 6px;
-      border-top-right-radius: 6px;
-      padding: 6px 10px;
-      font-weight: bold;
-      font-size: 11px;
-      color: var(--primary);
-      align-items: center;
-      overflow-x: auto;
-    }
-
-    .product-table input {
-      border: none;
-      background: transparent;
-      padding: 3px;
-      font-size: 12px;
-      width: 100%;
-    }
-
-    .product-table input:focus {
-      outline: none;
-      background: #fff;
-    }
-
-    .product-table input.editable-mode {
-      background: #ffffff;
-      border: 1px solid var(--primary);
-      border-radius: 3px;
-    }
-
-    .product-table input[readonly] {
-      background: #eaeded;
-    }
-
-    .product-table td.product-cell {
-      background-color: #f1f8e9;
-    }
-    .product-table input.productId {
-      font-weight: bold;
-      color: #1b5e20;
-    }
-
-    .add-row-btn {
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      width: 26px;
-      height: 26px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 15px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .add-row-btn:hover { background-color: var(--primary-hover); }
-
-    .del-row-btn {
-      background-color: #d32f2f;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 8px;
-      cursor: pointer;
-      font-size: 11px;
-    }
-    .del-row-btn:hover { background-color: #c62828; }
-
-    .btn-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .action-btn {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 13px;
-      color: #fff;
-      flex: 1;
-    }
-
-    .btn-primary { background-color: var(--primary); }
-    .btn-primary:hover { background-color: var(--primary-hover); }
-    .btn-secondary { background-color: #546e7a; }
-
-    .loader {
-      display: none;
-      text-align: center;
-      color: var(--primary);
-      font-weight: bold;
-      margin: 8px 0;
-      font-size: 12px;
-    }
-
-    .recent-sales-section {
-      margin-top: 25px;
-      border-top: 2px solid #e0e0e0;
-      padding-top: 15px;
-    }
-
-    .recent-filter-bar {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-      background: #f1f5f9;
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
-
-    .recent-filter-bar input {
-      width: 140px;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-    }
-    .modal-content {
-      background-color: #fff;
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 1050px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    .close-modal {
-      float: right;
-      font-size: 22px;
-      font-weight: bold;
-      cursor: pointer;
-      color: #64748b;
-    }
-    .close-modal:hover { color: #000; }
-    .search-box {
-      margin-bottom: 12px;
-      padding: 8px 10px;
-      width: 100%;
-      box-sizing: border-box;
-      text-transform: uppercase;
-      font-size: 12px;
-    }
-  
-    .config-box { background: #fff3cd; border: 1px solid #ffe69c; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; display: none; }
-    .config-box.show { display: block; }
-    .config-box input { width: 100%; padding: 6px 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
-    .config-box button { margin-top: 6px; padding: 6px 14px; background: #1b5e20; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .change-url-link { text-align: right; font-size: 10px; color: #64748b; margin-bottom: 4px; cursor: pointer; text-decoration: underline; }
-
-    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
-    .auto-mic-btn {
-      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
-      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
-      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auto-mic-btn:hover { opacity: 1; }
-    .auto-mic-btn.listening {
-      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
-      animation: autoMicPulse 1s infinite;
-    }
-    @keyframes autoMicPulse {
-      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
-      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
-      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:12px}
+  .tabs button,.seg button{min-height:40px;padding:6px 18px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+  .tabs button[aria-selected="true"],.seg button[aria-pressed="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .seg{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:10px}
+  .cgrid{display:grid;gap:10px;grid-template-columns:1fr 1fr}.cgrid .wide{grid-column:1/-1}
+  @media(min-width:760px){.cgrid{grid-template-columns:200px 150px 1fr 1fr}.cgrid .wide{grid-column:auto}}
+  .cinfo{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--bg);font-size:14px;display:none}
+  .cinfo.on{display:block}.cinfo b{font-size:16px}.cinfo.warn{background:#fef3c7;color:#78350f}.cinfo.bad{background:#fee2e2;color:#991b1b}
+  .line{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .l-top{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:10px}
+  .pinfo{min-width:0;font-size:14px}.pinfo small{display:block;color:var(--muted)}.pinfo.none{color:var(--muted)}
+  .l-grid{display:grid;gap:8px;grid-template-columns:1fr 1fr}.l-grid .wide{grid-column:1/-1}
+  @media(min-width:760px){.l-grid{grid-template-columns:80px 120px 120px 90px 120px 120px 110px 1fr}.l-grid .wide{grid-column:auto}}
+  .l-grid label{font-size:11px}.l-grid input[readonly]{background:var(--bg);font-weight:600}
+  .editing{background:#fef3c7;border:1px solid #f59e0b;color:#78350f;border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .sumbar{position:sticky;bottom:0;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));margin:0 -12px;box-shadow:0 -6px 18px rgba(15,23,42,.08);z-index:5}
+  .sumbar .k{display:flex;gap:18px;flex-wrap:wrap}.sumbar small{color:var(--muted);display:block;font-size:12px}.sumbar b{font-size:18px;font-variant-numeric:tabular-nums}.sumbar .g b{font-size:22px;color:var(--brand-dark)}
+  .po{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;box-shadow:var(--shadow)}
+  .po-h{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;cursor:pointer}.po-h small{color:var(--muted)}.po-h .amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .po-b{padding:0 14px 12px}.po-b .table-wrap{margin-bottom:10px}.po-b .ba{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .ft{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}.ft .wide{grid-column:1/-1}
+  @media(min-width:760px){.ft{grid-template-columns:150px 150px 1fr}.ft .wide{grid-column:auto}}
+  .plist{max-height:50vh;overflow:auto}.pi{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
+  .pi:hover{border-color:var(--brand)}.pi small{color:var(--muted);display:block}
+  #printArea{display:none}
+  @media print{body>*:not(#printArea){display:none!important}#printArea{display:block;font:13px/1.45 Arial,sans-serif;color:#000;padding:8mm}#printArea table{width:100%;border-collapse:collapse;min-width:0;margin:8px 0}#printArea th,#printArea td{border-bottom:1px solid #999;padding:4px 2px;font-size:12px}#printArea h2{margin:0}}
+</style>
 </head>
 <body>
-  <div class="change-url-link" onclick="showUrlConfig()">&#9881; Change Deployment URL</div>
-  <div id="configBox" class="config-box">
-    <b>Setup:</b> Apna Apps Script Deployment URL neeche daal kar Save karein.
-    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-    <button onclick="saveScriptUrl()">Save URL</button>
-  </div>
-
-  <div class="container">
-    <div class="top-header-row">
-      <h2>Al Meezan ERP - Sales Entry</h2>
-    </div>
-
-    <div id="loader" class="loader">Processing, please wait...</div>
-
-    <!-- Account & Details -->
-    <div class="section-card">
-      <div class="section-title" style="margin-bottom: 8px;">1. Account & Details</div>
-      <div class="row" style="align-items: flex-end;">
-        <div class="col" style="flex: 1.1;">
-          <label for="saleDate">Date</label>
-          <input type="date" id="saleDate">
-        </div>
-        <div class="col" style="flex: 1.2;">
-          <label for="accountNo">Account No. (Type & Press Enter)</label>
-          <input type="text" id="accountNo" placeholder="Type & Press Enter" onkeydown="handleAccountKey(event)">
-          <label style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cashSale" style="width:auto" onchange="toggleCash()"> Cash sale (invoice no.)</label>
-        </div>
-        <div class="col" style="flex: 2.5;">
-          <label for="accountTitle">Account Title</label>
-          <input type="text" id="accountTitle" readonly placeholder="Auto-fetched">
-        </div>
-        <div class="col" style="flex: 1.5;">
-          <label for="approvedBy">Approved By</label>
-          <input type="text" id="approvedBy" readonly placeholder="Auto-fetched">
-        </div>
-        <div class="col" style="flex: 1.2;">
-          <label for="cro">CRO</label>
-          <input type="text" id="cro" readonly placeholder="Auto-fetched">
-        </div>
-      </div>
-    </div>
-
-    <!-- Product & Installment Details -->
-    <div class="section-card">
-      <div class="section-header-flex">
-        <span class="section-title">2. Product & Installment Details</span>
-        <button type="button" class="btn-header-search" onclick="openGlobalSearchModal()">🔍 Search Stock Ledger</button>
-      </div>
-      <div class="product-table-wrapper">
-        <table class="product-table">
-          <thead>
-            <tr>
-              <th style="width: 9%;">Product ID</th>
-              <th style="width: 10%;">Company</th>
-              <th style="width: 8%;">Category</th>
-              <th style="width: 10%;">Model</th>
-              <th style="width: 8%;">Color</th>
-              <th style="width: 5%;">Qty</th>
-              <th style="width: 7%;">Rate</th>
-              <th style="width: 7%;">Amount</th>
-              <th style="width: 5%;">Months</th>
-              <th style="width: 6%;">Advance</th>
-              <th style="width: 7%;">Per Month</th>
-              <th style="width: 6%;">Proc Fee</th>
-              <th style="width: 7%;">Remarks</th>
-              <th style="width: 4%; text-align: center;">
-                <button type="button" class="add-row-btn" onclick="addProductRow()" title="Add Product Line">+</button>
-              </th>
-            </tr>
-          </thead>
-          <tbody id="productTableBody">
-            <tr>
-              <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
-              <td><input type="text" class="companyName" placeholder="Company" readonly></td>
-              <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
-              <td><input type="text" class="model" placeholder="Model" readonly></td>
-              <td><input type="text" class="color" placeholder="Color" readonly></td>
-              <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
-              <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
-              <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
-              <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-              <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-              <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
-              <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-              <td><input type="text" class="remarks" placeholder="Remarks"></td>
-              <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Overall Totals -->
-    <div class="section-card">
-      <div class="section-title">3. Overall Totals</div>
-      <div class="row">
-        <div class="col">
-          <label for="totalAmount">Total Amount (Sales + Fees)</label>
-          <input type="text" id="totalAmount" readonly tabindex="-1" placeholder="Auto calculated">
-        </div>
-        <div class="col">
-          <label for="nextInstMonth">Next Inst Month</label>
-          <select id="nextInstMonth"></select>
-        </div>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button id="actionMainBtn" class="action-btn btn-primary" onclick="submitNewSale()">Save Sales</button>
-      <button class="action-btn btn-secondary" onclick="clearSaleForm()">Reset / New</button>
-    </div>
-
-    <!-- Recent Saved Sales Section -->
-    <div class="recent-sales-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <h3 style="margin: 0; color: var(--primary); font-size: 15px;">Recent Saved Sales</h3>
-      </div>
-      <div class="recent-filter-bar">
-        <span style="font-weight: 600; font-size: 11px;">From Date:</span>
-        <input type="date" id="recentFromDate" onchange="loadRecentSales()">
-        <span style="font-weight: 600; font-size: 11px; margin-left: 10px;">To Date:</span>
-        <input type="date" id="recentToDate" onchange="loadRecentSales()">
-        <button type="button" class="btn-header-search" style="margin-left: auto;" onclick="loadRecentSales()">Refresh List</button>
-      </div>
-      
-      <!-- Frozen Totals Bar -->
-      <div class="recent-totals-bar">
-        <span style="margin-right: auto;">Totals:</span>
-        <div style="display: flex; gap: 15px; text-align: right;">
-          <div>Qty: <span id="totalQty" style="font-weight:700;">0</span></div>
-          <div>Sales Amt: <span id="totalSalesAmt" style="font-weight:700;">0</span></div>
-          <div>Advance: <span id="totalAdvance" style="font-weight:700;">0</span></div>
-          <div>Proc Fee: <span id="totalProcFee" style="font-weight:700;">0</span></div>
-          <div>Total Amount: <span id="totalGrandAmount" style="font-weight:700;">0</span></div>
-        </div>
-      </div>
-
-      <!-- Scrollable Table Container -->
-      <div class="recent-scroll-container">
-        <table class="product-table recent-table">
-          <thead>
-            <tr>
-              <th class="sortable-th" data-field="date" onclick="sortSalesTable('date')">Date <span class="sort-arrow" id="arrow-date"></span></th>
-              <th class="sortable-th" data-field="productId" onclick="sortSalesTable('productId')">Product ID <span class="sort-arrow" id="arrow-productId"></span></th>
-              <th class="sortable-th" data-field="approvedBy" onclick="sortSalesTable('approvedBy')">Approved By <span class="sort-arrow" id="arrow-approvedBy"></span></th>
-              <th class="sortable-th" data-field="accountNo" onclick="sortSalesTable('accountNo')">Account No <span class="sort-arrow" id="arrow-accountNo"></span></th>
-              <th class="sortable-th" data-field="accountTitle" onclick="sortSalesTable('accountTitle')">Account Title <span class="sort-arrow" id="arrow-accountTitle"></span></th>
-              <th class="sortable-th" data-field="companyName" onclick="sortSalesTable('companyName')">Company Name <span class="sort-arrow" id="arrow-companyName"></span></th>
-              <th class="sortable-th" data-field="productCategory" onclick="sortSalesTable('productCategory')">Category <span class="sort-arrow" id="arrow-productCategory"></span></th>
-              <th class="sortable-th" data-field="model" onclick="sortSalesTable('model')">Model <span class="sort-arrow" id="arrow-model"></span></th>
-              <th class="sortable-th" data-field="qty" onclick="sortSalesTable('qty')">Qty <span class="sort-arrow" id="arrow-qty"></span></th>
-              <th class="sortable-th" data-field="salesRate" onclick="sortSalesTable('salesRate')">Sales Rate <span class="sort-arrow" id="arrow-salesRate"></span></th>
-              <th class="sortable-th" data-field="salesAmt" onclick="sortSalesTable('salesAmt')">Sales Amt <span class="sort-arrow" id="arrow-salesAmt"></span></th>
-              <th class="sortable-th" data-field="planMonths" onclick="sortSalesTable('planMonths')">Months <span class="sort-arrow" id="arrow-planMonths"></span></th>
-              <th class="sortable-th" data-field="advance" onclick="sortSalesTable('advance')">Advance <span class="sort-arrow" id="arrow-advance"></span></th>
-              <th class="sortable-th" data-field="installmentPerMonth" onclick="sortSalesTable('installmentPerMonth')">Per Month <span class="sort-arrow" id="arrow-installmentPerMonth"></span></th>
-              <th class="sortable-th" data-field="processingFee" onclick="sortSalesTable('processingFee')">Proc Fee <span class="sort-arrow" id="arrow-processingFee"></span></th>
-              <th class="sortable-th" data-field="totalAmount" onclick="sortSalesTable('totalAmount')">Total Amount <span class="sort-arrow" id="arrow-totalAmount"></span></th>
-              <th style="text-align: center;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="recentSalesTableBody">
-            <tr><td colspan="17" style="text-align: center; color: #666;">Loading recent sales...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Product Selection Modal -->
-  <div id="productModal" class="modal">
-    <div class="modal-content">
-      <span class="close-modal" onclick="closeProductModal()">&times;</span>
-      <h3 style="margin-top:0; color:var(--primary); font-size:15px;">Select Product from Stock Ledger</h3>
-      <input type="text" id="modalSearchInput" class="search-box" placeholder="Search by Product ID, Company, Category, Model, Color..." oninput="filterModalProducts()">
-      <div style="overflow-x:auto;">
-        <table class="product-table" style="min-width: 100%;">
-          <thead>
-            <tr>
-              <th>Product ID</th>
-              <th>Company Name</th>
-              <th>Category</th>
-              <th>Model</th>
-              <th>Color</th>
-              <th style="text-align: center; color: #059669;">Balance</th>
-              <th style="text-align: center;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="modalProductTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
-  <script>
-    let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
-
-    let activeRowForModal = null;
-    let allMasterProducts = [];
-
-    window.onload = async function() {
-      await ERP.auth.guard();
-      setCurrentDatePakistani();
-      populateNextInstMonthDropdown();
-      loadRecentSales(); 
-    };
-
-    function setCurrentDatePakistani() {
-      let now = new Date();
-      let yyyy = now.getFullYear();
-      let mm = String(now.getMonth() + 1).padStart(2, '0');
-      let dd = String(now.getDate()).padStart(2, '0');
-      document.getElementById('saleDate').value = `${yyyy}-${mm}-${dd}`;
-    }
-
-    function populateNextInstMonthDropdown(selectedVal = '') {
-      let select = document.getElementById('nextInstMonth');
-      select.innerHTML = '';
-      
-      let date = new Date();
-      let monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      
-      for (let i = 0; i < 24; i++) {
-        let mIndex = date.getMonth();
-        let year = date.getFullYear();
-        let monthName = monthNames[mIndex];
-        let displayStr = monthName + " " + year;
-        
-        let option = document.createElement('option');
-        option.value = displayStr;
-        option.text = displayStr;
-        
-        if (selectedVal && displayStr.toLowerCase() === String(selectedVal).trim().toLowerCase()) {
-          option.selected = true;
-        }
-        
-        select.appendChild(option);
-        date.setMonth(date.getMonth() + 1);
-      }
-      
-      if (selectedVal && ![...select.options].some(o => o.value.toLowerCase() === String(selectedVal).trim().toLowerCase())) {
-        let option = document.createElement('option');
-        option.value = selectedVal;
-        option.text = selectedVal;
-        option.selected = true;
-        select.insertBefore(option, select.firstChild);
-      }
-    }
-
-    function showLoader(show) {
-      document.getElementById('loader').style.display = show ? 'block' : 'none';
-    }
-
-    function handleAccountKey(event) {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        fetchCustomerDetails(false);
-      }
-    }
-
-    async function fetchCustomerDetails(isEditMode = false) {
-      const accNo = document.getElementById("accountNo").value.trim();
-      if (!accNo) return;
-      const wipe = () => { ["accountNo","accountTitle","approvedBy","cro"].forEach(i => document.getElementById(i).value = ""); document.getElementById("accountNo").focus(); };
-      showLoader(true);
-      try {
-        const c = await ERP.db.customers.get(accNo);
-        if (!c) { alert("Account not found!"); wipe(); return; }
-        if (!isEditMode && await ERP.db.sales.exists(accNo)) { alert("Error: Sale against this Account Number is already saved!"); wipe(); return; }
-        document.getElementById("accountTitle").value = c.account_title || "";
-        document.getElementById("approvedBy").value = c.approved_by || "";
-        document.getElementById("cro").value = c.cro || "";
-      } catch (e) { alert("Error fetching customer details: " + e.message); }
-      finally { showLoader(false); }
-    }
-
-    /* CASH SALE: no CAF; an invoice number (INV-000001) is generated and used as the account number. */
-    let cashMode = false, editMode = false;
-    async function toggleCash() {
-      const cb = document.getElementById('cashSale'), a = document.getElementById('accountNo'), t = document.getElementById('accountTitle');
-      cashMode = cb.checked;
-      if (cashMode) {
-        try { a.value = await ERP.db.sales.nextInvoiceNo(); }
-        catch (e) { alert(e.message); cb.checked = false; cashMode = false; return; }
-        a.readOnly = true; t.readOnly = false; t.value = 'Cash Customer'; t.placeholder = 'Customer name';
-        document.getElementById('approvedBy').value = ''; document.getElementById('cro').value = '';
-      } else { a.readOnly = false; a.value = ''; t.readOnly = true; t.value = ''; t.placeholder = 'Auto-fetched'; }
-    }
-    function openGlobalSearchModal() {
-      let rows = document.querySelectorAll("#productTableBody tr");
-      activeRowForModal = rows[rows.length - 1]; 
-      document.getElementById('productModal').style.display = 'block';
-      document.getElementById('modalSearchInput').value = '';
-      
-      showLoader(true);
-      ERP.db.stock.balance().then(function(rows) {
-          showLoader(false);
-          allMasterProducts = rows.map(r => ({ product_id: r.product_id, companyName: r.company_name, productCategory: r.product_category, model: r.model, color: r.color, balance: r.in_stock }));
-          renderModalTable(allMasterProducts);
-        }).catch(function(e) { showLoader(false); alert("Could not load stock: " + e.message); });
-    }
-
-    function closeProductModal() {
-      document.getElementById('productModal').style.display = 'none';
-    }
-
-    function renderModalTable(products) {
-      let tbody = document.getElementById('modalProductTableBody');
-      tbody.innerHTML = '';
-      if (!products || products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No products found in stock ledger.</td></tr>';
-        return;
-      }
-
-      let groupedProducts = {};
-      products.forEach(function(p) {
-        let prodIdVal = p.product_id !== undefined ? p.product_id : (p.PRODUCT_ID !== undefined ? p.PRODUCT_ID : '');
-        if (!prodIdVal) return;
-
-        let balanceVal = 0;
-        if (p.balance !== undefined) balanceVal = Number(p.balance) || 0;
-        else if (p.BALAN !== undefined) balanceVal = Number(p.BALAN) || 0;
-
-        groupedProducts[prodIdVal] = {
-          product_id: prodIdVal,
-          companyName: p.companyName !== undefined ? p.companyName : (p.COMPANY_NAME !== undefined ? p.COMPANY_NAME : ''),
-          productCategory: p.productCategory !== undefined ? p.productCategory : (p.PRODUCT_CATEGORY !== undefined ? p.PRODUCT_CATEGORY : ''),
-          model: p.model !== undefined ? p.model : (p.MODEL !== undefined ? p.MODEL : ''),
-          color: p.color !== undefined ? p.color : (p.Color !== undefined ? p.Color : ''),
-          balance: balanceVal
-        };
-      });
-
-      let uniqueList = Object.values(groupedProducts);
-
-      uniqueList.forEach(function(p) {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><b>${p.product_id}</b></td>
-          <td>${String(p.companyName).toUpperCase()}</td>
-          <td>${String(p.productCategory).toUpperCase()}</td>
-          <td>${String(p.model).toUpperCase()}</td>
-          <td>${String(p.color).toUpperCase()}</td>
-          <td style="font-weight: bold; color: #059669; text-align: center;">${p.balance}</td>
-          <td style="text-align: center;"><button type="button" class="action-btn btn-primary" style="padding: 4px 8px; font-size:11px;" onclick='selectProductFromModal(${JSON.stringify(p)})'>Select</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterModalProducts() {
-      let query = document.getElementById('modalSearchInput').value.toLowerCase();
-      let filtered = allMasterProducts.filter(function(p) {
-        let pid = String(p.product_id || p.PRODUCT_ID || '').toLowerCase();
-        let comp = String(p.companyName || p.COMPANY_NAME || '').toLowerCase();
-        let cat = String(p.productCategory || p.PRODUCT_CATEGORY || '').toLowerCase();
-        let mod = String(p.model || p.MODEL || '').toLowerCase();
-        let col = String(p.color || p.Color || '').toLowerCase();
-        return pid.includes(query) || comp.includes(query) || cat.includes(query) || mod.includes(query) || col.includes(query);
-      });
-      renderModalTable(filtered);
-    }
-
-    function selectProductFromModal(p) {
-      if (!activeRowForModal) return;
-
-      let prodIdVal = p.product_id || p.PRODUCT_ID || '';
-      let companyVal = p.companyName || p.COMPANY_NAME || '';
-      let categoryVal = p.productCategory || p.PRODUCT_CATEGORY || '';
-      let modelVal = String(p.model || p.MODEL || '').toUpperCase();
-      let colorVal = String(p.color || p.Color || '').trim().toUpperCase();
-      
-      activeRowForModal.querySelector('.productId').value = String(prodIdVal).toUpperCase();
-      activeRowForModal.querySelector('.companyName').value = String(companyVal).toUpperCase();
-      activeRowForModal.querySelector('.productCategory').value = String(categoryVal).toUpperCase();
-      activeRowForModal.querySelector('.model').value = modelVal;
-      activeRowForModal.querySelector('.color').value = colorVal;
-      
-      closeProductModal();
-      activeRowForModal.querySelector('.qty').focus();
-    }
-
-    function addProductRow() {
-      let tbody = document.getElementById("productTableBody");
-      let newRow = document.createElement("tr");
-      newRow.innerHTML = `
-        <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
-        <td><input type="text" class="companyName" placeholder="Company" readonly></td>
-        <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
-        <td><input type="text" class="model" placeholder="Model" readonly></td>
-        <td><input type="text" class="color" placeholder="Color" readonly></td>
-        <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
-        <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
-        <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
-        <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-        <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-        <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
-        <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-        <td><input type="text" class="remarks" placeholder="Remarks"></td>
-        <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
-      `;
-      tbody.appendChild(newRow);
-    }
-
-    function removeProductRow(btn) {
-      let tbody = document.getElementById("productTableBody");
-      if (tbody.rows.length > 1) {
-        btn.closest("tr").remove();
-        calculateTotals();
-      } else {
-        alert("At least one product row is required!");
-      }
-    }
-
-    function calculateRow(input) {
-      let row = input.closest("tr");
-      let qty = Number(row.querySelector('.qty').value) || 0;
-      let rate = Number(row.querySelector('.salesRate').value) || 0;
-      let rowAmt = qty * rate;
-      row.querySelector('.salesAmount').value = rowAmt;
-
-      let planMonths = Number(row.querySelector('.planMonths').value) || 0;
-      let advance = Number(row.querySelector('.advance').value) || 0;
-
-      let netRowVal = rowAmt - advance;
-      if (planMonths > 0) {
-        let perMonthInst = netRowVal / planMonths;
-        row.querySelector('.installmentPerMonth').value = perMonthInst > 0 ? perMonthInst.toFixed(2) : '0.00';
-      } else {
-        row.querySelector('.installmentPerMonth').value = '0.00';
-      }
-
-      calculateTotals();
-    }
-
-    function calculateTotals() {
-      let rows = document.querySelectorAll("#productTableBody tr");
-      let grandTotal = 0;
-
-      rows.forEach(row => {
-        let rowAmt = Number(row.querySelector('.salesAmount').value) || 0;
-        let procFee = Number(row.querySelector('.processingFee').value) || 0;
-        grandTotal += (rowAmt + procFee);
-      });
-
-      document.getElementById('totalAmount').value = grandTotal.toFixed(2);
-    }
-
-    async function submitNewSale() {
-      const data = collectFormData();
-      if (!data) return;
-      const items = data.products.map(p => ({ product_id: p.product_id || null, company_name: p.companyName, product_category: p.productCategory,
-        model: p.model, color: p.color, qty: Number(p.qty) || 1, sales_rate: Number(p.salesRate) || 0, sales_amt: Number(p.salesAmt) || 0,
-        plan_months: Number(p.planMonths) || 0, advance: Number(p.advance) || 0, installment_per_month: Number(p.installmentPerMonth) || 0,
-        processing_fee: Number(p.processingFee) || 0, remarks: p.remarks }));
-      const sale = { date: data.date, approved_by: data.approvedBy, account_no: data.accountNo, account_title: data.accountTitle, next_inst_month: data.nextInstMonth || null };
-      showLoader(true);
-      try {
-        await ERP.ui.busy(document.getElementById('actionMainBtn'), () => ERP.db.sales.save(sale, items, editMode));
-        ERP.ui.toast((editMode ? "Sale updated: " : "Sale saved: ") + data.accountNo);
-        clearSaleForm(); loadRecentSales();
-      } catch (e) { alert("Error: " + e.message); }
-      finally { showLoader(false); }
-    }
-    function collectFormData() {
-      const accNoVal = document.getElementById('accountNo').value.trim();
-      const rawDate = document.getElementById('saleDate').value;
-      const products = [];
-      document.querySelectorAll("#productTableBody tr").forEach(row => {
-        const sAmt = Number(row.querySelector('.salesAmount').value) || 0;
-        const pFee = Number(row.querySelector('.processingFee').value) || 0;
-        const total = sAmt + pFee;
-        products.push({
-          product_id: row.querySelector('.productId').value.trim(),
-          companyName: row.querySelector('.companyName').value.trim(),
-          productCategory: row.querySelector('.productCategory').value.trim(),
-          model: row.querySelector('.model').value.trim(),
-          color: row.querySelector('.color').value.trim(),
-          qty: row.querySelector('.qty').value,
-          salesRate: row.querySelector('.salesRate').value,
-          salesAmt: sAmt,
-          planMonths: cashMode ? 0 : row.querySelector('.planMonths').value,
-          advance: cashMode ? total : row.querySelector('.advance').value,      // cash sale = paid in full
-          installmentPerMonth: cashMode ? 0 : row.querySelector('.installmentPerMonth').value,
-          processingFee: pFee, rowTotalAmount: total,
-          remarks: row.querySelector('.remarks').value.trim()
-        });
-      });
-      const data = {
-        accountNo: accNoVal,
-        accountTitle: document.getElementById('accountTitle').value.trim(),
-        approvedBy: document.getElementById('approvedBy').value.trim(),
-        cro: document.getElementById('cro').value.trim(),
-        date: rawDate, products: products,
-        totalAmount: document.getElementById('totalAmount').value,
-        nextInstMonth: cashMode ? '' : document.getElementById('nextInstMonth').value.trim()
-      };
-      if (!data.accountNo || !rawDate || !products[0].model || !products[0].salesRate) {
-        alert("Please fill required fields (Account No / Invoice, Date, Model, Sales Rate)!");
-        return null;
-      }
-      if (cashMode && !data.accountTitle) { alert("Enter the customer name for the cash sale."); return null; }
-      return data;
-    }
-    function clearSaleForm() {
-      cashMode = false; editMode = false;
-      document.getElementById('cashSale').checked = false;
-      document.getElementById('accountNo').readOnly = false;
-      document.getElementById('accountTitle').readOnly = true;
-      document.getElementById('actionMainBtn').textContent = 'Save Sales';
-      document.getElementById('accountNo').value = '';
-      document.getElementById('accountTitle').value = '';
-      document.getElementById('approvedBy').value = '';
-      document.getElementById('cro').value = '';
-      
-      let tbody = document.getElementById('productTableBody');
-      tbody.innerHTML = `
-        <tr>
-          <td class="product-cell"><input type="text" class="productId" placeholder="Product ID" readonly></td>
-          <td><input type="text" class="companyName" placeholder="Company" readonly></td>
-          <td><input type="text" class="productCategory" placeholder="Category" readonly></td>
-          <td><input type="text" class="model" placeholder="Model" readonly></td>
-          <td><input type="text" class="color" placeholder="Color" readonly></td>
-          <td><input type="number" class="qty" value="1" oninput="calculateRow(this)" onfocus="this.select()"></td>
-          <td><input type="number" class="salesRate" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
-          <td><input type="text" class="salesAmount" readonly tabindex="-1" placeholder="Amt"></td>
-          <td><input type="number" class="planMonths" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-          <td><input type="number" class="advance" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-          <td><input type="text" class="installmentPerMonth" readonly tabindex="-1" placeholder="Inst"></td>
-          <td><input type="number" class="processingFee" value="0" oninput="calculateRow(this)" onfocus="this.select()"></td>
-          <td><input type="text" class="remarks" placeholder="Remarks"></td>
-          <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>
-        </tr>
-      `;
-
-      document.getElementById('totalAmount').value = '';
-      populateNextInstMonthDropdown();
-      setCurrentDatePakistani();
-      document.getElementById('accountNo').focus();
-    }
-
-    let recentSalesData = [];
-    let salesSortState = { field: null, asc: true };
-
-    async function loadRecentSales() {
-      const e = ERP.ui.esc;
-      try {
-        const rows = await ERP.db.sales.recent({ from: document.getElementById('recentFromDate').value, to: document.getElementById('recentToDate').value });
-        recentSalesData = rows.map(r => ({ date: r.date, productId: e(r.product_id), approvedBy: e(r.approved_by), accountNo: e(r.account_no),
-          accountTitle: e(r.account_title), companyName: e(r.company_name), productCategory: e(r.product_category), model: e(r.model), color: e(r.color),
-          qty: r.qty, salesRate: r.sales_rate, salesAmt: r.sales_amt, planMonths: r.plan_months, advance: r.advance,
-          installmentPerMonth: r.installment_per_month, processingFee: r.processing_fee, rowTotalAmount: r.total_amt }));
-      } catch (err) { recentSalesData = []; ERP.ui.toast("Could not load sales: " + err.message, "err"); }
-      salesSortState = { field: null, asc: true };
-      renderSalesTable(recentSalesData);
-    }
-    function sortSalesTable(field) {
-      if (salesSortState.field === field) {
-        salesSortState.asc = !salesSortState.asc;
-      } else {
-        salesSortState.field = field;
-        salesSortState.asc = true;
-      }
-
-      const numericFields = ['qty', 'salesRate', 'salesAmt', 'planMonths', 'advance', 'installmentPerMonth', 'processingFee', 'totalAmount'];
-      const isNumeric = numericFields.includes(field);
-
-      recentSalesData.sort((a, b) => {
-        let valA = a[field], valB = b[field];
-        if (isNumeric) {
-          valA = Number(valA) || 0;
-          valB = Number(valB) || 0;
-          return salesSortState.asc ? valA - valB : valB - valA;
-        } else {
-          valA = String(valA || '').toLowerCase();
-          valB = String(valB || '').toLowerCase();
-          if (valA < valB) return salesSortState.asc ? -1 : 1;
-          if (valA > valB) return salesSortState.asc ? 1 : -1;
-          return 0;
-        }
-      });
-
-      document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
-      const arrowEl = document.getElementById('arrow-' + field);
-      if (arrowEl) arrowEl.textContent = salesSortState.asc ? '▲' : '▼';
-
-      renderSalesTable(recentSalesData);
-    }
-
-    function renderSalesTable(sales) {
-      let tbody = document.getElementById('recentSalesTableBody');
-      tbody.innerHTML = '';
-
-      let sumQty = 0;
-      let sumSalesAmt = 0;
-      let sumAdvance = 0;
-      let sumProcFee = 0;
-      let sumTotalAmount = 0;
-
-      if (sales && sales.length > 0) {
-        sales.forEach(s => {
-          let qtyVal = Number(s.qty || 0);
-          let salesAmtVal = Number(s.salesAmt || 0);
-          let advanceVal = Number(s.advance || 0);
-          let procFeeVal = Number(s.processingFee || 0);
-
-          let rowTotal = (s.rowTotalAmount !== undefined && s.rowTotalAmount !== null) 
-                       ? Number(s.rowTotalAmount) 
-                       : (salesAmtVal + procFeeVal);
-
-          sumQty += qtyVal;
-          sumSalesAmt += salesAmtVal;
-          sumAdvance += advanceVal;
-          sumProcFee += procFeeVal;
-          sumTotalAmount += rowTotal;
-
-          let tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${s.date || ''}</td>
-            <td>${s.productId || ''}</td>
-            <td>${s.approvedBy || ''}</td>
-            <td><b>${s.accountNo || ''}</b></td>
-            <td>${s.accountTitle || ''}</td>
-            <td>${s.companyName || ''}</td>
-            <td>${s.productCategory || ''}</td>
-            <td>${s.model || ''}</td>
-            <td>${s.qty || ''}</td>
-            <td>${s.salesRate ? Number(s.salesRate).toLocaleString() : ''}</td>
-            <td>${s.salesAmt ? Number(s.salesAmt).toLocaleString() : ''}</td>
-            <td>${s.planMonths || ''}</td>
-            <td>${s.advance ? Number(s.advance).toLocaleString() : ''}</td>
-            <td>${s.installmentPerMonth ? Number(s.installmentPerMonth).toLocaleString() : ''}</td>
-            <td>${s.processingFee ? Number(s.processingFee).toLocaleString() : ''}</td>
-            <td><b>${rowTotal ? rowTotal.toLocaleString() : '0'}</b></td>
-            <td style="text-align: center;">
-              <button type="button" class="action-btn btn-primary" style="padding: 2px 5px; font-size: 9px;" onclick="loadSpecificSale('${s.accountNo}')">View / Edit</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } else {
-        tbody.innerHTML = `<tr><td colspan="17" style="text-align: center; color: #666;">No recent sales found.</td></tr>`;
-      }
-
-      document.getElementById('totalQty').innerText = sumQty ? sumQty.toLocaleString() : '0';
-      document.getElementById('totalSalesAmt').innerText = sumSalesAmt ? sumSalesAmt.toLocaleString() : '0';
-      document.getElementById('totalAdvance').innerText = sumAdvance ? sumAdvance.toLocaleString() : '0';
-      document.getElementById('totalProcFee').innerText = sumProcFee ? sumProcFee.toLocaleString() : '0';
-      document.getElementById('totalGrandAmount').innerText = sumTotalAmount ? sumTotalAmount.toLocaleString() : '0';
-    }
-
-    // UPDATED: loadSpecificSale اب ڈپلیکیٹ چیک بائی پاس کرنے کے ساتھ ساتھ پروڈکٹ ڈیٹا بھی لوڈ کرے گا
-    async function loadSpecificSale(accNo) {
-      const e = ERP.ui.esc;
-      document.getElementById('accountNo').value = accNo;
-      editMode = true; showLoader(true);
-      try {
-        const rows = await ERP.db.sales.list({ accNo });
-        if (!rows.length) { alert("Sale not found"); return; }
-        cashMode = /^INV-/i.test(accNo);
-        document.getElementById('cashSale').checked = cashMode;
-        document.getElementById('accountNo').readOnly = cashMode;
-        if (cashMode) {
-          const t = document.getElementById('accountTitle'); t.readOnly = false; t.value = rows[0].account_title || '';
-          document.getElementById('approvedBy').value = ''; document.getElementById('cro').value = '';
-        } else { await fetchCustomerDetails(true); }
-        document.getElementById('saleDate').value = rows[0].date || '';
-        populateNextInstMonthDropdown(rows[0].next_inst_month || '');
-        const tbody = document.getElementById('productTableBody'); tbody.innerHTML = '';
-        rows.forEach(p => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="product-cell"><input type="text" class="productId" value="${e(p.product_id)}" placeholder="Product ID" readonly></td>
-            <td><input type="text" class="companyName" value="${e(p.company_name)}" placeholder="Company" readonly></td>
-            <td><input type="text" class="productCategory" value="${e(p.product_category)}" placeholder="Category" readonly></td>
-            <td><input type="text" class="model" value="${e(p.model)}" placeholder="Model" readonly></td>
-            <td><input type="text" class="color" value="${e(p.color)}" placeholder="Color" readonly></td>
-            <td><input type="number" class="qty" value="${p.qty || 1}" oninput="calculateRow(this)" onfocus="this.select()"></td>
-            <td><input type="number" class="salesRate" value="${p.sales_rate || 0}" placeholder="Rate" oninput="calculateRow(this)" onfocus="this.select()"></td>
-            <td><input type="text" class="salesAmount" value="${p.sales_amt || 0}" readonly tabindex="-1" placeholder="Amt"></td>
-            <td><input type="number" class="planMonths" value="${p.plan_months || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
-            <td><input type="number" class="advance" value="${p.advance || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
-            <td><input type="text" class="installmentPerMonth" value="${p.installment_per_month || 0}" readonly tabindex="-1" placeholder="Inst"></td>
-            <td><input type="number" class="processingFee" value="${p.processing_fee || 0}" oninput="calculateRow(this)" onfocus="this.select()"></td>
-            <td><input type="text" class="remarks" value="${e(p.remarks)}" placeholder="Remarks"></td>
-            <td style="text-align: center;"><button type="button" class="del-row-btn" onclick="removeProductRow(this)">X</button></td>`;
-          tbody.appendChild(tr);
-        });
-        calculateTotals();
-        document.getElementById('actionMainBtn').textContent = 'Update Sales';
-        window.scrollTo(0, 0);
-      } catch (err) { alert("Could not load sale: " + err.message); }
-      finally { showLoader(false); }
-    }
-    function showUrlConfig() {
-      var inp = document.getElementById('scriptUrlInput');
-      if (inp) inp.value = (typeof SCRIPT_URL !== 'undefined' ? SCRIPT_URL : (typeof WEB_APP_URL !== 'undefined' ? WEB_APP_URL : ''));
-      var box = document.getElementById('configBox');
-      if (box) box.classList.add('show');
-    }
-    function saveScriptUrl() {
-      var inp = document.getElementById('scriptUrlInput');
-      var val = inp ? inp.value.trim() : '';
-      if (!val) { alert("URL enter karein"); return; }
-      localStorage.setItem('erp_script_url', val);
-      location.reload();
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-      var savedUrl = localStorage.getItem('erp_script_url');
-      if (false) { // Google Script URL no longer used
-        var box = document.getElementById('configBox');
-        if (box) box.classList.add('show');
-      }
-    });
-
-    // ================= UNIVERSAL MIC INPUT =================
-    (function() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let activeRec = null, activeBtn = null, activeInput = null;
-
-      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-      function stopActiveMic() {
-        if (activeRec) {
-          activeRec.onend = null; activeRec.onresult = null;
-          try { activeRec.abort(); } catch (e) {}
-          activeRec = null;
-        }
-        if (activeBtn) activeBtn.classList.remove('listening');
-        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-        activeBtn = null; activeInput = null;
-      }
-
-      function toggleMic(input, btn) {
-        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-        const isNumeric = input.type === 'number';
-
-        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-        stopActiveMic();
-
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        let finalText = '';
-
-        activeRec = rec; activeBtn = btn; activeInput = input;
-        btn.classList.add('listening');
-        input.dataset.origPh = input.placeholder || '';
-        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-        rec.onresult = function(ev) {
-          let interim = '';
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-          }
-          let text = (finalText + interim).trim();
-          if (isNumeric) text = cleanNumeric(text);
-          input.value = text;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        rec.onerror = function(ev) {
-          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-        };
-        rec.onend = function() {
-          btn.classList.remove('listening');
-          input.placeholder = input.dataset.origPh || '';
-          if (isNumeric) input.value = cleanNumeric(input.value);
-          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-        };
-        try { rec.start(); } catch (e) {}
-      }
-
-      function attachMic(input) {
-        if (!input || input.dataset.autoMic) return;
-        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-        if (input.closest('#configBox')) return;
-        if (input.closest('.input-with-mic')) return;
-        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-        input.dataset.autoMic = '1';
-
-        const wrap = document.createElement('span');
-        wrap.className = 'auto-mic-wrap';
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-
-        input.style.paddingRight = '24px';
-        input.style.boxSizing = 'border-box';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'auto-mic-btn';
-        btn.title = 'Voice input';
-        btn.innerHTML = '&#127908;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-        wrap.appendChild(btn);
-      }
-
-      function scanAndAttach(root) {
-        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        scanAndAttach(document);
-      });
-
-      const mo = new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType !== 1) return;
-            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-              attachMic(node);
-            }
-            if (node.querySelectorAll) scanAndAttach(node);
-          });
-        });
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
-  </script>
+<main class="page">
+  <header class="appbar"><div><h1>Sales</h1><p>Installment (CAF) and cash sales</p></div></header>
+  <div class="tabs" role="tablist"><button role="tab" id="tNew" aria-selected="true">New sale</button><button role="tab" id="tList" aria-selected="false">All sales</button></div>
+
+  <!-- NEW / EDIT -->
+  <section id="pNew">
+    <div class="editing" id="editBar" hidden><span id="editTxt"></span><button class="btn sm ghost" id="cancelEdit">Cancel edit</button></div>
+    <div class="seg" id="seg"><button data-m="inst" aria-pressed="true">Installment sale</button><button data-m="cash" aria-pressed="false">Cash sale</button></div>
+    <div class="card"><div class="cgrid">
+      <div id="gAcc"><label for="sAcc">CAF number</label><div class="inp"><input id="sAcc" inputmode="numeric" value="786" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div>
+      <div><label for="sDate">Sale date</label><input id="sDate" type="date"></div>
+      <div id="gName" hidden class="wide"><label for="sName">Customer name</label><input id="sName" value="Cash Customer" autocomplete="off"></div>
+      <div id="gMonth"><label for="sMonth">First installment month</label><select id="sMonth"></select></div>
+      <div id="gInv" hidden class="wide"><label>Invoice number</label><input value="Assigned when you save" readonly></div></div>
+      <div class="cinfo" id="cinfo"></div></div>
+    <div id="lines"></div>
+    <button class="btn soft" id="addLine" style="width:100%;margin-bottom:12px">＋ Add item</button>
+    <div class="sumbar"><div class="k"><div><small>Items</small><b id="sCnt">0</b></div><div><small>Advance</small><b id="sAdv">0</b></div><div id="kInst"><small>Installment / month</small><b id="sInst">0</b></div><div class="g"><small>Grand total</small><b id="sTot">Rs 0</b></div></div>
+      <button class="btn" id="btnSave">Save sale</button></div>
+  </section>
+
+  <!-- LIST -->
+  <section id="pList" hidden>
+    <div class="card ft"><div><label>From</label><input type="date" id="hFrom"></div><div><label>To</label><input type="date" id="hTo"></div>
+      <div class="wide"><label>Search</label><input id="hQ" type="search" placeholder="CAF / invoice, customer name or model"></div></div>
+    <p id="hSum" style="color:var(--muted);font-size:13px;margin:0 0 8px"></p><div id="hList"></div>
+  </section>
+</main>
+
+<dialog id="pick" class="sheet"><div class="sh-head"><div><h2>Select product</h2><p>Stock shown beside each product</p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body"><input id="pickQ" type="search" placeholder="Search brand, model, color or ID" style="margin-bottom:8px"><label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="pickAll" style="width:auto;min-height:0"> Show out-of-stock items too</label><div class="plist" id="pickList"></div></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div></dialog>
+<div id="printArea"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase(), N = v => Number(v) || 0;
+let CUST = new Map(), STOCK = [], HIST = [], mode = "inst", editing = null, active = null, curCust = null;
+const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+
+/* ---------- mode / customer ---------- */
+function setMode(m) {
+  mode = m; document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === m));
+  const cash = m === "cash"; $("gAcc").hidden = cash; $("gMonth").hidden = cash; $("kInst").hidden = cash; $("gName").hidden = !cash; $("gInv").hidden = !cash || !!editing; $("cinfo").className = "cinfo";
+  document.querySelectorAll("#lines .line").forEach(l => { l.querySelectorAll(".plan,.adv").forEach(x => x.closest("div").hidden = cash); calc(l); });
+}
+$("seg").onclick = e => { const b = e.target.closest("button"); if (b && !editing) setMode(b.dataset.m); };
+function months() { const d = new Date(), out = []; d.setDate(1); for (let i = 0; i < 24; i++) { out.push(d.toLocaleString("en", { month: "long", year: "numeric" })); d.setMonth(d.getMonth() + 1); } return out; }
+function fillMonths(sel) { const l = months(); if (sel && !l.some(x => x.toLowerCase() === String(sel).toLowerCase())) l.unshift(sel); $("sMonth").innerHTML = l.map(x => `<option>${E(x)}</option>`).join(""); if (sel) $("sMonth").value = sel; }
+async function lookupCust() {
+  const a = $("sAcc").value.trim(), box = $("cinfo"); curCust = null; box.className = "cinfo";
+  if (a.length < 5 || a === "786") return;
+  const c = CUST.get(a); box.classList.add("on");
+  if (!c) { box.classList.add("bad"); box.textContent = "Account not found"; return; }
+  curCust = c; const b = N(c.balance);
+  let dup = false; if (!editing) try { dup = await ERP.db.sales.exists(a); } catch (e) {}
+  if (dup) { box.classList.add("bad"); box.innerHTML = `<b>${E(c.account_title)}</b><br>A sale against this CAF is already saved. Open it from "All sales" to edit.`; curCust = null; return; }
+  if (b > 0) box.classList.add("warn");
+  box.innerHTML = `<b>${E(c.account_title)}</b> · CRO: ${E(c.cro || "-")} · Approved by: ${E(c.approved_by || "-")}<br>${b > 0 ? "This customer still owes <b>Rs " + M(b) + "</b>" : "No balance due"}`;
+}
+$("sAcc").oninput = ERP.ui.debounce(lookupCust, 150);
+$("sAcc").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const l = document.querySelector("#lines .line .browse"); l && l.click(); } });
+
+/* ---------- item lines ---------- */
+function addLine(v = {}) {
+  const prev = [...document.querySelectorAll("#lines .line")].pop(), plan = v.plan_months ?? (prev ? prev.querySelector(".plan").value : 0);
+  const d = document.createElement("div"); d.className = "line";
+  d.innerHTML = `<div class="l-top"><div class="pinfo none">No product selected</div><button type="button" class="btn sm ghost browse">Select product</button><button type="button" class="btn sm ghost del" aria-label="Remove item" style="color:var(--danger)">✕</button></div>
+    <div class="l-grid"><div><label>Qty</label><input class="qty" type="number" inputmode="decimal" min="0" value="${v.qty || 1}"></div>
+      <div><label>Rate</label><input class="rate" type="number" inputmode="decimal" min="0" value="${v.sales_rate || ""}"></div>
+      <div><label>Amount</label><input class="amt" readonly tabindex="-1"></div>
+      <div><label>Plan (months)</label><input class="plan" type="number" inputmode="numeric" min="0" value="${plan || 0}"></div>
+      <div><label>Advance</label><input class="adv" type="number" inputmode="decimal" min="0" value="${v.advance || 0}"></div>
+      <div><label>Installment / mo</label><input class="inst" readonly tabindex="-1"></div>
+      <div><label>Processing fee</label><input class="fee" type="number" inputmode="decimal" min="0" value="${v.processing_fee || 0}"></div>
+      <div class="wide"><label>Remarks</label><input class="rem" value="${E(v.remarks)}" autocomplete="off"></div></div>`;
+  $("lines").appendChild(d); d._p = v.product_id ? { product_id: v.product_id, company_name: v.company_name, product_category: v.product_category, model: v.model, color: v.color, in_stock: null } : null;
+  if (d._p) showProduct(d); if (mode === "cash") d.querySelectorAll(".plan,.adv").forEach(x => x.closest("div").hidden = true); calc(d); return d;
+}
+function showProduct(l) { const p = l._p, i = l.querySelector(".pinfo"); i.classList.remove("none"); l.querySelector(".browse").textContent = "Change";
+  i.innerHTML = `<b>${E(label(p))}</b><small>${E(up(p.company_name))} · ${E(up(p.product_category))} · ${E(p.product_id)}${p.in_stock != null ? ` · <span style="color:${N(p.in_stock) > 0 ? "var(--brand-dark)" : "var(--danger)"}">stock ${M(p.in_stock)}</span>` : ""}</small>`; }
+function calc(l) {
+  const q = N(l.querySelector(".qty").value), r = N(l.querySelector(".rate").value), a = q * r, cash = mode === "cash", pl = cash ? 0 : N(l.querySelector(".plan").value), ad = cash ? 0 : N(l.querySelector(".adv").value);
+  l.querySelector(".amt").value = a ? M(a) : ""; l.querySelector(".inst").value = pl > 0 ? M(Math.max((a - ad) / pl, 0)) : "";
+  l._a = a; l._inst = pl > 0 ? Math.max((a - ad) / pl, 0) : 0; totals();
+}
+function totals() {
+  let n = 0, t = 0, ad = 0, ins = 0; const cash = mode === "cash";
+  document.querySelectorAll("#lines .line").forEach(l => { n++; const a = l._a || 0, f = N(l.querySelector(".fee").value); t += a + f; ad += cash ? a + f : N(l.querySelector(".adv").value); ins += l._inst || 0; });
+  $("sCnt").textContent = n; $("sAdv").textContent = M(ad); $("sInst").textContent = M(ins); $("sTot").textContent = "Rs " + M(t);
+}
+$("lines").addEventListener("input", e => { const l = e.target.closest(".line"); if (l && e.target.matches("input")) calc(l); });
+$("lines").addEventListener("click", e => { const l = e.target.closest(".line"); if (!l) return;
+  if (e.target.closest(".browse")) { active = l; $("pickQ").value = ""; renderPick(); $("pick").showModal(); }
+  if (e.target.closest(".del")) { if (document.querySelectorAll("#lines .line").length > 1) { l.remove(); totals(); } else ERP.ui.toast("At least one item is needed", "err"); } });
+$("addLine").onclick = () => { const l = addLine(); l.querySelector(".browse").click(); };
+
+function renderPick() {
+  const q = $("pickQ").value.trim().toLowerCase(), all = $("pickAll").checked;
+  const rows = STOCK.filter(p => (all || N(p.in_stock) > 0) && (!q || [p.product_id, p.company_name, p.model, p.color, p.product_category].join(" ").toLowerCase().includes(q))).slice(0, 80);
+  $("pickList").innerHTML = rows.map((p, i) => `<button type="button" class="pi" data-i="${STOCK.indexOf(p)}"><span><b>${E(label(p))}</b><small>${E(up(p.company_name))} · ${E(up(p.product_category))} · ${E(p.product_id)}</small></span><span class="badge ${N(p.in_stock) > 0 ? "ok" : "bad"}">${M(p.in_stock)}</span></button>`).join("")
+    || '<div class="empty">No product found.</div>';
+}
+$("pickQ").oninput = ERP.ui.debounce(renderPick, 150); $("pickAll").onchange = renderPick;
+$("pickList").onclick = e => { const b = e.target.closest(".pi"); if (!b || !active) return; active._p = STOCK[+b.dataset.i]; showProduct(active); $("pick").close(); active.querySelector(".qty").focus(); active.querySelector(".qty").select(); };
+
+/* ---------- save ---------- */
+function resetForm() {
+  editing = null; $("editBar").hidden = true; $("seg").style.opacity = 1; $("lines").innerHTML = ""; $("sAcc").value = "786"; $("sAcc").readOnly = false; $("sName").value = "Cash Customer";
+  $("sDate").value = ERP.ui.today(); fillMonths(); curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
+}
+$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
+  const cash = mode === "cash", date = $("sDate").value, acc = $("sAcc").value.trim();
+  if (!date) return ERP.ui.toast("Select the sale date", "err");
+  if (!cash && !curCust && !editing) return ERP.ui.toast("Enter a valid CAF number first", "err");
+  if (cash && !$("sName").value.trim()) return ERP.ui.toast("Enter the customer name", "err");
+  const items = []; let bad = null;
+  document.querySelectorAll("#lines .line").forEach((l, i) => { if (bad) return; const p = l._p, v = c => N(l.querySelector(c).value), a = v(".qty") * v(".rate"), fee = v(".fee");
+    if (!p) bad = [l, `Item ${i + 1}: select a product`]; else if (v(".qty") <= 0) bad = [l, `Item ${i + 1}: quantity must be more than 0`]; else if (v(".rate") <= 0) bad = [l, `Item ${i + 1}: enter the rate`];
+    else if (!cash && v(".plan") > 0 && v(".adv") >= a) bad = [l, `Item ${i + 1}: advance is not less than the amount, but a plan is set`];
+    else if (!editing && p.in_stock != null && v(".qty") > N(p.in_stock) && !confirm(`Item ${i + 1}: only ${M(p.in_stock)} in stock, you are selling ${v(".qty")}.\nContinue?`)) bad = [l, "Cancelled"];
+    else items.push({ product_id: p.product_id, company_name: up(p.company_name), product_category: up(p.product_category), model: up(p.model), color: up(p.color), qty: v(".qty"), sales_rate: v(".rate"), sales_amt: a,
+      plan_months: cash ? 0 : v(".plan"), advance: cash ? a + fee : v(".adv"), installment_per_month: cash ? 0 : (v(".plan") > 0 ? +((a - v(".adv")) / v(".plan")).toFixed(2) : 0), processing_fee: fee, remarks: l.querySelector(".rem").value.trim() }); });
+  if (bad) { bad[0].scrollIntoView({ block: "center" }); return ERP.ui.toast(bad[1], "err"); }
+  if (!cash && !editing && N(curCust.balance) > 0 && !confirm(`${curCust.account_title} still owes Rs ${M(curCust.balance)}.\nSave a new sale anyway?`)) return;
+  const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : $("sMonth").value };
+  try { const r = await ERP.db.sales.save(sale, items, !!editing); ERP.ui.toast((editing ? "Sale updated: " : "Sale saved: ") + r.account_no);
+    const wasCash = cash; resetForm(); loadHist(); if (wasCash) slip(r.account_no, true); }
+  catch (e) { ERP.ui.toast(e.message, "err"); }
+});
+$("cancelEdit").onclick = resetForm;
+
+/* ---------- history ---------- */
+async function loadHist() {
+  $("hList").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div></div>';
+  try { HIST = await ERP.db.sales.recent({ from: $("hFrom").value, to: $("hTo").value }); renderHist(); } catch (e) { $("hList").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+}
+function groups() { const q = $("hQ").value.trim().toLowerCase(), g = new Map();
+  HIST.filter(r => !q || [r.account_no, r.account_title, r.model, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.account_no; (g.get(k) || g.set(k, []).get(k)).push(r); }); return g; }
+function renderHist() {
+  const g = groups(); let grand = 0;
+  $("hList").innerHTML = [...g].map(([acc, rs]) => { const tot = rs.reduce((s, r) => s + N(r.total_amt), 0), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0), cash = /^INV-/i.test(acc); grand += tot;
+    return `<article class="po" data-a="${E(acc)}"><div class="po-h"><div><b>${E(rs[0].account_title)}</b> <span class="badge ${cash ? "" : "ok"}">${cash ? "Cash" : "CAF"} ${E(acc)}</span><br><small>${E(rs[0].date)} · ${rs.length} item${rs.length > 1 ? "s" : ""}${!cash && ins ? " · Inst Rs " + M(ins) + "/mo" : ""}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400">Advance ${M(adv)}</small></div></div>
+      <div class="po-b" hidden><div class="table-wrap"><table style="min-width:560px"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Plan</th><th class="num">Advance</th><th class="num">Inst/mo</th><th class="num">Total</th></tr></thead><tbody>${rs.map(r => `<tr><td>${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(r.total_amt)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}</div></div></article>`; }).join("") || '<div class="empty">No sales in this period.</div>';
+  $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
+}
+$("hList").onclick = async e => {
+  const art = e.target.closest(".po"); if (!art) return; const acc = art.dataset.a, act = e.target.closest("[data-do]");
+  if (!act) { if (e.target.closest("a")) return; const b = art.querySelector(".po-b"); b.hidden = !b.hidden; return; }
+  if (act.dataset.do === "print") return slip(acc);
+  if (act.dataset.do === "edit") {
+    try { const rows = await ERP.db.sales.list({ accNo: acc }); if (!rows.length) return; const cash = /^INV-/i.test(acc);
+      $("tNew").click(); editing = acc; setMode(cash ? "cash" : "inst"); $("seg").style.opacity = .5; $("lines").innerHTML = ""; $("sDate").value = rows[0].date; $("sAcc").value = acc; $("sAcc").readOnly = true; $("sName").value = rows[0].account_title || ""; fillMonths(rows[0].next_inst_month);
+      rows.forEach(r => addLine(r)); if (!cash) { curCust = CUST.get(acc.trim()) || { account_title: rows[0].account_title, approved_by: rows[0].approved_by, balance: 0 }; $("cinfo").className = "cinfo on"; $("cinfo").innerHTML = `<b>${E(rows[0].account_title)}</b> (editing saved sale)`; }
+      $("gInv").hidden = true; $("editBar").hidden = false; $("editTxt").textContent = `Editing ${acc}. Saving replaces the whole sale and its stock entry.`; totals(); window.scrollTo(0, 0); } catch (er) { ERP.ui.toast(er.message, "err"); }
+  } else if (confirm(`Delete sale ${acc}? Its stock-out entries are removed too.`)) { try { await ERP.db.sales.remove(acc); ERP.ui.toast("Sale deleted"); loadHist(); } catch (er) { ERP.ui.toast(er.message, "err"); } }
+};
+["hFrom", "hTo"].forEach(i => $(i).onchange = loadHist); $("hQ").oninput = ERP.ui.debounce(renderHist, 200);
+
+/* ---------- print slip ---------- */
+async function slip(acc, auto) {
+  const rows = HIST.filter(r => r.account_no === acc).length ? HIST.filter(r => r.account_no === acc) : await ERP.db.sales.list({ accNo: acc });
+  if (!rows.length) return; const r0 = rows[0], tot = rows.reduce((s, r) => s + N(r.total_amt), 0), adv = rows.reduce((s, r) => s + N(r.advance), 0), cash = /^INV-/i.test(acc), fee = rows.reduce((s, r) => s + N(r.processing_fee), 0);
+  $("printArea").innerHTML = `<h2>${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>${cash ? "Cash invoice" : "Installment sale"} · <b>${E(acc)}</b> · ${E(r0.date)}</div><div>Customer: <b>${E(r0.account_title)}</b></div>
+    <table><thead><tr><th style="text-align:left">Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows.map(r => `<tr><td>${E(r.model)} ${E(r.color)}${r.remarks ? "<br><small>" + E(r.remarks) + "</small>" : ""}</td><td style="text-align:center">${M(r.qty)}</td><td style="text-align:right">${M(r.sales_rate)}</td><td style="text-align:right">${M(r.sales_amt)}</td></tr>`).join("")}</tbody></table>
+    ${fee ? `<div>Processing fee: Rs ${M(fee)}</div>` : ""}<div><b>Total: Rs ${M(tot)}</b></div><div>Advance / paid: Rs ${M(adv)}</div>${cash ? "" : `<div>Balance: Rs ${M(Math.max(tot - adv, 0))}</div>${rows.map(r => N(r.plan_months) ? `<div>${E(r.model)}: ${M(r.plan_months)} × Rs ${M(r.installment_per_month)}</div>` : "").join("")}`}<p style="margin-top:14px">Thank you for your business.</p>`;
+  if (!auto || confirm("Print the invoice?")) window.print();
+}
+
+/* ---------- start ---------- */
+$("tNew").onclick = () => { $("tNew").setAttribute("aria-selected", true); $("tList").setAttribute("aria-selected", false); $("pNew").hidden = false; $("pList").hidden = true; };
+$("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("tNew").setAttribute("aria-selected", false); $("pNew").hidden = true; $("pList").hidden = false; };
+(async () => {
+  await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
+  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); resetForm(); ERP.voice.wire(document);
+  try { const [c, s] = await Promise.all([ERP.db.customers.balances(), ERP.db.stock.balance()]); CUST = new Map(c.map(x => [String(x.account_no).trim(), x])); STOCK = s.sort((a, b) => N(b.in_stock) - N(a.in_stock)); }
+  catch (e) { ERP.ui.toast("Could not load customers/stock: " + e.message, "err"); }
+  loadHist();
+})();
+</script>
 </body>
 </html>
