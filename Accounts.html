@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts &amp; Day Book</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  .acts .btn{flex:1;min-width:120px}
+  .btn.in{background:#047857}.btn.out{background:#b45309}.btn.xfer{background:#1d4ed8}
+  .range{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
+  .range .wide{grid-column:1/-1}
+  @media(min-width:900px){.range{grid-template-columns:150px 140px 140px 1.4fr 170px}.range .wide{grid-column:auto}}
+  .accs{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:4px;-webkit-overflow-scrolling:touch}
+  .ac{flex:0 0 auto;min-width:150px;text-align:left;background:#fff;border:2px solid var(--line);border-radius:var(--radius);padding:10px 14px;font:inherit;cursor:pointer;box-shadow:var(--shadow)}
+  .ac small{color:var(--muted);font-weight:600;display:block}.ac b{font-size:18px;font-variant-numeric:tabular-nums}
+  .ac[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+  .ac b.neg{color:var(--danger)}
+  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+  .stat.in b{color:#047857}.stat.out b{color:var(--warn)}
+  .head,.ent{display:grid;align-items:center;gap:10px;grid-template-columns:92px 90px 100px minmax(160px,2.2fr) 1.1fr 100px 100px 110px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .head span.r,.ent .r{text-align:right}
+  .ent{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 14px;margin-bottom:6px;cursor:pointer;box-shadow:var(--shadow);font-size:14px}
+  .ent:hover{border-color:var(--brand)} .ent .num{font-variant-numeric:tabular-nums}
+  .ent .in{color:#047857;font-weight:700}.ent .out{color:var(--warn);font-weight:700}.ent .bal{color:var(--muted)}
+  .ent small{color:var(--muted);display:block;line-height:1.3}.kd{white-space:nowrap}
+  .open{background:#eef2f7;cursor:default;font-weight:600}.open:hover{border-color:var(--line)}
+  @media(max-width:899px){
+    .head{display:none}
+    .ent{grid-template-columns:1fr auto;grid-template-areas:"p amt" "m bal"}
+    .ent .d,.ent .v,.ent .k,.ent .a{display:none}
+    .ent .p{grid-area:p}.ent .amt{grid-area:amt;text-align:right}.ent .mm{grid-area:m;color:var(--muted);font-size:12px}.ent .bal{grid-area:bal;text-align:right;font-size:12px}
+    .ent .in2,.ent .out2{display:none}
+  }
+  @media(min-width:900px){.ent .p .mm,.ent .amt,.ent .mm{display:none}}
+  .kinds{display:flex;gap:6px;flex-wrap:wrap}
+  .fld[hidden],.kd2[hidden]{display:none}
+  @media print{.page>*:not(#ledger):not(.stats):not(.appbar){display:none!important}.acts,.accs{display:none!important}.ent{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar"><div><h1>Accounts &amp; Day Book</h1><p id="sub">All money in and out, in one place</p></div></header>
+  <div class="acts no-print" id="acts">
+    <button class="btn in" data-k="receipt">＋ Receipt</button>
+    <button class="btn in" data-k="income">＋ Income</button>
+    <button class="btn out" data-k="pay">－ Payment / Expense</button>
+    <button class="btn xfer" data-k="transfer">⇄ Transfer</button>
+  </div>
+
+  <section class="card range" style="margin-top:12px">
+    <div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
+    <div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div>
+    <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Voucher, party, head or remarks"></div>
+    <div class="wide"><label>Type</label><select id="fKind"><option value="">All types</option><option>Receipt</option><option>Sale advance</option><option>Income</option><option>Expense</option><option>Payment</option><option>Transfer</option></select></div>
+  </section>
+
+  <div class="accs" id="accs"></div>
+  <section class="stats four" id="stats"></section>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px" class="no-print"><span id="cnt" style="color:var(--muted);font-size:13px"></span>
+    <span><button class="btn sm ghost" id="btnPrint">Print</button> <button class="btn sm ghost" id="btnCsv">Export</button></span></div>
+  <div class="head"><span>Date</span><span>Voucher</span><span>Type</span><span>Particulars</span><span>Account</span><span class="r">Money in</span><span class="r">Money out</span><span class="r">Balance</span></div>
+  <section id="ledger"></section>
+</main>
+
+<!-- NEW ENTRY -->
+<dialog id="dlg" class="sheet">
+  <div class="sh-head"><div><h2 id="dTitle"></h2><p id="dSub"></p></div><button class="x" data-close>✕</button></div>
+  <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
+    <div class="fld"><label>Date</label><input id="fDate" type="date"></div>
+    <div class="fld" id="gSub"><label>Payment type</label><select id="fSub"><option value="expense">Expense</option><option value="payment_vendor">Vendor / party payment</option><option value="payment_other">Other payment</option></select></div>
+    <div class="fld" id="gAcc"><label>Customer account no</label><input id="fAcc" inputmode="numeric" value="786" autocomplete="off"><small class="err" id="fAccInfo" style="color:var(--muted)"></small></div>
+    <div class="fld" id="gRct"><label>Receipt no</label><input id="fRct" list="dTags" autocomplete="off"></div>
+    <div class="fld" id="gName"><label id="lName">Name / head</label><input id="fName" list="dNames" autocomplete="off"></div>
+    <div class="fld"><label id="lMode">Account</label><select id="fMode"></select></div>
+    <div class="fld" id="gTo"><label>To account</label><select id="fTo"></select></div>
+    <div class="fld"><label>Amount (Rs)</label><input id="fAmt" type="number" inputmode="decimal" min="0"></div>
+    <div class="fld wide"><label>Remarks</label><div class="inp"><input id="fRem" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div></div>
+    <small class="err" id="fErr"></small></div></form>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn soft" id="btnAgain">Save &amp; add another</button><button class="btn" id="btnSave">Save</button></div>
+  <datalist id="dNames"></datalist><datalist id="dTags"></datalist>
+</dialog>
+
+<!-- ENTRY DETAILS -->
+<dialog id="det" class="sheet">
+  <div class="sh-head"><div><h2 id="tTitle"></h2><p id="tSub"></p></div><button class="x" data-close>✕</button></div>
+  <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
+    <div class="fld"><label>Date</label><input id="eDate" type="date"></div><div class="fld"><label>Account</label><select id="eMode"></select></div>
+    <div class="fld"><label>Party / name</label><input id="eParty"></div><div class="fld"><label>Head</label><input id="eHead" list="dNames"></div>
+    <div class="fld"><label>Amount (Rs)</label><input id="eAmt" type="number" inputmode="decimal" min="0"></div><div class="fld"><label>Remarks</label><input id="eRem"></div></div>
+    <p id="tNote" style="font-size:13px;color:var(--muted);margin:8px 0 0"></p></div></form>
+  <div class="sh-foot"><button class="btn danger" id="eDel" style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Close</button><button class="btn" id="eSave">Save changes</button></div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, PM = ERP_CONFIG.PAY_MODES, TAGS = ERP_CONFIG.QUICK_RECEIPT_TAGS;
+const KIND_CLS = { Receipt: "ok", "Sale advance": "ok", Income: "ok", Expense: "warn", Payment: "warn", Transfer: "" };
+let ENT = [], OPEN = new Map(), ACCS = [], sel = "", SETT = null, CUST = null, cur = null, kindNow = null;
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const allModes = () => [...new Set([...PM.cash, ...PM.bank, ...ACCS])];
+
+/* ---------- period ---------- */
+function setPreset(p) {
+  const t = new Date(), d = new Date(t); let a = t, b = t;
+  if (p === "yday") { d.setDate(t.getDate() - 1); a = b = d; }
+  else if (p === "week") { d.setDate(t.getDate() - ((t.getDay() + 6) % 7)); a = d; }
+  else if (p === "month") a = new Date(t.getFullYear(), t.getMonth(), 1);
+  if (p !== "custom") { $("from").value = iso(a); $("to").value = iso(b); }
+}
+$("preset").onchange = () => { setPreset($("preset").value); load(); };
+["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; load(); });
+
+/* ---------- load + compute ---------- */
+async function load() {
+  const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
+  $("ledger").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div><br><div class="skeleton"></div></div>';
+  try {
+    const [en, op] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from)]);
+    ENT = en; OPEN = new Map(op.map(r => [r.account || "(none)", Number(r.opening) || 0]));
+    ACCS = [...new Set([...allModes(), ...OPEN.keys(), ...ENT.map(e => e.account || "(none)")])].filter(Boolean);
+    render();
+  } catch (e) { $("ledger").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small></div>`; }
+}
+const acct = e => e.account || "(none)";
+function render() {
+  const acc = {}; ACCS.forEach(a => acc[a] = { open: OPEN.get(a) || 0, in: 0, out: 0 });
+  ENT.forEach(e => { const a = acc[acct(e)]; a.in += +e.money_in; a.out += +e.money_out; });
+  const tot = Object.values(acc).reduce((s, a) => ({ open: s.open + a.open, in: s.in + a.in, out: s.out + a.out }), { open: 0, in: 0, out: 0 });
+  const used = ACCS.filter(a => acc[a].open || acc[a].in || acc[a].out || allModes().includes(a));
+  $("accs").innerHTML = [["", "All accounts", tot]].concat(used.map(a => [a, a, acc[a]])).map(([k, n, v]) => { const c = v.open + v.in - v.out;
+    return `<button class="ac" data-a="${E(k)}" aria-pressed="${sel === k}"><small>${E(n)}</small><b class="${c < 0 ? "neg" : ""}">Rs ${M(c)}</b></button>`; }).join("");
+  const s = sel ? acc[sel] || { open: 0, in: 0, out: 0 } : tot;
+  $("stats").innerHTML = `<div class="stat"><small>Opening</small><b>Rs ${M(s.open)}</b></div><div class="stat in"><small>Money in</small><b>Rs ${M(s.in)}</b></div><div class="stat out"><small>Money out</small><b>Rs ${M(s.out)}</b></div><div class="stat"><small>Closing</small><b>Rs ${M(s.open + s.in - s.out)}</b></div>`;
+
+  let bal = s.open; const scope = ENT.filter(e => !sel || acct(e) === sel).map(e => (bal += +e.money_in - +e.money_out, { ...e, bal }));
+  const q = $("q").value.trim().toLowerCase(), k = $("fKind").value;
+  const rows = scope.filter(e => (!k || e.kind === k) && (!q || [e.voucher_no, e.party, e.head, e.remarks, e.party_no].join(" ").toLowerCase().includes(q)));
+  const note = ENT.some(e => e.needs_review) ? ' <span class="badge warn" title="Old contra rows: direction unknown, not counted in balances">some old transfers need review</span>' : "";
+  $("cnt").innerHTML = `${M(rows.length)} entries${note}`; $("sub").textContent = `${$("from").value} to ${$("to").value}${sel ? " · " + sel : ""}`;
+  $("ledger").innerHTML = (k || q ? "" : `<div class="ent open"><span class="d">${E($("from").value)}</span><span class="v"></span><span class="k"></span><span class="p">Opening balance</span><span class="a"></span><span></span><span></span><span class="r num bal"><b>${M(s.open)}</b></span></div>`)
+    + rows.map((e, i) => { const inn = +e.money_in, out = +e.money_out, amt = inn ? "+" + M(inn) : out ? "−" + M(out) : "0";
+      return `<article class="ent" data-i="${ENT.indexOf(ENT.find(x => x.src === e.src && x.rid === e.rid))}" tabindex="0">
+        <span class="d">${E(e.date)}</span><span class="v">${E(e.voucher_no)}</span><span class="k"><span class="badge kd ${KIND_CLS[e.kind] || ""}">${E(e.kind)}</span></span>
+        <span class="p"><b>${E(e.party || e.head)}</b><small>${E([e.head && e.party ? e.head : "", e.remarks].filter(Boolean).join(" · "))}${e.needs_review ? " · CHECK" : ""}</small></span>
+        <span class="mm">${E(e.date)} · ${E(e.kind)} · ${E(acct(e))}${e.voucher_no ? " · " + E(e.voucher_no) : ""}</span>
+        <span class="a">${E(acct(e))}</span><span class="r num in in2">${inn ? M(inn) : ""}</span><span class="r num out out2">${out ? M(out) : ""}</span>
+        <span class="amt num ${inn ? "in" : out ? "out" : ""}">${amt}</span><span class="r num bal">${M(e.bal)}</span></article>`; }).join("")
+    || '<div class="empty">No entries in this period.</div>';
+}
+$("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { sel = b.dataset.a; render(); } };
+$("fKind").onchange = render; $("q").oninput = ERP.ui.debounce(render, 200);
+$("btnPrint").onclick = () => window.print();
+$("btnCsv").onclick = () => ERP.ui.downloadCSV(`daybook_${$("from").value}_${$("to").value}.csv`, ENT.map(e => ({ date: e.date, voucher: e.voucher_no, type: e.kind, account: acct(e), party: e.party, head: e.head, remarks: e.remarks, money_in: e.money_in, money_out: e.money_out })));
+
+/* ---------- new entry ---------- */
+const CFG = { receipt: ["New receipt", "Money received from a customer", "Account it was received in"], income: ["New income", "Money received (not from a customer sale)", "Account it was received in"],
+  pay: ["New payment / expense", "Money paid out", "Account it was paid from"], transfer: ["Transfer", "Move money between your accounts", "From account"] };
+const show = (id, on) => $(id).hidden = !on;
+async function names() {
+  if (!SETT) try { SETT = (await ERP.db.settings()).rows; } catch (e) { SETT = []; }
+  const cat = c => SETT.filter(r => String(r.category).trim().toUpperCase() === c).map(r => String(r.display_name).trim());
+  const heads = k => [...new Set(ENT.filter(e => k.includes(e.kind)).map(e => e.head).filter(Boolean))];
+  return { expense: [...new Set([...cat("EXPENSE_HEAD"), ...heads(["Expense"])])], vendor: [...new Set([...cat("VENDOR"), ...heads(["Payment"])])], income: heads(["Income"]) };
+}
+async function setNames() {
+  const n = await names(), sub = $("fSub").value; const list = kindNow === "income" ? n.income : sub === "expense" ? n.expense : sub === "payment_vendor" ? n.vendor : [];
+  $("dNames").innerHTML = list.map(x => `<option value="${E(x)}">`).join(""); $("lName").textContent = kindNow === "income" ? "Income head" : sub === "expense" ? "Expense head" : sub === "payment_vendor" ? "Vendor / party" : "Paid to / head";
+}
+async function openNew(k) {
+  kindNow = k; const c = CFG[k]; $("dTitle").textContent = c[0]; $("dSub").textContent = c[1]; $("lMode").textContent = c[2]; $("fErr").textContent = "";
+  const opts = allModes().map(a => `<option>${E(a)}</option>`).join(""); $("fMode").innerHTML = opts; $("fTo").innerHTML = opts; $("fMode").value = PM.cash[0];
+  if (k === "transfer") $("fTo").value = PM.bank[0];
+  show("gSub", k === "pay"); show("gAcc", k === "receipt"); show("gRct", k === "receipt"); show("gName", k === "income" || k === "pay"); show("gTo", k === "transfer");
+  $("fDate").value = ERP.ui.today(); $("fAmt").value = ""; $("fRem").value = ""; $("fName").value = ""; $("fRct").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = ""; $("fSub").value = "expense";
+  $("dTags").innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); await setNames(); ERP.voice.wire($("dlg"));
+  if (k === "receipt" && !CUST) ERP.db.customers.balances().then(r => { CUST = new Map(r.map(c => [String(c.account_no).trim(), c])); lookup(); }).catch(() => {});
+  $("dlg").showModal(); setTimeout(() => ($(k === "receipt" ? "fAcc" : k === "transfer" ? "fAmt" : "fName")).focus(), 50);
+}
+function lookup() { const a = $("fAcc").value.trim(), i = $("fAccInfo"); if (!CUST || a.length < 5 || a === "786") { i.textContent = ""; return; } const c = CUST.get(a);
+  i.style.color = c ? "var(--brand-dark)" : "var(--danger)"; i.textContent = c ? `${c.account_title} · ${Number(c.balance) > 0 ? "Balance Rs " + M(c.balance) : "Clear"}` : "Account not found"; }
+$("fAcc").oninput = lookup; $("fSub").onchange = setNames;
+$("acts").onclick = e => { const b = e.target.closest("[data-k]"); if (b) openNew(b.dataset.k); };
+
+async function save(again) {
+  const bad = m => { $("fErr").textContent = m; return null; }; $("fErr").textContent = "";
+  const date = $("fDate").value, amt = +$("fAmt").value, mode = $("fMode").value, rem = $("fRem").value.trim(), name = $("fName").value.trim();
+  if (!date) return bad("Select the date"); if (!(amt > 0)) return bad("Enter the amount"); if (!mode) return bad("Select the account");
+  try {
+    if (kindNow === "receipt") {
+      const acc = $("fAcc").value.trim(), rct = $("fRct").value.trim(), c = CUST && CUST.get(acc);
+      if (!c) return bad("Account not found"); if (!rct) return bad("Enter the receipt number");
+      if (!TAGS.some(t => t.toLowerCase() === rct.toLowerCase()) && (await ERP.db.receipts.existing([rct])).length) return bad("This receipt number is already saved");
+      await ERP.db.receipts.add([{ voucher_no: rct, date, account_no: acc, account_title: c.account_title, account_head: "Recovery", pay_mode: mode, amount: amt, remarks: rem }]); ERP.ui.toast("Receipt saved");
+    } else if (kindNow === "transfer") {
+      const r = await ERP.db.accounts.create({ kind: "transfer", date, amount: amt, pay_mode: mode, to_account: $("fTo").value, remarks: rem }); ERP.ui.toast("Transfer saved: " + r.voucher_no);
+    } else {
+      if (!name) return bad("Enter the name / head");
+      const kind = kindNow === "income" ? "income" : $("fSub").value === "expense" ? "expense" : "payment";
+      const r = await ERP.db.accounts.create({ kind, date, amount: amt, pay_mode: mode, name, remarks: rem }); ERP.ui.toast("Saved. Voucher " + r.voucher_no);
+    }
+    if (again) { $("fAmt").value = ""; $("fRem").value = ""; $("fRct").value = ""; $("fName").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = ""; $("fAmt").focus(); } else $("dlg").close();
+    load();
+  } catch (e) { bad(e.message); }
+}
+$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), () => save(false)); $("btnAgain").onclick = () => ERP.ui.busy($("btnAgain"), () => save(true));
+
+/* ---------- entry details: edit / delete ---------- */
+function openDetail(e) {
+  cur = e; const isAdv = e.src === "sales", isTr = e.src === "contra";
+  $("tTitle").textContent = e.kind + " " + (e.voucher_no || ""); $("tSub").textContent = e.date + " · " + acct(e);
+  $("eDate").value = e.date; $("eMode").innerHTML = allModes().map(a => `<option>${E(a)}</option>`).join(""); $("eMode").value = acct(e);
+  $("eParty").value = e.party || ""; $("eHead").value = e.head || ""; $("eAmt").value = +e.money_in || +e.money_out; $("eRem").value = e.remarks || "";
+  const lock = isAdv || isTr || !ERP.auth.can("edit");
+  document.querySelectorAll("#det input,#det select").forEach(x => x.disabled = lock); $("eSave").hidden = lock;
+  $("eDel").hidden = isAdv || !ERP.auth.can("delete");
+  $("tNote").textContent = isAdv ? "This is the advance taken with a sale. Change it from the Sales page." : isTr ? "Transfers cannot be edited. Delete and enter it again if it is wrong (both sides are removed together)." : e.needs_review ? "Old transfer entry: its direction is not recorded." : "";
+  $("det").showModal();
+}
+$("ledger").onclick = e => { const a = e.target.closest(".ent[data-i]"); if (a) openDetail(ENT[+a.dataset.i]); };
+$("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.i) openDetail(ENT[+e.target.dataset.i]); };
+$("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
+  const f = { date: $("eDate").value, account: $("eMode").value, party: $("eParty").value.trim(), head: $("eHead").value.trim(), amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
+  if (!f.date || !(f.amount > 0)) return ERP.ui.toast("Date and amount are required", "err");
+  try { await ERP.db.accounts.update(cur.src, cur.rid, f); ERP.ui.toast("Saved"); $("det").close(); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } });
+$("eDel").onclick = async () => {
+  if (!confirm(cur.src === "contra" && !cur.needs_review ? `Delete transfer ${cur.voucher_no}? Both sides will be removed.` : "Delete this entry? This cannot be undone.")) return;
+  try { if (cur.src === "contra" && !cur.needs_review) await ERP.db.accounts.deleteTransfer(cur.voucher_no); else await ERP.db.accounts.remove(cur.src, cur.rid); ERP.ui.toast("Deleted"); $("det").close(); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
+
+(async () => { await ERP.auth.guard(); if (!ERP.auth.can("write")) $("acts").hidden = true; setPreset("today"); load(); })();
+</script>
+</body>
+</html>
