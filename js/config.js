@@ -8,7 +8,8 @@ window.ERP_CONFIG = {
     cash: ["Cash", "Head Office Cash", "Collection Cash"],
     bank: ["Bank Transfer", "Online Meezan", "Cheque", "Allied Bank (1870014)"]
   },
-  QUICK_RECEIPT_TAGS: ["Advance", "Processing Fee", "1st Installment"],  // special receipt numbers (may repeat)
+  SPECIAL_RECEIPT_NOS: ["Advance", "Processing Fee", "1st Installment"],  // receipt numbers that may repeat (old data)
+  QUICK_RECEIPT_TAGS: ["Advance", "Processing Fee", "1st Installment"],  // quick buttons on the Receipts page
   PAGE_SIZE: 1000,        // Supabase returns max 1000 rows per request
-  AUTH_REQUIRED: false    // login phase: set true once Supabase Auth + roles are added
+  AUTH_REQUIRED: true     // KEEP TRUE while the database is locked (sql/99). Pages then send you to login.html
 };
