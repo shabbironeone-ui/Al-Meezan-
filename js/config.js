@@ -11,5 +11,5 @@ window.ERP_CONFIG = {
   SPECIAL_RECEIPT_NOS: ["Advance", "Processing Fee", "1st Installment"],  // receipt numbers that may repeat (old data)
   QUICK_RECEIPT_TAGS: ["Advance", "Processing Fee", "1st Installment"],  // quick buttons on the Receipts page
   PAGE_SIZE: 1000,        // Supabase returns max 1000 rows per request
-  AUTH_REQUIRED: true     // KEEP TRUE while the database is locked (sql/99). Pages then send you to login.html
+  OPEN_ACCESS: true       // true = NO login (development, with sql/10_unlock_for_now.sql). Before going live: run sql/11_lock_again.sql and set this to false.
 };
