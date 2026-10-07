@@ -89,6 +89,7 @@ GROUPS.forEach(([name, pages]) => {
 { const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h);
   const bk = mk("", "💾  Backup all data (CSV)", () => ERP.ui.busy(bk, async () => { try { await ERP.db.backupAll(t => ERP.ui.toast("Exporting " + t + "...")); ERP.ui.toast("Backup done"); } catch (e) { ERP.ui.toast(e.message, "err"); } }), "backup");
   $("menu").appendChild(bk); }
+{ const c = mk("", "🩺  Connection check", () => window.open("status.html", "_blank"), "status"); $("menu").appendChild(c); }
 /* bottom bar (phones) */
 $("bar").appendChild(mk("", "<b>🏠</b>Home", () => go(null), ""));
 QUICK.forEach(k => $("bar").appendChild(mk("", "<b>" + ALL[k][1] + "</b>" + ALL[k][2].split(" ")[0], () => go(k), k)));
@@ -101,7 +102,7 @@ GROUPS.forEach(([name, pages]) => {
 });
 
 /* routing: target may carry a query, e.g. LedgerView.html?accNo=786001 */
-function mark(file) { document.querySelectorAll("[data-p]").forEach(b => (b.dataset.p === (file || "") && b.dataset.p !== "backup") ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
+function mark(file) { document.querySelectorAll("[data-p]").forEach(b => (b.dataset.p === (file || "") && b.dataset.p !== "backup" && b.dataset.p !== "status") ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
 function show(file, target) {
   document.body.classList.remove("open"); const p = ALL[file];
   if (!p) { $("frame").hidden = true; $("frame").removeAttribute("src"); $("home").hidden = false; $("homeBtn").hidden = true; $("title").textContent = "Home"; mark(null); return; }
@@ -123,10 +124,12 @@ $("scrim").onclick = () => document.body.classList.remove("open");
 $("homeBtn").onclick = () => go(null); $("brand").onclick = () => go(null);
 $("newtab").onclick = () => { const t = location.hash.slice(1); if (ALL[t.split("?")[0]]) window.open(t, "_blank"); };
 $("logout").onclick = () => ERP.auth.signOut();
-ERP.auth.guard().then(p => {
+(async () => {
+  if (!(ERP_CONFIG.OPEN_ACCESS === true) && !(await ERP.auth.session())) { location.replace("login.html"); return; }
+  const p = await ERP.auth.guard();
   if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
   const t = location.hash.slice(1); show(t.split("?")[0], t);
-});
+})();
 </script>
 </body>
 </html>
