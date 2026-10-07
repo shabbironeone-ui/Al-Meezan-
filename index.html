@@ -9,39 +9,41 @@
 <style>
   body{display:flex;height:100vh;height:100dvh;overflow:hidden}
   .shell-nav{width:250px;background:var(--nav);color:#f8fafc;display:flex;flex-direction:column;flex-shrink:0;z-index:50}
-  .brand{padding:16px;background:var(--nav-deep);color:var(--brand);font-weight:700;border-bottom:1px solid var(--nav-hover)}
+  .brand{display:block;width:100%;text-align:left;padding:16px;background:var(--nav-deep);color:#5eead4;font:inherit;font-weight:700;font-size:16px;border:0;border-bottom:1px solid var(--nav-hover);cursor:pointer}
   .menu{flex:1;overflow-y:auto;padding:6px 0}
   .menu h4{margin:12px 16px 4px;font-size:12px;color:#94a3b8;font-weight:600}
   .menu button{display:flex;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:8px 16px;background:none;border:0;border-left:4px solid transparent;color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
   .menu button:hover{background:var(--nav-hover)}
-  .menu button[aria-current="page"]{background:var(--nav-hover);border-left-color:var(--brand)}
+  .menu button[aria-current="page"]{background:var(--nav-hover);border-left-color:#5eead4}
   .main{flex:1;display:flex;flex-direction:column;min-width:0}
-  .topbar{height:54px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 12px;flex-shrink:0}
+  .topbar{height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0}
   .topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .burger{display:none;min-width:var(--tap)}
   .who{font-size:12px;color:var(--muted);white-space:nowrap}
-  @media(max-width:700px){.who,#newtab{display:none}}
   iframe{flex:1;width:100%;border:0;background:var(--bg)}
   .home{padding:16px;overflow:auto;flex:1}
+  .home h2{margin:0 0 4px;font-size:22px}.home p.hi{margin:0 0 16px;color:var(--muted)}
+  .home h3{margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   .tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
-  .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);min-height:84px;padding:12px;font:inherit;text-align:left;cursor:pointer}
-  .tile:hover{border-color:var(--brand)} .tile b{display:block;font-size:22px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);min-height:88px;padding:12px;font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
+  .tile:hover{border-color:var(--brand)} .tile b{display:block;font-size:24px;margin-bottom:2px}
   .bottom-bar{display:none}
   .scrim{display:none}
   @media(max-width:899px){
     .shell-nav{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);transition:transform .2s}
     body.open .shell-nav{transform:none}
     body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
-    .burger{display:inline-block}
+    .burger{display:inline-block}.who,#newtab{display:none}
     .bottom-bar{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-    .bottom-bar button{flex:1;min-height:56px;background:none;border:0;font:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+    .bottom-bar button{flex:1;min-height:58px;background:none;border:0;border-top:3px solid transparent;font:inherit;font-size:11px;color:var(--muted);cursor:pointer}
+    .bottom-bar button[aria-current="page"]{border-top-color:var(--brand);color:var(--brand-dark);font-weight:700}
     .bottom-bar button b{display:block;font-size:20px}
   }
 </style>
 </head>
 <body>
 <nav class="shell-nav" id="nav" aria-label="Main menu">
-  <div class="brand">Al Meezan ERP</div>
+  <button class="brand" id="brand" title="Go to Home">🏠 Al Meezan ERP</button>
   <div class="menu" id="menu"></div>
 </nav>
 <div class="scrim" id="scrim"></div>
@@ -49,6 +51,7 @@
 <div class="main">
   <header class="topbar">
     <button class="btn ghost burger" id="burger" aria-label="Open menu">☰</button>
+    <button class="btn ghost" id="homeBtn" hidden title="Back to Home">🏠 Home</button>
     <h1 id="title">Home</h1>
     <span class="who no-print" id="who"></span>
     <button class="btn ghost" id="logout" hidden>Logout</button>
@@ -65,48 +68,64 @@
 <script src="js/db.js"></script>
 <script src="js/auth.js"></script>
 <script>
-/* Menu is data: add a page here and it appears in the sidebar, home tiles and routing. */
+/* Menu is data: add a page here and it appears in the sidebar, home tiles, bottom bar and routing. */
 const GROUPS = [
   ["Sales & Customers", [["customer.html","👤","Customers"],["SalesForm.html","🛒","Sales"],["LedgerView.html","📒","Customer Ledger"]]],
   ["Accounts", [["receipts.html","💵","Receipts"],["Accounts.html","📖","Accounts & Day Book"],["ReconciliationView.html","🔄","Reconciliation"]]],
   ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
   ["Reports", [["DashboardView.html","📈","Dashboard"],["Recovery.html","💰","Recovery & Aging"]]]
 ];
-const QUICK = ["DashboardView.html","receipts.html","SalesForm.html","customer.html"];
+const QUICK = ["customer.html","SalesForm.html","receipts.html","Accounts.html"];
 const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
 const $ = id => document.getElementById(id);
+const mk = (cls, html, fn, key) => { const b = document.createElement("button"); b.className = cls || ""; b.innerHTML = html; b.dataset.p = key; b.onclick = fn; return b; };
 
-function btn(p, cls) { const b = document.createElement("button"); b.dataset.p = p[0]; b.className = cls || ""; return b; }
-
-const bk = document.createElement("button"); bk.textContent = "💾  Backup all data (CSV)";
-bk.onclick = () => ERP.ui.busy(bk, async () => { try { await ERP.db.backupAll(t => ERP.ui.toast("Exporting " + t + "...")); ERP.ui.toast("Backup done"); } catch (e) { ERP.ui.toast(e.message, "err"); } });
+/* sidebar */
+$("menu").appendChild(mk("", "🏠  Home", () => go(null), ""));
 GROUPS.forEach(([name, pages]) => {
   const h = document.createElement("h4"); h.textContent = name; $("menu").appendChild(h);
-  pages.forEach(p => { const b = btn(p); b.textContent = p[1] + "  " + p[2]; b.onclick = () => go(p[0]); $("menu").appendChild(b); });
+  pages.forEach(p => $("menu").appendChild(mk("", p[1] + "  " + p[2], () => go(p[0]), p[0])));
 });
-{ const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h); $("menu").appendChild(bk); }
-QUICK.forEach(k => { const p = ALL[k], b = btn(p); b.innerHTML = "<b>" + p[1] + "</b>" + p[2]; b.onclick = () => go(k); $("bar").appendChild(b); });
-GROUPS.flatMap(g => g[1]).forEach(p => { const b = btn(p, "tile"); b.innerHTML = "<b>" + p[1] + "</b>" + p[2]; b.onclick = () => go(p[0]); $("home").appendChild(Object.assign(document.createElement("div"), {className: "tiles"})).appendChild(b); });
-/* merge tiles into one grid */
-const tiles = $("home").querySelectorAll(".tiles"); const first = tiles[0]; tiles.forEach((t, i) => { if (i) first.appendChild(t.firstChild), t.remove(); });
+{ const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h);
+  const bk = mk("", "💾  Backup all data (CSV)", () => ERP.ui.busy(bk, async () => { try { await ERP.db.backupAll(t => ERP.ui.toast("Exporting " + t + "...")); ERP.ui.toast("Backup done"); } catch (e) { ERP.ui.toast(e.message, "err"); } }), "backup");
+  $("menu").appendChild(bk); }
+/* bottom bar (phones) */
+$("bar").appendChild(mk("", "<b>🏠</b>Home", () => go(null), ""));
+QUICK.forEach(k => $("bar").appendChild(mk("", "<b>" + ALL[k][1] + "</b>" + ALL[k][2].split(" ")[0], () => go(k), k)));
+/* home tiles, grouped */
+$("home").innerHTML = '<h2>Welcome</h2><p class="hi">Choose what you want to open</p>';
+GROUPS.forEach(([name, pages]) => {
+  const h = document.createElement("h3"); h.textContent = name; $("home").appendChild(h);
+  const g = document.createElement("div"); g.className = "tiles"; $("home").appendChild(g);
+  pages.forEach(p => g.appendChild(mk("tile", "<b>" + p[1] + "</b>" + p[2], () => go(p[0]), p[0])));
+});
 
-function go(file) {
-  const p = ALL[file]; document.body.classList.remove("open");
-  if (!p) { $("frame").hidden = true; $("home").hidden = false; $("title").textContent = "Home"; history.replaceState(null, "", "#"); mark(null); return; }
-  $("home").hidden = true; $("frame").hidden = false; $("frame").src = file;
-  $("title").textContent = p[1] + " " + p[2]; history.replaceState(null, "", "#" + file); mark(file);
-  try { localStorage.setItem("erp_last", file); } catch (e) {}
+/* routing: target may carry a query, e.g. LedgerView.html?accNo=786001 */
+function mark(file) { document.querySelectorAll("[data-p]").forEach(b => (b.dataset.p === (file || "") && b.dataset.p !== "backup") ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
+function show(file, target) {
+  document.body.classList.remove("open"); const p = ALL[file];
+  if (!p) { $("frame").hidden = true; $("frame").removeAttribute("src"); $("home").hidden = false; $("homeBtn").hidden = true; $("title").textContent = "Home"; mark(null); return; }
+  $("home").hidden = true; $("frame").hidden = false; $("homeBtn").hidden = false; $("title").textContent = p[1] + " " + p[2]; mark(file);
+  if ($("frame").getAttribute("src") !== target) $("frame").src = target;
+  try { localStorage.setItem("erp_last", target); } catch (e) {}
 }
-function mark(file) { document.querySelectorAll("[data-p]").forEach(b => b.dataset.p === file ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
+function go(target, push = true) {
+  target = target || ""; const file = target.split("?")[0];
+  if (push && location.hash.slice(1) !== target) history.pushState(null, "", "#" + target);
+  show(file, target);
+}
+window.addEventListener("popstate", () => { const t = location.hash.slice(1); show(t.split("?")[0], t); });
+/* a link clicked INSIDE a page (e.g. Ledger button) keeps the title and menu in step */
+$("frame").onload = () => { try { const w = $("frame").contentWindow, f = w.location.pathname.split("/").pop(); if (ALL[f]) { const t = f + w.location.search; if (location.hash.slice(1) !== t) history.replaceState(null, "", "#" + t); $("title").textContent = ALL[f][1] + " " + ALL[f][2]; mark(f); } } catch (e) {} };
 
 $("burger").onclick = () => document.body.classList.add("open");
 $("scrim").onclick = () => document.body.classList.remove("open");
-$("newtab").onclick = () => { const f = location.hash.slice(1); if (ALL[f]) window.open(f, "_blank"); };
-$("title").onclick = () => go(null);
+$("homeBtn").onclick = () => go(null); $("brand").onclick = () => go(null);
+$("newtab").onclick = () => { const t = location.hash.slice(1); if (ALL[t.split("?")[0]]) window.open(t, "_blank"); };
 $("logout").onclick = () => ERP.auth.signOut();
 ERP.auth.guard().then(p => {
   if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
-  go(location.hash.slice(1) || null);
+  const t = location.hash.slice(1); show(t.split("?")[0], t);
 });
 </script>
 </body>
