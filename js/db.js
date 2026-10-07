@@ -125,6 +125,11 @@ ERP.db = (function () {
       }
     },
 
+    /* installment plan of one CAF, or aging of all customers (08_installments.sql) */
+    schedule: async accNo => must(await sb.from("v_installment_schedule").select("*").eq("account_no", String(accNo).trim()).order("inst_no")),
+    saleDues: () => fetchAll("v_sale_dues", { order: "account_no" }),
+    aging: () => fetchAll("v_customer_aging", { order: "account_no" }),
+
     stock: {
       /* every stock movement up to a date (oldest first). Used by the Stock Ledger page. */
       ledger: ({ to } = {}) => fetchAll("stock_ledger", { order: "transaction_id", build: q => { if (to) q = q.lte("date", to); return q.order("date", { ascending: true }).order("created_date", { ascending: true }); } }),
