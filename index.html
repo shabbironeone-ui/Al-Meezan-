@@ -70,7 +70,7 @@ const GROUPS = [
   ["Sales & Customers", [["customer.html","👤","Customers"],["SalesForm.html","🛒","Sales"],["LedgerView.html","📒","Customer Ledger"]]],
   ["Accounts", [["receipts.html","💵","Receipts"],["Accounts.html","📖","Accounts & Day Book"],["ReconciliationView.html","🔄","Reconciliation"]]],
   ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
-  ["Reports", [["DashboardView.html","📈","Dashboard"],["DailyRecoveryReport.html","💰","Daily Recovery"],["AgingReport2.html","⏳","Aging Report"]]]
+  ["Reports", [["DashboardView.html","📈","Dashboard"],["Recovery.html","💰","Recovery & Aging"]]]
 ];
 const QUICK = ["DashboardView.html","receipts.html","SalesForm.html","customer.html"];
 const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
