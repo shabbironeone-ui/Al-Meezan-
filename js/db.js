@@ -126,6 +126,10 @@ ERP.db = (function () {
       }
     },
 
+    /* customer statement lines (09_ledger.sql), oldest first */
+    ledger: async accNo => must(await sb.from("v_ledger_lines").select("*").eq("account_no", String(accNo).trim()).order("date").order("ord").order("ts")),
+    balanceOf: async accNo => must(await sb.from("v_customer_balance").select("*").eq("account_no", String(accNo).trim()).maybeSingle()),
+
     /* installment plan of one CAF, or aging of all customers (08_installments.sql) */
     schedule: async accNo => must(await sb.from("v_installment_schedule").select("*").eq("account_no", String(accNo).trim()).order("inst_no")),
     saleDues: () => fetchAll("v_sale_dues", { order: "account_no" }),
