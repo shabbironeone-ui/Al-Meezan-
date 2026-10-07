@@ -56,6 +56,7 @@ ERP.db = (function () {
         const r = must(await sb.from("customers").delete().eq("account_no", String(accNo).trim()).select());
         if (!r.length) throw new Error("Not deleted: you do not have permission"); return r;
       },
+      async peekNextNo() { return must(await sb.rpc("peek_next_customer_no")); },
       balances: () => fetchAll("v_customer_balance", { order: "account_no" }),
       sowdowoOf: c => c[SOWDOWO]
     },
