@@ -36,6 +36,7 @@
     <div class="bar-actions"><button class="btn ghost" id="btnExport">Export</button><button class="btn" id="btnNew">＋ New customer</button></div>
   </header>
 
+  <div class="card" id="notice" hidden style="border-color:#f59e0b;background:#fffbeb"></div>
   <section class="stats" id="stats"></section>
 
   <section class="card toolbar">
@@ -95,13 +96,14 @@ function fmt(m, v) {
 async function load() {
   $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(4);
   try {
-    const [c, b, s] = await Promise.all([ERP.db.customers.list(), ERP.db.customers.balances(), ERP.db.settings()]);
+    const [c, s] = await Promise.all([ERP.db.customers.list(), ERP.db.settings().catch(() => ({ rows: [] }))]);
+    let b = []; try { b = await ERP.db.customers.balances(); } catch (er) { ERP.ui.toast("Balances unavailable (run sql/08): " + er.message, "err"); }
     ALL = c; BAL = new Map(b.map(x => [String(x.account_no).trim(), x]));
     const names = cat => s.rows.filter(r => String(r.category || "").trim().toUpperCase() === cat).map(r => String(r.display_name || r.lookup_code || "").trim()).filter(Boolean);
     window.CRO = names("CRO"); window.APP = names("APPROVED_BY");
     const all = [...new Set([...CRO, ...ALL.map(x => x.cro).filter(Boolean)])].sort();
     $("fCro").innerHTML = '<option value="">All CROs</option>' + all.map(x => `<option>${E(x)}</option>`).join("");
-    render();
+    render(); checkAccess();
   } catch (e) { $("list").innerHTML = `<div class="empty">Could not load customers.<br><small>${E(e.message)}</small></div>`; }
 }
 
@@ -151,7 +153,7 @@ function openProfile(c) {
   $("profile").innerHTML = `<div class="sh-head"><div class="av lg" style="background:hsl(${(Number(digits(c.account_no)) * 47) % 360} 45% 38%)">${E(ini)}</div>
       <div><h2>${E(c.account_title)}</h2><p>CAF ${E(key(c))}${c[SO] ? " · " + E(c[SO]) : ""}</p></div><button class="x" data-close aria-label="Close">✕</button></div>
     <div class="sh-body"><div class="balbox ${bl > 0 ? "due" : ""}"><small>Outstanding balance</small><b>${bl > 0 ? "Rs " + M(bl) : "Clear"}</b>
-      <span>Sale ${M(b.total_sale)} · Advance ${M(b.advance)} · Received ${M(b.received)}</span></div>
+      <span>Sale ${M(b.total_sale)} · Received ${M(b.received)}</span></div>
       <div class="fsec"><dl class="kv">${kv("Mobile", c.mobile_number)}${kv("CNIC", c.cnic_no)}${kv("Address", c.address)}${kv("CRO", c.cro)}${kv("Approved by", c.approved_by)}${kv("Department", c.department)}${kv("Designation", c.designation)}${kv("Salary", c.salary ? "Rs " + M(c.salary) : "")}</dl></div>${g(1)}${g(2)}</div>
     <div class="sh-foot"><a class="btn ghost" style="display:inline-grid;place-items:center;text-decoration:none" href="LedgerView.html?accNo=${encodeURIComponent(key(c))}">Ledger</a>
       <button class="btn ghost" id="pWa" ${digits(c.mobile_number) ? "" : "disabled"}>WhatsApp</button>
@@ -162,11 +164,19 @@ function openProfile(c) {
 }
 
 function fillSel(el, list, cur) { el.innerHTML = '<option value="">Select...</option>' + [...new Set([...list, ...(cur ? [cur] : [])])].map(x => `<option>${E(x)}</option>`).join(""); el.value = cur || ""; }
+async function checkAccess() {
+  const n = $("notice"); if (ALL.length) { n.hidden = true; return; }
+  const s = await ERP.auth.session(); n.hidden = false;
+  n.innerHTML = !s ? '<b>You are not logged in, so the database shows nothing.</b> <a href="login.html">Log in</a>. (Also check that <code>AUTH_REQUIRED</code> is <code>true</code> in js/config.js.)'
+    : `<b>No customers visible.</b> You are logged in as ${E(s.user.email)}. Either the table is empty, or this account has no role yet: run sql/02_add_users.sql with this email.`;
+}
 function nextPreview() { return String(Math.max(7860000, ...ALL.map(c => Number(digits(c.account_no)) || 0)) + 1); }
 function openForm(c) {
   editing = c ? key(c) : null;
   $("fTitle").textContent = c ? "Edit customer" : "New customer";
-  $("fAcc").textContent = c ? "CAF " + key(c) : "CAF number is assigned when you save (next: " + nextPreview() + ")";
+  $("fAcc").textContent = c ? "CAF " + key(c) : "Finding the next CAF number...";
+  if (!c) ERP.db.customers.peekNextNo().then(n => { if (!editing) $("fAcc").textContent = n ? "Next CAF number: " + n + " (assigned when you save)" : "CAF number is assigned when you save"; })
+    .catch(() => { if (!editing) $("fAcc").textContent = "CAF number is assigned when you save (could not read the next number: log in first)"; });
   document.querySelectorAll("#frm [data-k]").forEach(el => {
     const k = el.dataset.k, v = c ? (c[k] ?? "") : "";
     if (k === "cro") fillSel(el, window.CRO || [], v); else if (k === "approved_by") fillSel(el, window.APP || [], v);
