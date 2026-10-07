@@ -12,20 +12,24 @@ ERP.auth = (function () {
     return data;
   }
 
-  async function signOut() { await sb().auth.signOut(); location.replace("login.html"); }
+  const toLogin = () => (self !== top ? top : window).location.replace("login.html");   // never show the login page inside the frame
+  async function signOut() { await sb().auth.signOut(); toLogin(); }
 
   /* Call at the top of any protected page. Redirects to login.html when not signed in. */
   async function guard() {
+    /* a page opened directly (not inside the menu shell) is sent into the shell, so Home and the menu are always there */
+    const file = location.pathname.split("/").pop();
+    if (self === top && file && file !== "index.html" && file !== "login.html") { location.replace("index.html#" + file + location.search); return new Promise(() => {}); }
     if (!ERP_CONFIG.AUTH_REQUIRED) return { full_name: "", role: "admin", open: true };
     const s = await session();
-    if (!s) { location.replace("login.html"); return new Promise(() => {}); }
+    if (!s) { toLogin(); return new Promise(() => {}); }
     const { data } = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
     if (!data || !data.role) {
       alert("Your account has no role yet. Ask the admin to give you access.");
       await signOut(); return new Promise(() => {});
     }
     profile = { ...data, email: s.user.email };
-    sb().auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") location.replace("login.html"); });
+    sb().auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") toLogin(); });
     return profile;
   }
 
