@@ -20,7 +20,7 @@ ERP.auth = (function () {
     /* a page opened directly (not inside the menu shell) is sent into the shell, so Home and the menu are always there */
     const file = location.pathname.split("/").pop();
     if (self === top && file && file !== "index.html" && file !== "login.html") { location.replace("index.html#" + file + location.search); return new Promise(() => {}); }
-    if (!ERP_CONFIG.AUTH_REQUIRED) return { full_name: "", role: "admin", open: true };
+    if (ERP_CONFIG.OPEN_ACCESS === true) return { full_name: "", role: "admin", open: true };   // only if the database lock (sql/99) was removed
     const s = await session();
     if (!s) { toLogin(); return new Promise(() => {}); }
     const { data } = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
@@ -35,7 +35,7 @@ ERP.auth = (function () {
 
   /* Simple permission check for buttons: ERP.auth.can("delete") */
   const RULES = { admin: ["read", "write", "edit", "delete"], accountant: ["read", "write", "edit"], cro: ["read", "write"], viewer: ["read"] };
-  const can = action => !ERP_CONFIG.AUTH_REQUIRED || !!(profile && (RULES[profile.role] || []).includes(action));
+  const can = action => ERP_CONFIG.OPEN_ACCESS === true || !!(profile && (RULES[profile.role] || []).includes(action));
 
   return { session, signIn, signOut, guard, can, get profile() { return profile; } };
 })();
