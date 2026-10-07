@@ -167,7 +167,7 @@ function fillSel(el, list, cur) { el.innerHTML = '<option value="">Select...</op
 async function checkAccess() {
   const n = $("notice"); if (ALL.length) { n.hidden = true; return; }
   const s = await ERP.auth.session(); n.hidden = false;
-  n.innerHTML = !s ? '<b>You are not logged in, so the database shows nothing.</b> <a href="login.html">Log in</a>. (Also check that <code>AUTH_REQUIRED</code> is <code>true</code> in js/config.js.)'
+  n.innerHTML = !s ? '<b>You are not logged in, so the database shows nothing.</b> <a href="login.html">Log in</a>. Not sure why? Open <a href="status.html">Connection check</a>.'
     : `<b>No customers visible.</b> You are logged in as ${E(s.user.email)}. Either the table is empty, or this account has no role yet: run sql/02_add_users.sql with this email.`;
 }
 function nextPreview() { return String(Math.max(7860000, ...ALL.map(c => Number(digits(c.account_no)) || 0)) + 1); }
