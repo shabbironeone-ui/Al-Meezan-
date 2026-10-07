@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery &amp; Aging</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:12px;max-width:100%;overflow-x:auto}
+  .tabs button{min-height:40px;padding:6px 16px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .flt{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}.flt .wide{grid-column:1/-1}
+  @media(min-width:900px){.flt{grid-template-columns:1.6fr 1fr 1fr auto}.flt .wide{grid-column:auto}}
+  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+  .stat.bad b{color:var(--danger)}
+  .head,.row{display:grid;align-items:center;gap:10px;grid-template-columns:minmax(190px,2.2fr) 1fr 90px 105px 105px 105px 96px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.head .r,.row .r{text-align:right}
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 14px;margin-bottom:6px;cursor:pointer;box-shadow:var(--shadow)}
+  .row:hover,.row:focus-visible{border-color:var(--brand)}.row b{display:block;line-height:1.25}.row small{color:var(--muted)}.num{font-variant-numeric:tabular-nums}
+  .act{display:flex;gap:6px;justify-content:flex-end}.act button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:16px}.act button:disabled{opacity:.35}
+  .late{color:var(--danger);font-weight:700}.warn{color:var(--warn);font-weight:700}
+  .sumtab{margin-bottom:14px}
+  @media(max-width:899px){
+    .head{display:none}
+    .row{grid-template-columns:1fr auto;grid-template-areas:"n a" "m t"}.row .n{grid-area:n}.row .a{grid-area:a;text-align:right}.row .m{grid-area:m;font-size:12px;color:var(--muted)}.row .t{grid-area:t}
+    .row .c1,.row .c2,.row .c3,.row .c4,.row .cm{display:none}
+  }
+  @media(min-width:900px){.row .m,.row .a,.row .t{display:none}}
+  @media print{.page>*:not(#body):not(.stats):not(.appbar){display:none!important}.act{display:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar"><div><h1>Recovery &amp; Aging</h1><p id="sub">Who has to pay, how late, and what was recovered</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnPrint">Print</button><button class="btn ghost" id="btnCsv">Export</button></div></header>
+  <div class="tabs" role="tablist"><button role="tab" id="tDue" aria-selected="true">To collect</button><button role="tab" id="tAge" aria-selected="false">Aging</button><button role="tab" id="tDay" aria-selected="false">Recovered</button></div>
+
+  <section class="card flt">
+    <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Name, CAF or mobile" autocomplete="off"></div>
+    <div><label>CRO</label><select id="fCro"></select></div>
+    <div id="gSort"><label>Sort</label><select id="fSort"><option value="over">Most overdue</option><option value="old">Oldest unpaid</option><option value="name">Name A-Z</option></select></div>
+    <div id="gFrom" hidden><label>From</label><input type="date" id="dFrom"></div><div id="gTo" hidden><label>To</label><input type="date" id="dTo"></div>
+  </section>
+  <div id="chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" hidden>
+    <button class="chip" data-b="" aria-pressed="true">All</button><button class="chip" data-b="late_1_month" aria-pressed="false">1 month late</button>
+    <button class="chip" data-b="late_2_months" aria-pressed="false">2 months late</button><button class="chip" data-b="late_3_plus" aria-pressed="false">3+ months late</button></div>
+
+  <section class="stats four" id="stats"></section>
+  <section id="body"></section>
+  <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
+</main>
+
+<dialog id="dlg" class="sheet"><div class="sh-head"><div><h2 id="dT"></h2><p id="dS"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body" id="dB"></div>
+  <div class="sh-foot"><a class="btn ghost" id="dLed" style="display:inline-grid;place-items:center;text-decoration:none">Ledger</a><button class="btn ghost" id="dWa">WhatsApp</button><button class="btn" data-close>Close</button></div></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
+const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"] };
+let ROWS = [], REC = [], tab = "due", bucket = "", shown = 60, cur = null, VIEW = [];
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
+const late = r => N(r.overdue_amt), toCollect = r => N(r.overdue_amt) + N(r.due_this_month);
+
+async function load() {
+  $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(3);
+  try {
+    const [ag, cb] = await Promise.all([ERP.db.aging(), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    ROWS = ag.map(a => ({ ...a, ...(m.get(String(a.account_no).trim()) || {}), account_no: a.account_no }));
+    const cros = [...new Set(ROWS.map(r => r.cro).filter(Boolean))].sort(); const v = $("fCro").value;
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+  } catch (e) { $("body").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/08_installments.sql if this mentions v_customer_aging.</small></div>`; }
+}
+async function loadDay() {
+  $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div></div>';
+  try { const [rc, cb] = await Promise.all([ERP.db.receipts.list({ from: $("dFrom").value, to: $("dTo").value }), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    REC = rc.map(r => ({ ...r, cro: (m.get(String(r.account_no).trim()) || {}).cro || "(none)" })); const cros = [...new Set(REC.map(r => r.cro))].sort(); const v = $("fCro").value;
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+  } catch (e) { $("body").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+}
+const match = r => { const q = $("q").value.trim().toLowerCase(), c = $("fCro").value; return (!c || r.cro === c) && (!q || [r.account_no, r.account_title, r.mobile_number, r.voucher_no].join(" ").toLowerCase().includes(q)); };
+
+function render() { shown = 60; tab === "day" ? renderDay() : tab === "age" ? renderAge() : renderDue(); }
+function sorted(rows) { const s = $("fSort").value; return rows.sort(s === "name" ? (a, b) => String(a.account_title).localeCompare(String(b.account_title)) : s === "old" ? (a, b) => String(a.oldest_unpaid_month || "9").localeCompare(String(b.oldest_unpaid_month || "9")) : (a, b) => late(b) - late(a) || N(b.due_this_month) - N(a.due_this_month)); }
+const stat = (l, v, c) => `<div class="stat ${c || ""}"><small>${l}</small><b>${v}</b></div>`;
+function waUrl(r) { let d = digits(r.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const o = late(r), t = N(r.due_this_month);
+  const msg = `Assalam o Alaikum ${r.account_title}, CAF ${r.account_no} ki ${o > 0 ? "pichli qist ka Rs " + M(o) + " baqi hai" : ""}${o > 0 && t > 0 ? " aur " : ""}${t > 0 ? "is mahine ki qist Rs " + M(t) + " hai" : ""}. Meherbani karke ada kar dein. Shukriya - Al Meezan`;
+  return `https://wa.me/${d}?text=${encodeURIComponent(msg)}`; }
+
+function listHtml(rows, cols) {
+  return `<div class="head"><span>Customer</span><span>CRO</span><span class="r">Late by</span>${cols.map(c => `<span class="r">${c[0]}</span>`).join("")}<span></span></div>`
+  + rows.slice(0, shown).map(r => { const ml = N(r.overdue_months), has = digits(r.mobile_number);
+    return `<article class="row" data-a="${E(r.account_no)}" tabindex="0"><div class="n"><b>${E(r.account_title)}</b><small>CAF ${E(r.account_no)} · ${E(r.mobile_number)}</small></div><div class="cm">${E(r.cro)}</div>
+      <div class="r c1 num ${ml ? "late" : ""}">${ml ? ml + " mo" : "-"}</div>${cols.map((c, i) => `<div class="r c${i + 2} num ${c[2] || ""}">${N(r[c[1]]) ? M(r[c[1]]) : "-"}</div>`).join("")}
+      <div class="a num ${late(r) ? "late" : "warn"}">Rs ${M(toCollect(r))}</div><div class="m">${E(r.cro)}${ml ? " · " + ml + " months late" : ""}</div>
+      <div class="act"><button data-act="wa" ${has ? "" : "disabled"} title="WhatsApp">💬</button><button data-act="call" ${has ? "" : "disabled"} title="Call">📞</button></div></article>`; }).join("")
+  || '<div class="empty">Nothing here. 🎉</div>';
+}
+function renderDue() {
+  let rows = sorted(ROWS.filter(r => match(r) && toCollect(r) > 0)); VIEW = rows;
+  $("stats").innerHTML = stat("Customers to collect from", M(rows.length)) + stat("Overdue (earlier months)", "Rs " + M(rows.reduce((s, r) => s + late(r), 0)), "bad") + stat("Due this month", "Rs " + M(rows.reduce((s, r) => s + N(r.due_this_month), 0))) + stat("Total to collect", "Rs " + M(rows.reduce((s, r) => s + toCollect(r), 0)));
+  $("sub").textContent = new Date().toLocaleString("en", { month: "long", year: "numeric" });
+  $("body").innerHTML = listHtml(rows, [["Overdue", "overdue_amt", "late"], ["This month", "due_this_month"], ["Oldest", "oldest_unpaid_month"]].map(c => c)); fixOldest(); more(rows.length);
+}
+function fixOldest() { document.querySelectorAll("#body .row").forEach(el => { const r = ROWS.find(x => String(x.account_no) === el.dataset.a), c = el.querySelector(".c4"); if (c) c.textContent = r && r.oldest_unpaid_month ? mon(r.oldest_unpaid_month) : "-"; }); }
+function renderAge() {
+  let rows = sorted(ROWS.filter(r => match(r) && late(r) > 0 && (!bucket || N(r[bucket]) > 0))); VIEW = rows;
+  const sum = k => rows.reduce((s, r) => s + N(r[k]), 0), cro = new Map();
+  rows.forEach(r => { const k = r.cro || "(none)", o = cro.get(k) || cro.set(k, { n: 0, a: 0, b: 0, c: 0 }).get(k); o.n++; o.a += N(r.late_1_month); o.b += N(r.late_2_months); o.c += N(r.late_3_plus); });
+  $("stats").innerHTML = stat("1 month late", "Rs " + M(sum("late_1_month")), "") + stat("2 months late", "Rs " + M(sum("late_2_months")), "") + stat("3+ months late", "Rs " + M(sum("late_3_plus")), "bad") + stat("Total overdue", "Rs " + M(sum("overdue_amt")), "bad");
+  $("sub").textContent = `${M(rows.length)} customers overdue`;
+  const t = `<div class="table-wrap sumtab"><table style="min-width:520px"><thead><tr><th>CRO</th><th class="num">Customers</th><th class="num">1 month</th><th class="num">2 months</th><th class="num">3+ months</th><th class="num">Total</th></tr></thead><tbody>${[...cro].sort().map(([k, o]) => `<tr><td>${E(k)}</td><td class="num">${o.n}</td><td class="num">${M(o.a)}</td><td class="num">${M(o.b)}</td><td class="num late">${M(o.c)}</td><td class="num"><b>${M(o.a + o.b + o.c)}</b></td></tr>`).join("")}</tbody></table></div>`;
+  $("body").innerHTML = (rows.length ? t : "") + listHtml(rows, [["1 month", "late_1_month"], ["2 months", "late_2_months"], ["3+ months", "late_3_plus", "late"]]); more(rows.length);
+}
+function renderDay() {
+  const rows = REC.filter(match); VIEW = rows; const tot = rows.reduce((s, r) => s + N(r.amount), 0), by = (k) => { const m = new Map(); rows.forEach(r => m.set(r[k] || "(none)", (m.get(r[k] || "(none)") || 0) + N(r.amount))); return [...m].sort((a, b) => b[1] - a[1]); };
+  $("stats").innerHTML = stat("Total recovered", "Rs " + M(tot)) + stat("Receipts", M(rows.length)) + stat("Cash / bank accounts", M(by("pay_mode").length)) + stat("CROs", M(by("cro").length));
+  $("sub").textContent = `${$("dFrom").value} to ${$("dTo").value}`;
+  const tb = (t, a) => `<div class="table-wrap sumtab" style="flex:1;min-width:240px"><table style="min-width:0"><thead><tr><th>${t}</th><th class="num">Amount</th></tr></thead><tbody>${a.map(([k, v]) => `<tr><td>${E(k)}</td><td class="num"><b>${M(v)}</b></td></tr>`).join("")}</tbody></table></div>`;
+  $("body").innerHTML = (rows.length ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${tb("By CRO", by("cro"))}${tb("By account", by("pay_mode"))}</div>` : "")
+    + `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Account</th><th>Customer</th><th>CRO</th><th>Mode</th><th class="num">Amount</th></tr></thead><tbody>${rows.slice(0, shown).map(r => `<tr><td>${E(r.date)}</td><td>${E(r.voucher_no)}</td><td>${E(r.account_no)}</td><td>${E(r.account_title)}</td><td>${E(r.cro)}</td><td>${E(r.pay_mode)}</td><td class="num"><b>${M(r.amount)}</b></td></tr>`).join("") || '<tr><td colspan="7" class="empty">No receipts in this period.</td></tr>'}</tbody></table></div>`;
+  more(rows.length);
+}
+function more(n) { $("more").hidden = n <= shown; $("more").textContent = `Show more (${M(n - shown)} remaining)`; }
+$("more").onclick = () => { shown += 60; tab === "day" ? renderDay() : tab === "age" ? renderAge() : (renderDue()); };
+
+/* ---------- row actions ---------- */
+$("body").onclick = async e => { const row = e.target.closest(".row"); if (!row) return; const r = ROWS.find(x => String(x.account_no) === row.dataset.a), act = e.target.closest("[data-act]");
+  if (act) { e.stopPropagation(); return act.dataset.act === "wa" ? window.open(waUrl(r), "_blank", "noopener") : (location.href = "tel:" + digits(r.mobile_number)); }
+  cur = r; $("dT").textContent = r.account_title; $("dS").textContent = `CAF ${r.account_no} · ${r.mobile_number || ""} · CRO ${r.cro || "-"}`; $("dLed").href = "LedgerView.html?accNo=" + encodeURIComponent(r.account_no);
+  $("dWa").disabled = !digits(r.mobile_number); $("dB").innerHTML = '<div class="skeleton"></div>'; $("dlg").showModal();
+  try { const s = await ERP.db.schedule(r.account_no);
+    $("dB").innerHTML = `<div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">${stat("Balance", "Rs " + M(r.balance))}${stat("Overdue", "Rs " + M(r.overdue_amt), "bad")}${stat("This month", "Rs " + M(r.due_this_month))}</div>
+      <div class="table-wrap"><table style="min-width:380px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>${s.map(x => `<tr><td>${x.inst_no}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("")}</tbody></table></div>`;
+  } catch (er) { $("dB").innerHTML = `<div class="empty">${E(er.message)}</div>`; } };
+$("body").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) e.target.click(); };
+$("dWa").onclick = () => cur && window.open(waUrl(cur), "_blank", "noopener");
+
+/* ---------- tabs & filters ---------- */
+function setTab(t) { tab = t; ["Due", "Age", "Day"].forEach(x => $("t" + x).setAttribute("aria-selected", x.toLowerCase() === t)); $("gSort").hidden = t === "day"; $("gFrom").hidden = $("gTo").hidden = t !== "day"; $("chips").hidden = t !== "age"; $("q").value = ""; t === "day" ? loadDay() : (ROWS.length ? render() : load()); }
+$("tDue").onclick = () => setTab("due"); $("tAge").onclick = () => setTab("age"); $("tDay").onclick = () => setTab("day");
+$("chips").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; bucket = b.dataset.b; $("chips").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); render(); };
+$("q").oninput = ERP.ui.debounce(render, 200); $("fCro").onchange = $("fSort").onchange = render; $("dFrom").onchange = $("dTo").onchange = loadDay;
+$("btnPrint").onclick = () => { shown = 1e9; render(); window.print(); };
+$("btnCsv").onclick = () => ERP.ui.downloadCSV("recovery_" + tab + "_" + ERP.ui.today() + ".csv", tab === "day" ? VIEW.map(r => ({ date: r.date, receipt: r.voucher_no, account: r.account_no, customer: r.account_title, cro: r.cro, mode: r.pay_mode, amount: r.amount }))
+  : VIEW.map(r => ({ account: r.account_no, customer: r.account_title, mobile: r.mobile_number, cro: r.cro, overdue: r.overdue_amt, overdue_months: r.overdue_months, due_this_month: r.due_this_month, late_1: r.late_1_month, late_2: r.late_2_months, late_3_plus: r.late_3_plus, balance: r.balance })));
+(async () => { await ERP.auth.guard(); $("dFrom").value = $("dTo").value = ERP.ui.today(); load(); })();
+</script>
+</body>
+</html>
