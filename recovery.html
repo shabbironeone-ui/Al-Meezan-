@@ -58,7 +58,7 @@
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
-const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"] };
+const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
 let ROWS = [], REC = [], tab = "due", bucket = "", shown = 60, cur = null, VIEW = [];
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
@@ -133,7 +133,7 @@ $("body").onclick = async e => { const row = e.target.closest(".row"); if (!row)
   $("dWa").disabled = !digits(r.mobile_number); $("dB").innerHTML = '<div class="skeleton"></div>'; $("dlg").showModal();
   try { const s = await ERP.db.schedule(r.account_no);
     $("dB").innerHTML = `<div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">${stat("Balance", "Rs " + M(r.balance))}${stat("Overdue", "Rs " + M(r.overdue_amt), "bad")}${stat("This month", "Rs " + M(r.due_this_month))}</div>
-      <div class="table-wrap"><table style="min-width:380px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>${s.map(x => `<tr><td>${x.inst_no}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("")}</tbody></table></div>`;
+      <div class="table-wrap"><table style="min-width:380px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>${s.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("")}</tbody></table></div>`;
   } catch (er) { $("dB").innerHTML = `<div class="empty">${E(er.message)}</div>`; } };
 $("body").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) e.target.click(); };
 $("dWa").onclick = () => cur && window.open(waUrl(cur), "_blank", "noopener");
