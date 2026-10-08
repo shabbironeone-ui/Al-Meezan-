@@ -30,6 +30,9 @@
   @media(min-width:760px){.ft{grid-template-columns:150px 150px 1fr}.ft .wide{grid-column:auto}}
   .plist{max-height:50vh;overflow:auto}.pi{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
   .pi:hover{border-color:var(--brand)}.pi small{color:var(--muted);display:block}
+  .crow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 12px;background:var(--bg);border-radius:10px}
+  .crow.chk{cursor:pointer}.crow.chk input{width:auto;min-height:0;margin-right:6px}.crow b{font-variant-numeric:tabular-nums}
+  .sch{margin-bottom:10px}.sch h4{margin:4px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   #printArea{display:none}
   @media print{body>*:not(#printArea){display:none!important}#printArea{display:block;font:13px/1.45 Arial,sans-serif;color:#000;padding:8mm}#printArea table{width:100%;border-collapse:collapse;min-width:0;margin:8px 0}#printArea th,#printArea td{border-bottom:1px solid #999;padding:4px 2px;font-size:12px}#printArea h2{margin:0}}
 </style>
@@ -52,7 +55,17 @@
       <div class="cinfo" id="cinfo"></div></div>
     <div id="lines"></div>
     <button class="btn soft" id="addLine" style="width:100%;margin-bottom:12px">＋ Add item</button>
-    <div class="sumbar"><div class="k"><div><small>Items</small><b id="sCnt">0</b></div><div><small>Advance</small><b id="sAdv">0</b></div><div id="kInst"><small>Installment / month</small><b id="sInst">0</b></div><div class="g"><small>Grand total</small><b id="sTot">Rs 0</b></div></div>
+    <div class="card" id="colCard">
+      <div id="colRows"><h3 style="margin-bottom:8px">Received at sale</h3>
+        <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+          <div><label for="rAdv">Advance (Rs)</label><input id="rAdv" type="number" inputmode="decimal" min="0"></div>
+          <div><label for="rFee">Processing fee (Rs)</label><input id="rFee" type="number" inputmode="decimal" min="0"></div>
+          <div><label for="rFirst">1st installment (Rs)</label><input id="rFirst" type="number" inputmode="decimal" min="0"></div></div>
+        <p id="rHint" style="margin:8px 0 0;font-size:12px;color:var(--muted)"></p></div>
+      <div id="cashRow" hidden><label for="colMode">Cash sale received in</label><select id="colMode"></select></div></div>
+    <div class="card" id="planCard"><h3 style="margin-bottom:2px">Installment plan</h3><p id="planSub" style="margin:0 0 10px;color:var(--muted);font-size:13px"></p>
+      <div class="table-wrap"><table style="min-width:340px"><thead><tr><th>#</th><th>Month</th><th class="num">Due (Rs)</th><th>Note</th></tr></thead><tbody id="planBody"></tbody></table></div></div>
+    <div class="sumbar"><div class="k"><div><small>Items</small><b id="sCnt">0</b></div><div><small>Advance</small><b id="sAdv">0</b></div><div id="kInst"><small>Installment / month</small><b id="sInst">0</b></div><div id="kRec"><small>Received now</small><b id="sRec">0</b></div><div class="g"><small>Grand total</small><b id="sTot">Rs 0</b></div></div>
       <button class="btn" id="btnSave">Save sale</button></div>
   </section>
 
@@ -67,12 +80,24 @@
 <dialog id="pick" class="sheet"><div class="sh-head"><div><h2>Select product</h2><p>Stock shown beside each product</p></div><button class="x" data-close>✕</button></div>
   <div class="sh-body"><input id="pickQ" type="search" placeholder="Search brand, model, color or ID" style="margin-bottom:8px"><label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="pickAll" style="width:auto;min-height:0"> Show out-of-stock items too</label><div class="plist" id="pickList"></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div></dialog>
+<dialog id="rcpt" class="sheet"><div class="sh-head"><div><h2 id="rcT"></h2><p id="rcS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="sh-body"><div class="fsec"><div class="table-wrap" style="margin-bottom:12px"><table style="min-width:340px"><thead><tr><th>For</th><th class="num">Due</th><th>Received (Rs)</th><th></th></tr></thead><tbody id="rcRows"></tbody></table></div>
+    <div class="fgrid"><div><label for="rcDate">Date</label><input id="rcDate" type="date"></div><div><label for="rcMode">Received in</label><select id="rcMode"></select></div></div>
+    <p style="margin:12px 0 0;font-size:20px"><b>Total received: Rs <span id="rcTot">0</span></b></p>
+    <p style="margin:4px 0 0;font-size:12px;color:var(--muted)">If the customer paid less, type what was actually paid. The rest stays due.</p></div></div>
+  <div class="sh-foot"><button class="btn ghost" id="rcLater">Not received yet</button><button class="btn ghost" id="rcPrint">Print</button><button class="btn" id="rcPaid">Paid ✓ Save receipts</button></div></dialog>
+
+<dialog id="schd" class="sheet"><div class="sh-head"><div><h2>Installment schedule</h2><p id="scS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="sh-body"><p style="margin:0 0 10px;font-size:13px;color:var(--muted)">A tick means an installment is due that month. <b>Untick a month</b> if the customer will not pay in it: the installments after it move one month ahead, and that month will not show as due in Aging.</p>
+    <div class="table-wrap"><table style="min-width:340px"><thead><tr><th style="width:52px">Due</th><th>Month</th><th class="num">Installment</th><th>Status</th></tr></thead><tbody id="scBody"></tbody></table></div></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Close</button><button class="btn" id="scSave">Save schedule</button></div></dialog>
 <div id="printArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase(), N = v => Number(v) || 0;
+const PM = ERP_CONFIG.PAY_MODES;
 let CUST = new Map(), STOCK = [], HIST = [], mode = "inst", editing = null, active = null, curCust = null;
 const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
@@ -123,10 +148,35 @@ function calc(l) {
   l.querySelector(".amt").value = a ? M(a) : ""; l.querySelector(".inst").value = pl > 0 ? M(Math.max((a - ad) / pl, 0)) : "";
   l._a = a; l._inst = pl > 0 ? Math.max((a - ad) / pl, 0) : 0; totals();
 }
+const MN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function firstMonth() { const [m, y] = $("sMonth").value.split(" "); const i = MN.indexOf(m); return i < 0 ? null : { m: i, y: +y }; }
+function planRows() {                                   // same rule the database uses: last month absorbs rounding
+  const per = []; let maxP = 0;
+  document.querySelectorAll("#lines .line").forEach(l => { const a = N(l.querySelector(".qty").value) * N(l.querySelector(".rate").value), pl = Math.round(N(l.querySelector(".plan").value)), ad = N(l.querySelector(".adv").value);
+    if (pl > 0 && a > 0) { const fin = Math.max(a - ad, 0), inst = +(fin / pl).toFixed(2); per.push({ pl, fin, inst }); maxP = Math.max(maxP, pl); } });
+  const fm = firstMonth(), rows = [];
+  for (let k = 1; k <= maxP; k++) { let due = 0; per.forEach(x => { if (k <= x.pl) due += k < x.pl ? x.inst : x.fin - x.inst * (x.pl - 1); });
+    const d = fm ? new Date(fm.y, fm.m + k - 1, 1) : null; rows.push({ k, due: +due.toFixed(2), label: d ? d.toLocaleString("en", { month: "long", year: "numeric" }) : "-" }); }
+  return rows;
+}
+const dirty = { adv: false, fee: false };
+function recvTotal() { $("sRec").textContent = M(N($("rAdv").value) + N($("rFee").value) + N($("rFirst").value)); }
+["rAdv", "rFee", "rFirst"].forEach(id => $(id).addEventListener("input", e => { if (e.isTrusted) { if (id === "rAdv") dirty.adv = true; if (id === "rFee") dirty.fee = true; } recvTotal(); }));
+function dues() { let adv = 0, fee = 0; document.querySelectorAll("#lines .line").forEach(l => { adv += N(l.querySelector(".adv").value); fee += N(l.querySelector(".fee").value); }); const rows = planRows(); return { adv, fee, first: rows.length ? rows[0].due : 0, rows }; }
+function renderPlan() {
+  const cash = mode === "cash"; $("planCard").hidden = cash; $("colRows").hidden = cash; $("cashRow").hidden = !cash; $("kRec").hidden = cash; if (cash) return;
+  const d = dues(), rows = d.rows, fin = rows.reduce((s, r) => s + r.due, 0);
+  if (!dirty.adv) $("rAdv").value = d.adv || ""; if (!dirty.fee) $("rFee").value = d.fee || "";
+  $("rHint").textContent = `Due: advance Rs ${M(d.adv)} · processing fee Rs ${M(d.fee)} · 1st installment Rs ${M(d.first)}. Type what the customer actually pays now. You confirm it in the receipt window after Save.`;
+  recvTotal();
+  $("planSub").textContent = rows.length ? `${rows.length} installments · financed Rs ${M(fin)} (after advance)` : "Set the plan months on an item to see the schedule.";
+  $("planBody").innerHTML = rows.map(r => `<tr><td>${r.k}</td><td>${E(r.label)}</td><td class="num"><b>${M(r.due)}</b></td><td>${r.k === 1 ? '<span class="badge">1st installment</span>' : ""}</td></tr>`).join("") || '<tr><td colspan="4" class="empty" style="padding:14px">No installment plan yet</td></tr>';
+}
+$("sMonth").onchange = renderPlan;
 function totals() {
   let n = 0, t = 0, ad = 0, ins = 0; const cash = mode === "cash";
   document.querySelectorAll("#lines .line").forEach(l => { n++; const a = l._a || 0, f = N(l.querySelector(".fee").value); t += a + f; ad += cash ? a + f : N(l.querySelector(".adv").value); ins += l._inst || 0; });
-  $("sCnt").textContent = n; $("sAdv").textContent = M(ad); $("sInst").textContent = M(ins); $("sTot").textContent = "Rs " + M(t);
+  $("sCnt").textContent = n; $("sAdv").textContent = M(ad); $("sInst").textContent = M(ins); $("sTot").textContent = "Rs " + M(t); renderPlan();
 }
 $("lines").addEventListener("input", e => { const l = e.target.closest(".line"); if (l && e.target.matches("input")) calc(l); });
 $("lines").addEventListener("click", e => { const l = e.target.closest(".line"); if (!l) return;
@@ -146,7 +196,7 @@ $("pickList").onclick = e => { const b = e.target.closest(".pi"); if (!b || !act
 /* ---------- save ---------- */
 function resetForm() {
   editing = null; $("editBar").hidden = true; $("seg").style.opacity = 1; $("lines").innerHTML = ""; $("sAcc").value = "786"; $("sAcc").readOnly = false; $("sName").value = "Cash Customer";
-  $("sDate").value = ERP.ui.today(); fillMonths(); curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
+  $("sDate").value = ERP.ui.today(); fillMonths(); dirty.adv = dirty.fee = false; $("rFirst").value = ""; curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
 }
 $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   const cash = mode === "cash", date = $("sDate").value, acc = $("sAcc").value.trim();
@@ -162,9 +212,12 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
       plan_months: cash ? 0 : v(".plan"), advance: cash ? a + fee : v(".adv"), installment_per_month: cash ? 0 : (v(".plan") > 0 ? +((a - v(".adv")) / v(".plan")).toFixed(2) : 0), processing_fee: fee, remarks: l.querySelector(".rem").value.trim() }); });
   if (bad) { bad[0].scrollIntoView({ block: "center" }); return ERP.ui.toast(bad[1], "err"); }
   if (!cash && !editing && N(curCust.balance) > 0 && !confirm(`${curCust.account_title} still owes Rs ${M(curCust.balance)}.\nSave a new sale anyway?`)) return;
-  const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : $("sMonth").value };
+  const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : $("sMonth").value,
+    pay_mode: cash ? $("colMode").value : "" };
+  const dd = cash ? null : dues(), rec = cash ? null : { adv: N($("rAdv").value), fee: N($("rFee").value), first: N($("rFirst").value), dueAdv: dd.adv, dueFee: dd.fee, dueFirst: dd.first };
   try { const r = await ERP.db.sales.save(sale, items, !!editing); ERP.ui.toast((editing ? "Sale updated: " : "Sale saved: ") + r.account_no);
-    const wasCash = cash; resetForm(); loadHist(); if (wasCash) slip(r.account_no, true); }
+    const wasCash = cash, wasEdit = !!editing; resetForm(); loadHist();
+    if (wasCash) slip(r.account_no, true); else if (!wasEdit) openReceipt({ ...rec, acc: r.account_no, name: sale.account_title, date }); }
   catch (e) { ERP.ui.toast(e.message, "err"); }
 });
 $("cancelEdit").onclick = resetForm;
@@ -181,21 +234,80 @@ function renderHist() {
   $("hList").innerHTML = [...g].map(([acc, rs]) => { const tot = rs.reduce((s, r) => s + N(r.total_amt), 0), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0), cash = /^INV-/i.test(acc); grand += tot;
     return `<article class="po" data-a="${E(acc)}"><div class="po-h"><div><b>${E(rs[0].account_title)}</b> <span class="badge ${cash ? "" : "ok"}">${cash ? "Cash" : "CAF"} ${E(acc)}</span><br><small>${E(rs[0].date)} · ${rs.length} item${rs.length > 1 ? "s" : ""}${!cash && ins ? " · Inst Rs " + M(ins) + "/mo" : ""}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400">Advance ${M(adv)}</small></div></div>
       <div class="po-b" hidden><div class="table-wrap"><table style="min-width:560px"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Plan</th><th class="num">Advance</th><th class="num">Inst/mo</th><th class="num">Total</th></tr></thead><tbody>${rs.map(r => `<tr><td>${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(r.total_amt)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}</div></div></article>`; }).join("") || '<div class="empty">No sales in this period.</div>';
+      <div class="sch" data-acc="${E(acc)}"></div><div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}${!cash && ERP.auth.can("edit") ? '<button class="btn sm ghost" data-do="sched">Schedule</button>' : ""}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}</div></div></article>`; }).join("") || '<div class="empty">No sales in this period.</div>';
   $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
 }
 $("hList").onclick = async e => {
   const art = e.target.closest(".po"); if (!art) return; const acc = art.dataset.a, act = e.target.closest("[data-do]");
-  if (!act) { if (e.target.closest("a")) return; const b = art.querySelector(".po-b"); b.hidden = !b.hidden; return; }
+  if (!act) { if (e.target.closest("a")) return; const b = art.querySelector(".po-b"); b.hidden = !b.hidden; if (!b.hidden) loadSch(b.querySelector(".sch")); return; }
   if (act.dataset.do === "print") return slip(acc);
+  if (act.dataset.do === "sched") return openSchedule(acc, art.querySelector(".po-h b").textContent);
   if (act.dataset.do === "edit") {
     try { const rows = await ERP.db.sales.list({ accNo: acc }); if (!rows.length) return; const cash = /^INV-/i.test(acc);
       $("tNew").click(); editing = acc; setMode(cash ? "cash" : "inst"); $("seg").style.opacity = .5; $("lines").innerHTML = ""; $("sDate").value = rows[0].date; $("sAcc").value = acc; $("sAcc").readOnly = true; $("sName").value = rows[0].account_title || ""; fillMonths(rows[0].next_inst_month);
-      rows.forEach(r => addLine(r)); if (!cash) { curCust = CUST.get(acc.trim()) || { account_title: rows[0].account_title, approved_by: rows[0].approved_by, balance: 0 }; $("cinfo").className = "cinfo on"; $("cinfo").innerHTML = `<b>${E(rows[0].account_title)}</b> (editing saved sale)`; }
+      rows.forEach(r => addLine(r)); $("colMode").value = rows[0].pay_mode || PM.cash[0];
+      if (!cash) { curCust = CUST.get(acc.trim()) || { account_title: rows[0].account_title, approved_by: rows[0].approved_by, balance: 0 }; $("cinfo").className = "cinfo on"; $("cinfo").innerHTML = `<b>${E(rows[0].account_title)}</b> (editing saved sale)`; }
       $("gInv").hidden = true; $("editBar").hidden = false; $("editTxt").textContent = `Editing ${acc}. Saving replaces the whole sale and its stock entry.`; totals(); window.scrollTo(0, 0); } catch (er) { ERP.ui.toast(er.message, "err"); }
   } else if (confirm(`Delete sale ${acc}? Its stock-out entries are removed too.`)) { try { await ERP.db.sales.remove(acc); ERP.ui.toast("Sale deleted"); loadHist(); } catch (er) { ERP.ui.toast(er.message, "err"); } }
 };
 ["hFrom", "hTo"].forEach(i => $(i).onchange = loadHist); $("hQ").oninput = ERP.ui.debounce(renderHist, 200);
+
+const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
+async function loadSch(el) {
+  if (!el || el.dataset.done || /^INV-/i.test(el.dataset.acc)) return; el.dataset.done = 1; el.innerHTML = '<div class="skeleton" style="width:50%"></div>';
+  try { const r = await ERP.db.schedule(el.dataset.acc); if (!r.length) { el.innerHTML = ""; return; }
+    el.innerHTML = `<h4>Installment schedule</h4><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>${r.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${new Date(x.due_month + "T12:00").toLocaleString("en", { month: "short", year: "numeric" })}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("")}</tbody></table></div>`;
+  } catch (e) { el.innerHTML = `<small style="color:var(--danger)">Schedule: ${E(e.message)}</small>`; }
+}
+
+/* ---------- receipt window (opens after Save) ---------- */
+let RC = null; const DUEKEY = { adv: "dueAdv", fee: "dueFee", first: "dueFirst" };
+function openReceipt(r) {
+  RC = r; $("rcT").textContent = "Receipt · CAF " + r.acc; $("rcS").textContent = r.name; $("rcDate").value = r.date; $("rcMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); $("rcMode").value = PM.cash[0];
+  $("rcRows").innerHTML = [["Advance", "adv"], ["Processing fee", "fee"], ["1st installment", "first"]].map(([l, k]) => `<tr><td>${l}</td><td class="num">${M(r[DUEKEY[k]])}</td><td><input class="rc-in" data-k="${k}" type="number" inputmode="decimal" min="0" value="${r[k] || ""}" style="min-width:110px"></td><td class="short" data-s="${k}" style="font-size:12px;white-space:nowrap"></td></tr>`).join("");
+  rcCalc(); $("rcpt").showModal();
+}
+function rcCalc() { let t = 0; document.querySelectorAll("#rcRows .rc-in").forEach(i => { const v = N(i.value), d = N(RC[DUEKEY[i.dataset.k]]); t += v; const c = document.querySelector(`[data-s="${i.dataset.k}"]`);
+  c.textContent = d > 0 && v < d ? "short " + M(d - v) : v > d && v > 0 ? "extra " + M(v - d) : ""; c.style.color = v < d ? "var(--warn)" : "var(--muted)"; }); $("rcTot").textContent = M(t); }
+$("rcRows").addEventListener("input", rcCalc);
+$("rcLater").onclick = () => { $("rcpt").close(); ERP.ui.toast("Sale saved. Enter the receipts later in Receipts."); };
+$("rcPaid").onclick = () => ERP.ui.busy($("rcPaid"), async () => {
+  const v = {}; document.querySelectorAll("#rcRows .rc-in").forEach(i => v[i.dataset.k] = N(i.value));
+  const base = { date: $("rcDate").value, account_no: RC.acc, account_title: RC.name, pay_mode: $("rcMode").value, remarks: "Received at sale" }, rows = [];
+  if (v.adv > 0) rows.push({ ...base, voucher_no: "Advance", account_head: "Advance", amount: v.adv });
+  if (v.fee > 0) rows.push({ ...base, voucher_no: "Processing Fee", account_head: "Processing Fee", amount: v.fee });
+  if (v.first > 0) rows.push({ ...base, voucher_no: "1st Installment", account_head: "Recovery", amount: v.first });
+  if (!base.date) return ERP.ui.toast("Select the date", "err");
+  if (!rows.length) return ERP.ui.toast("Enter at least one amount, or press 'Not received yet'", "err");
+  try { await ERP.db.receipts.add(rows); ERP.ui.toast(rows.length + " receipt" + (rows.length > 1 ? "s" : "") + " saved"); $("rcpt").close(); openSchedule(RC.acc, RC.name); }
+  catch (e) { ERP.ui.toast(e.message, "err"); }
+});
+$("rcPrint").onclick = () => { const lines = [...document.querySelectorAll("#rcRows .rc-in")].map(i => [i.closest("tr").children[0].textContent, N(i.value)]).filter(x => x[1] > 0), tot = lines.reduce((s, x) => s + x[1], 0);
+  $("printArea").innerHTML = `<h2>${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>Receipt · CAF <b>${E(RC.acc)}</b> · ${E($("rcDate").value)}</div><div>Received from: <b>${E(RC.name)}</b></div>
+    <table><tbody>${lines.map(x => `<tr><td>${E(x[0])}</td><td style="text-align:right">Rs ${M(x[1])}</td></tr>`).join("")}</tbody></table><div><b>Total received: Rs ${M(tot)}</b></div><div>Account: ${E($("rcMode").value)}</div><p style="margin-top:14px">Thank you.</p>`; window.print(); };
+
+/* ---------- schedule window: untick a month = nothing due that month, later installments move ahead ---------- */
+let SC = null; const mon = d => new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }), isoM = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+async function openSchedule(acc, name) {
+  $("scS").textContent = "CAF " + acc + (name ? " · " + name : ""); $("scBody").innerHTML = '<tr><td colspan="4"><div class="skeleton"></div></td></tr>'; $("schd").showModal();
+  try {
+    const rows = await ERP.db.schedule(acc), inst = rows.filter(r => !r.is_skipped).sort((a, b) => a.inst_no - b.inst_no).map(r => ({ due: N(r.due_amt), paid: N(r.paid_amt) }));
+    if (!inst.length) { SC = null; $("scBody").innerHTML = '<tr><td colspan="4" class="empty">No installment plan found for this sale (check the first installment month).</td></tr>'; return; }
+    SC = { acc, inst, skip: new Set(rows.filter(r => r.is_skipped).map(r => r.due_month)), first: rows.map(r => r.due_month).sort()[0] }; drawSchedule();
+  } catch (e) { SC = null; $("scBody").innerHTML = `<tr><td colspan="4" class="empty">${E(e.message)}<br><small>Run the latest sql/08_installments.sql if this mentions installment_skips or is_skipped.</small></td></tr>`; }
+}
+function calendar() { const [y, m] = SC.first.split("-").map(Number), out = []; let i = 0, k = 0;
+  while (k < SC.inst.length && i < 240) { const iso = isoM(new Date(y, m - 1 + i, 1, 12)); i++; if (SC.skip.has(iso)) out.push({ iso, skipped: true }); else out.push({ iso, inst: SC.inst[k++] }); } return out; }
+function drawSchedule() {
+  const cm = isoM(new Date());
+  $("scBody").innerHTML = calendar().map(r => { const ck = 'type="checkbox" data-m="' + r.iso + '" style="width:22px;min-height:0"';
+    if (r.skipped) return `<tr style="opacity:.75"><td><input ${ck}></td><td>${mon(r.iso)}</td><td class="num">—</td><td><span class="badge">Skipped</span></td></tr>`;
+    const x = r.inst, paid = x.paid >= x.due - 0.005, st = paid ? ["ok", "✓ Paid"] : x.paid > 0 && r.iso >= cm ? ["warn", "Partial"] : r.iso < cm ? ["bad", "Overdue"] : r.iso === cm ? ["warn", "Due this month"] : ["", "Upcoming"];
+    return `<tr><td><input ${ck} checked ${paid ? "disabled" : ""}></td><td>${mon(r.iso)}</td><td class="num"><b>${M(x.due)}</b></td><td><span class="badge ${st[0]}">${st[1]}</span></td></tr>`; }).join("");
+}
+$("scBody").addEventListener("change", e => { const c = e.target.closest("input[data-m]"); if (!c || !SC) return; if (c.checked) SC.skip.delete(c.dataset.m); else SC.skip.add(c.dataset.m); drawSchedule(); });
+$("scSave").onclick = () => ERP.ui.busy($("scSave"), async () => { if (!SC) return $("schd").close();
+  try { await ERP.db.setSkips(SC.acc, calendar().filter(r => r.skipped).map(r => r.iso)); ERP.ui.toast("Schedule saved"); $("schd").close(); loadHist(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
 /* ---------- print slip ---------- */
 async function slip(acc, auto) {
@@ -212,7 +324,7 @@ $("tNew").onclick = () => { $("tNew").setAttribute("aria-selected", true); $("tL
 $("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("tNew").setAttribute("aria-selected", false); $("pNew").hidden = true; $("pList").hidden = false; };
 (async () => {
   await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
-  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); resetForm(); ERP.voice.wire(document);
+  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); $("colMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); resetForm(); ERP.voice.wire(document);
   try { const [c, s] = await Promise.all([ERP.db.customers.balances(), ERP.db.stock.balance()]); CUST = new Map(c.map(x => [String(x.account_no).trim(), x])); STOCK = s.sort((a, b) => N(b.in_stock) - N(a.in_stock)); }
   catch (e) { ERP.ui.toast("Could not load customers/stock: " + e.message, "err"); }
   loadHist();
