@@ -131,7 +131,8 @@ ERP.db = (function () {
     balanceOf: async accNo => must(await sb.from("v_customer_balance").select("*").eq("account_no", String(accNo).trim()).maybeSingle()),
 
     /* installment plan of one CAF, or aging of all customers (08_installments.sql) */
-    schedule: async accNo => must(await sb.from("v_installment_schedule").select("*").eq("account_no", String(accNo).trim()).order("inst_no")),
+    schedule: async accNo => must(await sb.from("v_installment_schedule").select("*").eq("account_no", String(accNo).trim()).order("due_month")),
+    setSkips: async (accNo, months) => must(await sb.rpc("set_installment_skips", { p_acc: String(accNo).trim(), p_months: months })),
     saleDues: () => fetchAll("v_sale_dues", { order: "account_no" }),
     aging: () => fetchAll("v_customer_aging", { order: "account_no" }),
 
