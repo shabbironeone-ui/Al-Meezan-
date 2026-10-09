@@ -43,7 +43,7 @@
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
-const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"] };
+const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
 const SO = "S/O D/O W/O"; let LIST = [], cur = null;
 const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
 const stat = (l, v, c) => `<div class="stat ${c || ""}"><small>${l}</small><b>${v}</b></div>`;
@@ -58,13 +58,27 @@ $("q").onkeydown = e => { if (e.key === "Enter") { const b = $("sug").querySelec
 $("sug").onclick = e => { const b = e.target.closest("button"); if (b) pick(b.dataset.a); };
 document.addEventListener("click", e => { if (!e.target.closest(".sbox")) $("sug").hidden = true; });
 
+function buildLedger(acc, sales, rcs) {   // same money rule as the database: balance = sale total - all receipts (old advance only where not already a receipt)
+  const lines = [];
+  if (sales.length) {
+    const d = sales.map(r => r.date).sort()[0], ts = sales.map(r => r.created_at || "").sort()[0];
+    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: sales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: sales.reduce((t, r) => t + N(r.total_amt), 0), credit: 0, ts });
+    const oldAdv = sales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
+    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts });
+  }
+  rcs.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "" }));
+  return lines.sort((x, y) => String(x.date).localeCompare(String(y.date)) || x.ord - y.ord || String(x.ts).localeCompare(String(y.ts)));
+}
 async function pick(acc) {
-  $("sug").hidden = true; $("hint").hidden = true; $("view").hidden = false; $("lBody").innerHTML = '<tr><td colspan="7"><div class="skeleton" style="width:60%"></div></td></tr>';
+  acc = String(acc).trim(); $("sug").hidden = true; $("hint").hidden = true; $("view").hidden = false; $("lBody").innerHTML = '<tr><td colspan="7"><div class="skeleton" style="width:60%"></div></td></tr>';
   try {
-    const [c, b, led, sch] = await Promise.all([ERP.db.customers.get(acc), ERP.db.balanceOf(acc), ERP.db.ledger(acc), ERP.db.schedule(acc)]);
+    const [c, sales, rcs] = await Promise.all([ERP.db.customers.get(acc), ERP.db.sales.list({ accNo: acc }), ERP.db.receipts.list({ accNo: acc })]);
     if (!c) { $("view").hidden = true; $("hint").hidden = false; $("hint").textContent = "No customer found with CAF " + acc; return; }
-    cur = { c, b: b || {}, led, sch }; $("q").value = c.account_title + " (" + c.account_no + ")"; history.replaceState(null, "", "?accNo=" + encodeURIComponent(c.account_no)); draw();
-  } catch (e) { $("hint").hidden = false; $("view").hidden = true; $("hint").innerHTML = "Could not load: " + E(e.message) + "<br><small>If it mentions v_ledger_lines, run sql/09_ledger.sql.</small>"; }
+    let sch = [], schErr = ""; try { sch = await ERP.db.schedule(acc); } catch (e) { schErr = e.message; }      // the plan is optional: the ledger shows even if it fails
+    const led = buildLedger(acc, sales, rcs), bal = led.reduce((t, r) => t + N(r.debit) - N(r.credit), 0);
+    cur = { c, b: { installment: sales.reduce((t, r) => t + N(r.installment_per_month), 0), balance: Math.max(bal, 0) }, led, sch, schErr };
+    $("q").value = c.account_title + " (" + c.account_no + ")"; history.replaceState(null, "", "?accNo=" + encodeURIComponent(c.account_no)); draw();
+  } catch (e) { $("hint").hidden = false; $("view").hidden = true; $("hint").innerHTML = "Could not load the ledger:<br><b>" + E(e.message) + "</b>"; }
 }
 
 function draw() {
@@ -76,7 +90,7 @@ function draw() {
   $("stats").innerHTML = stat("Total sale", "Rs " + M(tD)) + stat("Total received", "Rs " + M(tC)) + stat("Installment / month", "Rs " + M(b.installment)) + stat("Overdue", "Rs " + M(over), over > 0 ? "bad" : "") + stat("Due this month", "Rs " + M(month)) + stat("Next due", next ? mon(next.due_month) : "-");
   $("lBody").innerHTML = rows.map(r => `<tr class="${r.kind === "Sale" ? "sale" : ""}"><td>${E(r.date)}</td><td>${E(r.kind)}</td><td>${E(r.ref)}</td><td style="white-space:normal;min-width:180px">${E(r.particulars)}</td><td class="num deb">${N(r.debit) ? M(r.debit) : ""}</td><td class="num cre">${N(r.credit) ? M(r.credit) : ""}</td><td class="num"><b>${M(r.run)}</b></td></tr>`).join("")
     + (rows.length ? `<tr style="font-weight:700;background:#eef2f7"><td colspan="4">Total</td><td class="num">${M(tD)}</td><td class="num">${M(tC)}</td><td class="num">${M(bl)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries for this customer.</td></tr>');
-  $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || '<tr><td colspan="6" class="empty">No installment plan found for this customer.</td></tr>';
+  $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || (cur.schErr ? '<tr><td colspan="6" class="empty">Plan could not be loaded: ' + E(cur.schErr) + '</td></tr>' : '<tr><td colspan="6" class="empty">No installment plan found for this customer.</td></tr>');
   $("bRec").href = "receipts.html"; $("bWa").disabled = !digits(c.mobile_number);
 }
 $("bWa").onclick = () => { const { c, b } = cur; let d = digits(c.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const bl = N(b.balance);
