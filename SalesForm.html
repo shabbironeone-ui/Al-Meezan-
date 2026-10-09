@@ -50,7 +50,7 @@
       <div id="gAcc"><label for="sAcc">CAF number</label><div class="inp"><input id="sAcc" inputmode="numeric" value="786" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div>
       <div><label for="sDate">Sale date</label><input id="sDate" type="date"></div>
       <div id="gName" hidden class="wide"><label for="sName">Customer name</label><input id="sName" value="Cash Customer" autocomplete="off"></div>
-      <div id="gMonth"><label for="sMonth">First installment month</label><select id="sMonth"></select></div>
+      
       <div id="gInv" hidden class="wide"><label>Invoice number</label><input value="Assigned when you save" readonly></div></div>
       <div class="cinfo" id="cinfo"></div></div>
     <div id="lines"></div>
@@ -105,12 +105,10 @@ document.addEventListener("click", e => { const d = e.target.closest("dialog"); 
 /* ---------- mode / customer ---------- */
 function setMode(m) {
   mode = m; document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === m));
-  const cash = m === "cash"; $("gAcc").hidden = cash; $("gMonth").hidden = cash; $("kInst").hidden = cash; $("gName").hidden = !cash; $("gInv").hidden = !cash || !!editing; $("cinfo").className = "cinfo";
+  const cash = m === "cash"; $("gAcc").hidden = cash; $("kInst").hidden = cash; $("gName").hidden = !cash; $("gInv").hidden = !cash || !!editing; $("cinfo").className = "cinfo";
   document.querySelectorAll("#lines .line").forEach(l => { l.querySelectorAll(".plan,.adv").forEach(x => x.closest("div").hidden = cash); calc(l); });
 }
 $("seg").onclick = e => { const b = e.target.closest("button"); if (b && !editing) setMode(b.dataset.m); };
-function months() { const d = new Date(), out = []; d.setDate(1); for (let i = 0; i < 24; i++) { out.push(d.toLocaleString("en", { month: "long", year: "numeric" })); d.setMonth(d.getMonth() + 1); } return out; }
-function fillMonths(sel) { const l = months(); if (sel && !l.some(x => x.toLowerCase() === String(sel).toLowerCase())) l.unshift(sel); $("sMonth").innerHTML = l.map(x => `<option>${E(x)}</option>`).join(""); if (sel) $("sMonth").value = sel; }
 async function lookupCust() {
   const a = $("sAcc").value.trim(), box = $("cinfo"); curCust = null; box.className = "cinfo";
   if (a.length < 5 || a === "786") return;
@@ -149,7 +147,10 @@ function calc(l) {
   l._a = a; l._inst = pl > 0 ? Math.max((a - ad) / pl, 0) : 0; totals();
 }
 const MN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-function firstMonth() { const [m, y] = $("sMonth").value.split(" "); const i = MN.indexOf(m); return i < 0 ? null : { m: i, y: +y }; }
+/* the plan starts in the month of the sale date (first installment month = sale month) */
+function firstMonth() { const m = /^(\d{4})-(\d{2})/.exec($("sDate").value || ""); return m ? { m: +m[2] - 1, y: +m[1] } : null; }
+const monthLabel = d => { const m = /^(\d{4})-(\d{2})/.exec(d || ""); return m ? MN[+m[2] - 1] + " " + m[1] : null; };
+let origEdit = null;
 function planRows() {                                   // same rule the database uses: last month absorbs rounding
   const per = []; let maxP = 0;
   document.querySelectorAll("#lines .line").forEach(l => { const a = N(l.querySelector(".qty").value) * N(l.querySelector(".rate").value), pl = Math.round(N(l.querySelector(".plan").value)), ad = N(l.querySelector(".adv").value);
@@ -172,7 +173,7 @@ function renderPlan() {
   $("planSub").textContent = rows.length ? `${rows.length} installments · financed Rs ${M(fin)} (after advance)` : "Set the plan months on an item to see the schedule.";
   $("planBody").innerHTML = rows.map(r => `<tr><td>${r.k}</td><td>${E(r.label)}</td><td class="num"><b>${M(r.due)}</b></td><td>${r.k === 1 ? '<span class="badge">1st installment</span>' : ""}</td></tr>`).join("") || '<tr><td colspan="4" class="empty" style="padding:14px">No installment plan yet</td></tr>';
 }
-$("sMonth").onchange = renderPlan;
+$("sDate").onchange = renderPlan;
 function totals() {
   let n = 0, t = 0, ad = 0, ins = 0; const cash = mode === "cash";
   document.querySelectorAll("#lines .line").forEach(l => { n++; const a = l._a || 0, f = N(l.querySelector(".fee").value); t += a + f; ad += cash ? a + f : N(l.querySelector(".adv").value); ins += l._inst || 0; });
@@ -196,7 +197,7 @@ $("pickList").onclick = e => { const b = e.target.closest(".pi"); if (!b || !act
 /* ---------- save ---------- */
 function resetForm() {
   editing = null; $("editBar").hidden = true; $("seg").style.opacity = 1; $("lines").innerHTML = ""; $("sAcc").value = "786"; $("sAcc").readOnly = false; $("sName").value = "Cash Customer";
-  $("sDate").value = ERP.ui.today(); fillMonths(); dirty.adv = dirty.fee = false; $("rFirst").value = ""; curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
+  $("sDate").value = ERP.ui.today(); origEdit = null; dirty.adv = dirty.fee = false; $("rFirst").value = ""; curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
 }
 $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   const cash = mode === "cash", date = $("sDate").value, acc = $("sAcc").value.trim();
@@ -212,7 +213,7 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
       plan_months: cash ? 0 : v(".plan"), advance: cash ? a + fee : v(".adv"), installment_per_month: cash ? 0 : (v(".plan") > 0 ? +((a - v(".adv")) / v(".plan")).toFixed(2) : 0), processing_fee: fee, remarks: l.querySelector(".rem").value.trim() }); });
   if (bad) { bad[0].scrollIntoView({ block: "center" }); return ERP.ui.toast(bad[1], "err"); }
   if (!cash && !editing && N(curCust.balance) > 0 && !confirm(`${curCust.account_title} still owes Rs ${M(curCust.balance)}.\nSave a new sale anyway?`)) return;
-  const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : $("sMonth").value,
+  const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : (editing && origEdit && String(origEdit.date).slice(0, 7) === date.slice(0, 7) ? origEdit.next : monthLabel(date)),
     pay_mode: cash ? $("colMode").value : "" };
   const dd = cash ? null : dues(), rec = cash ? null : { adv: N($("rAdv").value), fee: N($("rFee").value), first: N($("rFirst").value), dueAdv: dd.adv, dueFee: dd.fee, dueFirst: dd.first };
   try { const r = await ERP.db.sales.save(sale, items, !!editing); ERP.ui.toast((editing ? "Sale updated: " : "Sale saved: ") + r.account_no);
@@ -244,7 +245,7 @@ $("hList").onclick = async e => {
   if (act.dataset.do === "sched") return openSchedule(acc, art.querySelector(".po-h b").textContent);
   if (act.dataset.do === "edit") {
     try { const rows = await ERP.db.sales.list({ accNo: acc }); if (!rows.length) return; const cash = /^INV-/i.test(acc);
-      $("tNew").click(); editing = acc; setMode(cash ? "cash" : "inst"); $("seg").style.opacity = .5; $("lines").innerHTML = ""; $("sDate").value = rows[0].date; $("sAcc").value = acc; $("sAcc").readOnly = true; $("sName").value = rows[0].account_title || ""; fillMonths(rows[0].next_inst_month);
+      $("tNew").click(); editing = acc; setMode(cash ? "cash" : "inst"); $("seg").style.opacity = .5; $("lines").innerHTML = ""; $("sDate").value = rows[0].date; $("sAcc").value = acc; $("sAcc").readOnly = true; $("sName").value = rows[0].account_title || ""; origEdit = { date: rows[0].date, next: rows[0].next_inst_month };
       rows.forEach(r => addLine(r)); $("colMode").value = rows[0].pay_mode || PM.cash[0];
       if (!cash) { curCust = CUST.get(acc.trim()) || { account_title: rows[0].account_title, approved_by: rows[0].approved_by, balance: 0 }; $("cinfo").className = "cinfo on"; $("cinfo").innerHTML = `<b>${E(rows[0].account_title)}</b> (editing saved sale)`; }
       $("gInv").hidden = true; $("editBar").hidden = false; $("editTxt").textContent = `Editing ${acc}. Saving replaces the whole sale and its stock entry.`; totals(); window.scrollTo(0, 0); } catch (er) { ERP.ui.toast(er.message, "err"); }
