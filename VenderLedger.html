@@ -3,89 +3,125 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Customer Ledger</title>
+<title>Vendor Ledger</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .sbox{position:relative}.sug{position:absolute;left:0;right:0;top:100%;z-index:20;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.18);margin-top:4px;overflow:hidden}
-  .sug button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:#fff;font:inherit;cursor:pointer}
-  .sug button:hover,.sug button:focus{background:var(--brand-soft)}.sug small{color:var(--muted)}
-  .prof{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.prof .grow{flex:1;min-width:200px}.prof h2{margin:0}.prof p{margin:2px 0 0;color:var(--muted);font-size:14px}
-  .balbox{border-radius:var(--radius);padding:14px 16px;color:#fff;background:#047857;margin:12px 0}.balbox.due{background:var(--warn)}.balbox small{opacity:.85}.balbox b{display:block;font-size:30px;font-variant-numeric:tabular-nums}
-  .stats.six{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.six{grid-template-columns:repeat(3,1fr)}}@media(min-width:1000px){.stats.six{grid-template-columns:repeat(6,1fr)}}
+  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
   .stat.bad b{color:var(--danger)}
-  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin:6px 0 12px}
-  .tabs button{min-height:40px;padding:6px 18px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
-  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
-  td.deb{color:var(--warn);font-weight:600}td.cre{color:#047857;font-weight:600}tr.sale td{background:#fff7ed}
-  #pr{display:none}
-  @media print{body{background:#fff}.page>*:not(#view):not(#pr){display:none!important}#view .no-print,.tabs{display:none!important}#pr{display:block;margin-bottom:8px}.card{box-shadow:none;border:0;padding:0}.balbox{color:#000;background:#fff;border:1px solid #000}.table-wrap{border:0;overflow:visible}table{min-width:0;font-size:11px}#planTab{display:block!important}}
+  .toolbar{grid-template-columns:1fr 1fr!important}.toolbar .search{grid-column:1/-1}
+  @media(min-width:760px){.toolbar{grid-template-columns:1fr 190px auto!important}.toolbar .search{grid-column:auto}}
+  .head,.row{display:grid;align-items:center;gap:10px;grid-template-columns:minmax(200px,2.4fr) 90px 120px 120px 130px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.head .r,.row .r{text-align:right}
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow)}
+  .row:hover,.row:focus-visible{border-color:var(--brand)}.row b{display:block;line-height:1.25}.row small{color:var(--muted)}.num{font-variant-numeric:tabular-nums}
+  .due{font-weight:700;color:var(--danger)}.clr{font-weight:700;color:#047857}
+  @media(max-width:759px){.head{display:none}.row{grid-template-columns:1fr auto;grid-template-areas:"n b" "m m"}.row .n{grid-area:n}.row .b{grid-area:b;text-align:right}.row .m{grid-area:m;display:flex;gap:12px;font-size:12px;color:var(--muted)}.row .c,.row .p,.row .t{display:none}}
+  @media(min-width:760px){.row .m{display:none}}
+  .payform{display:none;margin-top:12px}.payform.on{display:block}
+  td.dr{color:#047857;font-weight:600}td.cr{color:var(--danger);font-weight:600}tr.open td{background:#eef2f7;font-weight:600}
+  #printArea{display:none}
+  @media print{body>*:not(#printArea){display:none!important}#printArea{display:block;font:12px/1.4 Arial,sans-serif;color:#000;padding:8mm}#printArea table{width:100%;border-collapse:collapse;min-width:0}#printArea th,#printArea td{border-bottom:1px solid #999;padding:4px 3px;text-align:left}#printArea .n{text-align:right}}
 </style>
 </head>
 <body>
 <main class="page">
-  <header class="appbar"><div><h1>Customer Ledger</h1><p>Statement, balance and installment plan</p></div></header>
-  <section class="card no-print"><label for="q">Find a customer</label>
-    <div class="sbox"><input id="q" type="search" placeholder="Type name, CAF number or mobile" autocomplete="off"><div class="sug" id="sug" hidden></div></div></section>
-  <div id="hint" class="empty">Search for a customer to see the ledger.</div>
-
-  <section id="view" hidden>
-    <div id="pr"><h2 id="prShop"></h2><div>Customer statement · printed <span id="prDate"></span></div></div>
-    <div class="card"><div class="prof"><div class="grow"><h2 id="pName"></h2><p id="pSub"></p><p id="pSub2"></p></div>
-      <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="bWa">WhatsApp</button><button class="btn ghost" id="bPrint">Print</button><a class="btn" id="bRec" style="text-decoration:none;display:inline-grid;place-items:center" href="receipts.html">＋ Receipt</a></div></div></div>
-    <div class="balbox" id="bal"></div>
-    <section class="stats six" id="stats"></section>
-    <div class="tabs"><button id="tL" aria-selected="true">Ledger</button><button id="tP" aria-selected="false">Installment plan</button></div>
-    <div id="ledTab" class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Ref</th><th>Particulars</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead><tbody id="lBody"></tbody></table></div>
-    <div id="planTab" hidden><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
+  <header class="appbar"><div><h1>Vendor Ledger</h1><p id="sub">What we bought and what we owe</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnCsv">Export</button></div></header>
+  <section class="stats four" id="stats"></section>
+  <section class="card toolbar">
+    <div class="search"><input id="q" type="search" placeholder="Search vendor" autocomplete="off"></div>
+    <select id="fSort" aria-label="Sort"><option value="bal">Highest balance due</option><option value="name">Name A-Z</option><option value="buy">Most purchases</option></select>
+    <button class="chip" id="chipDue" aria-pressed="false">Balance due only</button>
   </section>
+  <div class="head"><span>Vendor</span><span class="r">Entries</span><span class="r">Purchases</span><span class="r">Paid</span><span class="r">Balance due</span></div>
+  <section id="list"></section>
+  <details class="card" id="unm" hidden style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Payments not linked to any vendor</summary><p style="color:var(--muted);font-size:13px">These payments are not counted in any vendor's ledger because their name does not match a vendor. If one is a vendor payment with a different spelling, use that vendor's exact name in the next payment.</p><div id="unmBody"></div></details>
 </main>
+
+<dialog id="dlg" class="sheet">
+  <div class="sh-head"><div><h2 id="vT"></h2><p id="vS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="sh-body">
+    <div class="fsec" style="display:grid;gap:8px;grid-template-columns:1fr 1fr"><div><label>From</label><input type="date" id="vFrom"></div><div><label>To</label><input type="date" id="vTo"></div></div>
+    <section class="stats" id="vStats" style="grid-template-columns:repeat(3,1fr)"></section>
+    <div class="table-wrap"><table style="min-width:560px"><thead><tr><th>Date</th><th>Type</th><th>Ref</th><th>Particulars</th><th class="num">Paid</th><th class="num">Purchase</th><th class="num">Balance due</th></tr></thead><tbody id="vBody"></tbody></table></div>
+    <div class="payform" id="payForm"><div class="fsec"><h3 style="margin-bottom:8px">Pay this vendor</h3><div class="fgrid">
+      <div><label>Date</label><input id="pDate" type="date"></div><div><label>Amount (Rs)</label><input id="pAmt" type="number" inputmode="decimal" min="0"></div>
+      <div><label>Paid from (account)</label><select id="pMode"></select></div><div><label>Remarks</label><input id="pRem" autocomplete="off"></div></div></div></div>
+  </div>
+  <div class="sh-foot"><button class="btn ghost" id="vPrint">Print</button><button class="btn soft" id="vPay">＋ Pay vendor</button><button class="btn" id="pSave" hidden>Save payment</button></div>
+</dialog>
+<div id="printArea"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
-const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
-const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
-const SO = "S/O D/O W/O"; let LIST = [], cur = null;
-const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, key = s => String(s || "").trim().toUpperCase(), PM = ERP_CONFIG.PAY_MODES;
+let V = new Map(), UNM = new Map(), cur = null, SETT = [];
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const stat = (l, v, c) => `<div class="stat ${c || ""}"><small>${l}</small><b>${v}</b></div>`;
 
-/* ---------- find a customer ---------- */
-$("q").oninput = ERP.ui.debounce(() => {
-  const q = $("q").value.trim().toLowerCase(), qd = digits(q); if (q.length < 2) { $("sug").hidden = true; return; }
-  const r = LIST.filter(c => String(c.account_title || "").toLowerCase().includes(q) || String(c.account_no).includes(q) || (qd.length > 3 && digits(c.mobile_number).includes(qd))).slice(0, 8);
-  $("sug").innerHTML = r.map(c => `<button data-a="${E(c.account_no)}"><span><b>${E(c.account_title)}</b><br><small>CAF ${E(c.account_no)} · ${E(c.mobile_number)}</small></span><small>${N(c.balance) > 0 ? "Rs " + M(c.balance) : "Clear"}</small></button>`).join("") || '<div class="empty" style="padding:14px">No customer found</div>';
-  $("sug").hidden = false; }, 150);
-$("q").onkeydown = e => { if (e.key === "Enter") { const b = $("sug").querySelector("button"); if (b) b.click(); else if ($("q").value.trim()) pick($("q").value.trim()); } };
-$("sug").onclick = e => { const b = e.target.closest("button"); if (b) pick(b.dataset.a); };
-document.addEventListener("click", e => { if (!e.target.closest(".sbox")) $("sug").hidden = true; });
-
-async function pick(acc) {
-  $("sug").hidden = true; $("hint").hidden = true; $("view").hidden = false; $("lBody").innerHTML = '<tr><td colspan="7"><div class="skeleton" style="width:60%"></div></td></tr>';
+async function load() {
+  $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(3);
   try {
-    const [c, b, led, sch] = await Promise.all([ERP.db.customers.get(acc), ERP.db.balanceOf(acc), ERP.db.ledger(acc), ERP.db.schedule(acc)]);
-    if (!c) { $("view").hidden = true; $("hint").hidden = false; $("hint").textContent = "No customer found with CAF " + acc; return; }
-    cur = { c, b: b || {}, led, sch }; $("q").value = c.account_title + " (" + c.account_no + ")"; history.replaceState(null, "", "?accNo=" + encodeURIComponent(c.account_no)); draw();
-  } catch (e) { $("hint").hidden = false; $("view").hidden = true; $("hint").innerHTML = "Could not load: " + E(e.message) + "<br><small>If it mentions v_ledger_lines, run sql/09_ledger.sql.</small>"; }
+    const [pur, pay, set] = await Promise.all([ERP.db.fetchAll("purchase_detail", { order: "id" }), ERP.db.fetchAll("payments", { order: "id" }), ERP.db.settings().catch(() => ({ rows: [] }))]);
+    SETT = set.rows; build(pur, pay); render();
+  } catch (e) { $("list").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small></div>`; }
 }
+function build(pur, pay) {
+  V = new Map(); UNM = new Map();
+  const ensure = name => { const k = key(name) || "(NO SUPPLIER)"; if (!V.has(k)) V.set(k, { k, name: String(name || "").trim() || "(no supplier)", lines: [] }); return V.get(k); };
+  SETT.filter(r => String(r.category).trim().toUpperCase() === "VENDOR").forEach(r => ensure(r.display_name));
+  const g = new Map(); pur.forEach(r => { const k = key(r.supplier) + "|" + String(r.po_num || "").trim(); (g.get(k) || g.set(k, []).get(k)).push(r); });
+  g.forEach(rows => ensure(rows[0].supplier).lines.push({ date: rows.map(r => r.purchase_date).sort()[0], ref: String(rows[0].po_num || ""), kind: "Purchase", part: rows.map(r => `${String(r.model || "").trim()} ×${N(r.qty)}`).join(", "), debit: 0, credit: rows.reduce((s, r) => s + N(r.line_total), 0) }));
+  pay.forEach(p => { const k1 = key(p.payment_head), k2 = key(p.account_title), k = V.has(k1) ? k1 : V.has(k2) ? k2 : null;
+    if (k) V.get(k).lines.push({ date: p.date, ref: p.voucher_no, kind: "Payment", part: [p.pay_mode, p.remarks].filter(Boolean).join(" · "), debit: N(p.amount), credit: 0 });
+    else { const n = String(p.payment_head || p.account_title || "(blank)").trim(); UNM.set(n, (UNM.get(n) || 0) + N(p.amount)); } });
+  V.forEach(v => { v.credit = v.lines.reduce((s, l) => s + l.credit, 0); v.debit = v.lines.reduce((s, l) => s + l.debit, 0); v.bal = v.credit - v.debit; });
+}
+function render() {
+  const q = $("q").value.trim().toLowerCase(), due = $("chipDue").getAttribute("aria-pressed") === "true", s = $("fSort").value;
+  let rows = [...V.values()].filter(v => v.lines.length && (!q || v.name.toLowerCase().includes(q)) && (!due || v.bal > 0.5));
+  rows.sort(s === "name" ? (a, b) => a.name.localeCompare(b.name) : s === "buy" ? (a, b) => b.credit - a.credit : (a, b) => b.bal - a.bal);
+  const all = [...V.values()].filter(v => v.lines.length), sum = k => all.reduce((t, v) => t + v[k], 0);
+  $("stats").innerHTML = stat("Vendors", M(all.length)) + stat("Total purchases", "Rs " + M(sum("credit"))) + stat("Total paid", "Rs " + M(sum("debit"))) + stat("Total payable", "Rs " + M(sum("bal")), "bad");
+  $("sub").textContent = rows.length === all.length ? `${M(all.length)} vendors` : `${M(rows.length)} of ${M(all.length)} vendors`;
+  $("list").innerHTML = rows.map(v => `<article class="row" data-k="${E(v.k)}" tabindex="0"><div class="n"><b>${E(v.name)}</b></div><div class="c r num">${M(v.lines.length)}</div><div class="p r num">${M(v.credit)}</div><div class="t r num">${M(v.debit)}</div>
+    <div class="b r num ${v.bal > 0.5 ? "due" : "clr"}">${v.bal > 0.5 ? "Rs " + M(v.bal) : v.bal < -0.5 ? "Advance " + M(-v.bal) : "Clear"}</div><div class="m"><span>Purchases ${M(v.credit)}</span><span>Paid ${M(v.debit)}</span></div></article>`).join("") || '<div class="empty">No vendors found.</div>';
+  $("unm").hidden = !UNM.size; $("unmBody").innerHTML = `<div class="table-wrap"><table style="min-width:0"><thead><tr><th>Name on the payment</th><th class="num">Amount</th></tr></thead><tbody>${[...UNM].sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${E(k)}</td><td class="num">${M(v)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+$("list").onclick = e => { const r = e.target.closest(".row"); if (r) openV(V.get(r.dataset.k)); };
+$("list").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) e.target.click(); };
+$("q").oninput = ERP.ui.debounce(render, 200); $("fSort").onchange = render;
+$("chipDue").onclick = e => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); render(); };
+$("btnCsv").onclick = () => ERP.ui.downloadCSV("vendors_" + ERP.ui.today() + ".csv", [...V.values()].filter(v => v.lines.length).map(v => ({ vendor: v.name, entries: v.lines.length, purchases: v.credit, paid: v.debit, balance_due: v.bal })));
 
-function draw() {
-  const { c, b, led, sch } = cur, now = new Date(), cm = new Date(now.getFullYear(), now.getMonth(), 1, 12).toISOString().slice(0, 10);
-  $("pName").textContent = c.account_title; $("pSub").textContent = `CAF ${c.account_no}${c[SO] ? " · " + c[SO] : ""} · ${c.mobile_number || "no mobile"}`; $("pSub2").textContent = `CRO: ${c.cro || "-"} · Approved by: ${c.approved_by || "-"}${c.address ? " · " + c.address : ""}`;
-  let run = 0, tD = 0, tC = 0; const rows = led.map(r => { run += N(r.debit) - N(r.credit); tD += N(r.debit); tC += N(r.credit); return { ...r, run }; });
-  const bl = run; $("bal").className = "balbox" + (bl > 0.5 ? " due" : ""); $("bal").innerHTML = `<small>${bl < -0.5 ? "Paid in excess" : "Outstanding balance"}</small><b>${bl > 0.5 ? "Rs " + M(bl) : bl < -0.5 ? "Rs " + M(-bl) + " extra" : "Clear"}</b>`;
-  const over = sch.filter(x => x.due_month < cm).reduce((s, x) => s + N(x.balance_due), 0), month = sch.filter(x => x.due_month === cm).reduce((s, x) => s + N(x.balance_due), 0), next = sch.find(x => N(x.balance_due) > 0 && x.due_month >= cm);
-  $("stats").innerHTML = stat("Total sale", "Rs " + M(tD)) + stat("Total received", "Rs " + M(tC)) + stat("Installment / month", "Rs " + M(b.installment)) + stat("Overdue", "Rs " + M(over), over > 0 ? "bad" : "") + stat("Due this month", "Rs " + M(month)) + stat("Next due", next ? mon(next.due_month) : "-");
-  $("lBody").innerHTML = rows.map(r => `<tr class="${r.kind === "Sale" ? "sale" : ""}"><td>${E(r.date)}</td><td>${E(r.kind)}</td><td>${E(r.ref)}</td><td style="white-space:normal;min-width:180px">${E(r.particulars)}</td><td class="num deb">${N(r.debit) ? M(r.debit) : ""}</td><td class="num cre">${N(r.credit) ? M(r.credit) : ""}</td><td class="num"><b>${M(r.run)}</b></td></tr>`).join("")
-    + (rows.length ? `<tr style="font-weight:700;background:#eef2f7"><td colspan="4">Total</td><td class="num">${M(tD)}</td><td class="num">${M(tC)}</td><td class="num">${M(bl)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries for this customer.</td></tr>');
-  $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || '<tr><td colspan="6" class="empty">No installment plan found for this customer.</td></tr>';
-  $("bRec").href = "receipts.html"; $("bWa").disabled = !digits(c.mobile_number);
+/* ---------- one vendor ---------- */
+function openV(v) { cur = v; $("vT").textContent = v.name; $("vFrom").value = ""; $("vTo").value = ""; $("payForm").classList.remove("on"); $("pSave").hidden = true; $("vPay").hidden = !ERP.auth.can("write"); drawV(); $("dlg").showModal(); }
+function vLines() {
+  const f = $("vFrom").value, t = $("vTo").value, all = cur.lines.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.kind === "Purchase" ? -1 : 1));
+  const open = f ? all.filter(l => l.date < f).reduce((s, l) => s + l.credit - l.debit, 0) : 0; let run = open;
+  const rows = all.filter(l => (!f || l.date >= f) && (!t || l.date <= t)).map(l => (run += l.credit - l.debit, { ...l, run })); return { open, rows, close: run };
 }
-$("bWa").onclick = () => { const { c, b } = cur; let d = digits(c.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const bl = N(b.balance);
-  window.open(`https://wa.me/${d}?text=${encodeURIComponent(`Assalam o Alaikum ${c.account_title}, aap ki CAF ${c.account_no} ka baqaya Rs ${M(bl)} hai. Meherbani karke ada kar dein. Shukriya - Al Meezan`)}`, "_blank", "noopener"); };
-$("bPrint").onclick = () => { $("prShop").textContent = ERP_CONFIG.APP_NAME.replace(" ERP", ""); $("prDate").textContent = new Date().toLocaleDateString("en-GB"); $("ledTab").hidden = false; window.print(); };
-$("tL").onclick = () => { $("tL").setAttribute("aria-selected", true); $("tP").setAttribute("aria-selected", false); $("ledTab").hidden = false; $("planTab").hidden = true; };
-$("tP").onclick = () => { $("tP").setAttribute("aria-selected", true); $("tL").setAttribute("aria-selected", false); $("ledTab").hidden = true; $("planTab").hidden = false; };
-(async () => { await ERP.auth.guard(); try { LIST = await ERP.db.customers.balances(); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); }
-  const a = new URLSearchParams(location.search).get("accNo") || new URLSearchParams(location.search).get("acc"); if (a) pick(a); else $("q").focus(); })();
+function drawV() {
+  const { open, rows, close } = vLines(), cr = rows.reduce((s, l) => s + l.credit, 0), dr = rows.reduce((s, l) => s + l.debit, 0);
+  $("vS").textContent = `${M(cur.lines.length)} entries · balance due Rs ${M(cur.bal)}`;
+  $("vStats").innerHTML = stat("Purchases", "Rs " + M(cr)) + stat("Paid", "Rs " + M(dr)) + stat("Balance due", "Rs " + M(close), close > 0.5 ? "bad" : "");
+  $("vBody").innerHTML = ($("vFrom").value ? `<tr class="open"><td colspan="6">Opening balance</td><td class="num">${M(open)}</td></tr>` : "")
+    + rows.map(l => `<tr><td>${E(l.date)}</td><td>${E(l.kind)}</td><td>${E(l.ref)}</td><td style="white-space:normal;min-width:160px">${E(l.part)}</td><td class="num dr">${l.debit ? M(l.debit) : ""}</td><td class="num cr">${l.credit ? M(l.credit) : ""}</td><td class="num"><b>${M(l.run)}</b></td></tr>`).join("")
+    + (rows.length ? `<tr class="open"><td colspan="4">Total</td><td class="num">${M(dr)}</td><td class="num">${M(cr)}</td><td class="num">${M(close)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries in this period.</td></tr>');
+}
+$("vFrom").onchange = $("vTo").onchange = drawV;
+$("vPay").onclick = () => { $("payForm").classList.add("on"); $("pSave").hidden = false; $("vPay").hidden = true; $("pDate").value = ERP.ui.today(); $("pAmt").value = ""; $("pRem").value = "";
+  $("pMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); $("pMode").value = PM.cash[0]; $("pAmt").focus(); $("payForm").scrollIntoView({ block: "center" }); };
+$("pSave").onclick = () => ERP.ui.busy($("pSave"), async () => {
+  const amt = +$("pAmt").value; if (!(amt > 0)) return ERP.ui.toast("Enter the amount", "err"); if (!$("pDate").value) return ERP.ui.toast("Select the date", "err");
+  try { const r = await ERP.db.accounts.create({ kind: "payment", date: $("pDate").value, amount: amt, pay_mode: $("pMode").value, name: cur.name, remarks: $("pRem").value.trim() });
+    ERP.ui.toast("Payment saved. Voucher " + r.voucher_no); const k = cur.k; await load(); openV(V.get(k)); } catch (e) { ERP.ui.toast(e.message, "err"); } });
+$("vPrint").onclick = () => { const { open, rows, close } = vLines(), cr = rows.reduce((s, l) => s + l.credit, 0), dr = rows.reduce((s, l) => s + l.debit, 0);
+  $("printArea").innerHTML = `<h2 style="margin:0">${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>Vendor statement: <b>${E(cur.name)}</b> · printed ${new Date().toLocaleDateString("en-GB")}${$("vFrom").value ? " · from " + E($("vFrom").value) : ""}${$("vTo").value ? " to " + E($("vTo").value) : ""}</div>
+    <table><thead><tr><th>Date</th><th>Type</th><th>Ref</th><th>Particulars</th><th class="n">Paid</th><th class="n">Purchase</th><th class="n">Balance</th></tr></thead><tbody>${$("vFrom").value ? `<tr><td colspan="6">Opening balance</td><td class="n">${M(open)}</td></tr>` : ""}${rows.map(l => `<tr><td>${E(l.date)}</td><td>${E(l.kind)}</td><td>${E(l.ref)}</td><td>${E(l.part)}</td><td class="n">${l.debit ? M(l.debit) : ""}</td><td class="n">${l.credit ? M(l.credit) : ""}</td><td class="n">${M(l.run)}</td></tr>`).join("")}
+    <tr><td colspan="4"><b>Total</b></td><td class="n"><b>${M(dr)}</b></td><td class="n"><b>${M(cr)}</b></td><td class="n"><b>${M(close)}</b></td></tr></tbody></table>`; window.print(); };
+(async () => { await ERP.auth.guard(); load(); })();
 </script>
 </body>
 </html>
