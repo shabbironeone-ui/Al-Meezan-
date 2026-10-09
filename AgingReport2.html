@@ -1,842 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <base target="_top">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <!-- Supabase JS Client v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f6f9;
-      margin: 8px auto;
-      max-width: 1300px;
-      padding: 5px;
-      color: #333;
-      transition: all 0.3s ease;
-    }
-    .container {
-      max-width: 100%;
-      margin: 0 auto;
-      background: #fff;
-      padding: 10px 15px;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      box-sizing: border-box;
-      position: relative;
-    }
-    
-    body.mobile-mode {
-      margin: 2px !important;
-      padding: 2px !important;
-      overflow-x: hidden !important;
-    }
-    body.mobile-mode .container {
-      max-width: 100% !important;
-      padding: 6px !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-    }
-    body.mobile-mode .filters-grid {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 6px !important;
-    }
-    body.mobile-mode .input-group {
-      grid-column: span 1 !important;
-    }
-    body.mobile-mode .input-group:nth-child(n+3) {
-      grid-column: span 2 !important;
-    }
-    body.mobile-mode .button-group {
-      grid-column: span 2 !important;
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-    }
-    body.mobile-mode .button-group button {
-      flex: 1;
-      font-size: 11px !important;
-      padding: 2px 4px !important;
-    }
-    body.mobile-mode .table-container {
-      max-height: 70vh !important;
-      border: 1px solid #1b5e20 !important;
-    }
-    body.mobile-mode th, body.mobile-mode td {
-      font-size: 8.5pt !important;
-      padding: 3px 2px !important;
-      white-space: nowrap !important;
-    }
-    body.mobile-mode h2 {
-      font-size: 15px !important;
-      margin-bottom: 8px !important;
-    }
-
-    .floating-mobile-toggle {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      background: #1b5e20;
-      color: white;
-      border: none;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      z-index: 100;
-      transition: background 0.2s;
-    }
-    .floating-mobile-toggle:hover {
-      background: #144316;
-    }
-
-    h2 {
-      text-align: center;
-      color: #1b5e20;
-      margin: 0 0 12px 0;
-      font-size: 18px;
-      padding-right: 35px;
-    }
-    .filters-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1.2fr 1.8fr 1.2fr 1.2fr auto;
-      gap: 6px;
-      align-items: end;
-      margin-bottom: 8px;
-    }
-    .input-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .input-group label {
-      font-size: 11px;
-      font-weight: bold;
-      color: #555;
-      margin-bottom: 2px;
-    }
-    input[type="text"], input[type="date"], select {
-      padding: 4px 6px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 12px;
-      width: 100%;
-      box-sizing: border-box;
-      height: 32px;
-    }
-    .button-group {
-      display: flex;
-      gap: 4px;
-    }
-    button {
-      background-color: #1b5e20;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 13px;
-      height: 32px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    button:hover {
-      background-color: #144316;
-    }
-    button.secondary {
-      background-color: #37474f;
-    }
-    button.secondary:hover {
-      background-color: #263238;
-    }
-    button.excel-btn {
-      background-color: #1f7246;
-    }
-    button.excel-btn:hover {
-      background-color: #155734;
-    }
-
-    #loadingContainer {
-      display: none;
-      text-align: center;
-      margin: 15px 0;
-    }
-    .spinner {
-      width: 30px;
-      height: 30px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #1b5e20;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 5px auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #loadingMsg {
-      color: #1b5e20;
-      font-weight: bold;
-      font-size: 13px;
-    }
-
-    .table-container {
-      max-height: 460px;
-      overflow-y: auto;
-      overflow-x: auto;
-      border: 1px solid #bbb;
-      border-radius: 4px;
-      margin-top: 4px;
-      position: relative;
-      -webkit-overflow-scrolling: touch;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      table-layout: fixed;
-    }
-    
-    th, td {
-      padding: 2px 4px;
-      border: 1px solid #bbb !important;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 9.5pt; 
-      font-weight: normal; 
-      line-height: 1.1;
-    }
-
-    th {
-      font-weight: bold !important;
-    }
-    
-    th.col-accNo, td.col-accNo { width: 55px; }         
-    th.col-accTitle, td.col-accTitle { width: 120px; }   
-    th.col-approvedBy, td.col-approvedBy { width: 55px; } 
-    th.col-cro, td.col-cro { width: 32px; }                
-    th.col-mobile, td.col-mobile { width: 75px; }        
-    th.col-monthlyInst, td.col-monthlyInst { width: 50px; } 
-    th.col-remarks, td.col-remarks { width: 120px; }     
-    th.col-cmd, td.col-cmd { width: 55px; }                
-    th.col-plan, td.col-plan { width: 32px; text-align: center; } 
-    th.col-totalSales, td.col-totalSales { width: 60px; } 
-    th.col-totalReceived, td.col-totalReceived { width: 60px; } 
-    th.col-balance, td.col-balance { width: 55px; }      
-    th.col-lpd, td.col-lpd { width: 60px; }                
-    th.col-lpAmount, td.col-lpAmount { width: 55px; }    
-    th.col-deliveryDate, td.col-deliveryDate { width: 60px; } 
-    th.col-endingMonth, td.col-endingMonth { width: 60px; } 
-    th.col-product, td.col-product { width: 55px; }      
-    th.col-m4, td.col-m4 { width: 45px; }                 
-    th.col-m3, td.col-m3 { width: 45px; }                 
-    th.col-m2, td.col-m2 { width: 52px; }                 
-    th.col-m1, td.col-m1 { width: 52px; }                 
-
-    .sticky-header {
-      background-color: #1b5e20 !important;
-      color: white !important;
-      position: sticky;
-      top: 0;
-      z-index: 3;
-      font-weight: bold;
-      text-align: center;
-      font-size: 9.5pt;
-    }
-    .sticky-header th {
-      padding: 4px 2px;
-    }
-    .filter-header-row {
-      background-color: #f1f8e9 !important;
-      position: sticky;
-      top: 25px;
-      z-index: 3;
-    }
-    .filter-header-row th {
-      padding: 1px 2px;
-      background-color: #f1f8e9;
-    }
-    .filter-cell-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 1px;
-    }
-    .col-filter {
-      width: 100%;
-      padding: 1px 1px;
-      font-size: 8px;
-      border: 1px solid #c8e6c9;
-      border-radius: 3px;
-      box-sizing: border-box;
-      height: 18px;
-      background: #fff;
-    }
-    .excel-filter-btn {
-      background: #e8f5e9;
-      border: 1px solid #81c784;
-      color: #1b5e20;
-      cursor: pointer;
-      font-size: 7px;
-      padding: 0 1px;
-      height: 18px;
-      border-radius: 3px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .excel-filter-btn.active-filter {
-      background: #0288d1 !important;
-      color: #fff !important;
-      border-color: #01579b !important;
-    }
-
-    tbody tr:hover {
-      background-color: #d1e7dd !important;
-      font-weight: 500;
-    }
-
-    .account-link {
-      color: #0d47a1;
-      text-decoration: underline;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .account-link:hover {
-      color: #1565c0;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-
-    .table-footer-row {
-      background-color: #dcedc8 !important;
-      font-weight: bold !important;
-      color: #1b5e20 !important;
-      position: sticky;
-      bottom: 0;
-      z-index: 2;
-    }
-    .table-footer-row td {
-      border-top: 2px solid #1b5e20 !important;
-      font-weight: bold !important;
-      background-color: #dcedc8 !important;
-      font-size: 8.5pt !important;
-      padding: 3px 2px !important;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery &amp; Aging</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:12px;max-width:100%;overflow-x:auto}
+  .tabs button{min-height:40px;padding:6px 16px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .flt{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}.flt .wide{grid-column:1/-1}
+  @media(min-width:900px){.flt{grid-template-columns:1.6fr 1fr 1fr auto}.flt .wide{grid-column:auto}}
+  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+  .stat.bad b{color:var(--danger)}
+  .head,.row{display:grid;align-items:center;gap:10px;grid-template-columns:minmax(190px,2.2fr) 1fr 90px 105px 105px 105px 96px}
+  .head{padding:0 14px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.head .r,.row .r{text-align:right}
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 14px;margin-bottom:6px;cursor:pointer;box-shadow:var(--shadow)}
+  .row:hover,.row:focus-visible{border-color:var(--brand)}.row b{display:block;line-height:1.25}.row small{color:var(--muted)}.num{font-variant-numeric:tabular-nums}
+  .act{display:flex;gap:6px;justify-content:flex-end}.act button{width:38px;height:38px;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:16px}.act button:disabled{opacity:.35}
+  .late{color:var(--danger);font-weight:700}.warn{color:var(--warn);font-weight:700}
+  .sumtab{margin-bottom:14px}
+  @media(max-width:899px){
+    .head{display:none}
+    .row{grid-template-columns:1fr auto;grid-template-areas:"n a" "m t"}.row .n{grid-area:n}.row .a{grid-area:a;text-align:right}.row .m{grid-area:m;font-size:12px;color:var(--muted)}.row .t{grid-area:t}
+    .row .c1,.row .c2,.row .c3,.row .c4,.row .cm{display:none}
+  }
+  @media(min-width:900px){.row .m,.row .a,.row .t{display:none}}
+  @media print{.page>*:not(#body):not(.stats):not(.appbar){display:none!important}.act{display:none}}
+</style>
 </head>
 <body>
+<main class="page">
+  <header class="appbar"><div><h1>Recovery &amp; Aging</h1><p id="sub">Who has to pay, how late, and what was recovered</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnPrint">Print</button><button class="btn ghost" id="btnCsv">Export</button></div></header>
+  <div class="tabs" role="tablist"><button role="tab" id="tDue" aria-selected="true">To collect</button><button role="tab" id="tAge" aria-selected="false">Aging</button><button role="tab" id="tDay" aria-selected="false">Recovered</button></div>
 
-  <div class="container">
-    <button class="floating-mobile-toggle" onclick="toggleMobileView()" id="mobileToggleBtn" title="Switch to Mobile View">
-      <i class="fa fa-mobile-alt" id="toggleIcon"></i>
-    </button>
+  <section class="card flt">
+    <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Name, CAF or mobile" autocomplete="off"></div>
+    <div><label>CRO</label><select id="fCro"></select></div>
+    <div id="gSort"><label>Sort</label><select id="fSort"><option value="over">Most overdue</option><option value="old">Oldest unpaid</option><option value="name">Name A-Z</option></select></div>
+    <div id="gFrom" hidden><label>From</label><input type="date" id="dFrom"></div><div id="gTo" hidden><label>To</label><input type="date" id="dTo"></div>
+  </section>
+  <div id="chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" hidden>
+    <button class="chip" data-b="" aria-pressed="true">All</button><button class="chip" data-b="late_1_month" aria-pressed="false">1 month late</button>
+    <button class="chip" data-b="late_2_months" aria-pressed="false">2 months late</button><button class="chip" data-b="late_3_plus" aria-pressed="false">3+ months late</button></div>
 
-    <h2>Al-Meezan Electronics - Customer Aging Report (Supabase)</h2>
-    
-    <div class="filters-grid">
-      <div class="input-group">
-        <label>START DATE</label>
-        <input type="date" id="startDateInput">
-      </div>
-      <div class="input-group">
-        <label>END DATE</label>
-        <input type="date" id="endDateInput">
-      </div>
-      <div class="input-group">
-        <label>ACCOUNT NO</label>
-        <input type="text" id="searchAccInput" placeholder="Acc No..." inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="input-group">
-        <label>ACCOUNT TITLE / NAME</label>
-        <input type="text" id="searchTitleInput" placeholder="Name / Title..." inputmode="text">
-      </div>
-      <div class="input-group">
-        <label>MOBILE NO</label>
-        <input type="text" id="searchMobileInput" placeholder="Mobile No..." inputmode="tel" pattern="[0-9]*">
-      </div>
-      <div class="input-group">
-        <label>START FROM ACCT</label>
-        <input type="text" id="startFromAcctInput" placeholder="From Acc No..." inputmode="numeric" pattern="[0-9]*">
-      </div>
-      <div class="button-group">
-        <button onclick="fetchAndFilterData(true)" title="Reload Data"><i class="fa fa-sync"></i></button>
-        <button class="secondary" onclick="resetFilters()" title="Reset"><i class="fa fa-redo"></i></button>
-        <button class="excel-btn" onclick="exportToExcel()" title="Export to Excel"><i class="fa fa-file-excel"></i></button>
-        <button class="secondary" onclick="printReport()" title="Print"><i class="fa fa-print"></i></button>
-      </div>
-    </div>
+  <section class="stats four" id="stats"></section>
+  <section id="body"></section>
+  <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
+</main>
 
-    <div id="loadingContainer">
-      <div class="spinner"></div>
-      <div id="loadingMsg">Fetching aging records from Supabase... Please wait.</div>
-    </div>
+<dialog id="dlg" class="sheet"><div class="sh-head"><div><h2 id="dT"></h2><p id="dS"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body" id="dB"></div>
+  <div class="sh-foot"><a class="btn ghost" id="dLed" style="display:inline-grid;place-items:center;text-decoration:none">Ledger</a><button class="btn ghost" id="dWa">WhatsApp</button><button class="btn" data-close>Close</button></div></dialog>
 
-    <div class="table-container">
-      <table id="reportTable">
-        <thead>
-          <tr class="sticky-header" id="mainHeaderRow">
-            <th class="col-accNo">Acct Num</th>
-            <th class="col-accTitle">Acct Title</th>
-            <th class="col-approvedBy">Aprv by</th>
-            <th class="col-cro">CRO</th>
-            <th class="col-mobile">Mobile Nu</th>
-            <th class="col-monthlyInst">M Inst</th>
-            <th class="col-remarks">Remarks</th>
-            <th class="col-cmd">CMD</th>
-            <th class="col-plan">Plan</th>
-            <th class="col-totalSales">Total Sale</th>
-            <th class="col-totalReceived">Total Paid</th>
-            <th class="col-balance">T Balance</th>
-            <th class="col-lpd">LPD</th>
-            <th class="col-lpAmount">L.Pamount</th>
-            <th class="col-deliveryDate">Deliv Date</th>
-            <th class="col-endingMonth">End</th>
-            <th class="col-product">Product</th>
-            <th class="col-m4" id="thM4">M-4</th>
-            <th class="col-m3" id="thM3">M-3</th>
-            <th class="col-m2" id="thM2">M-2</th>
-            <th class="col-m1" id="thM1">M-1</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr>
-            <td colspan="21" style="text-align: center; color: #777; padding: 15px;">Loading aging report from Supabase...</td>
-          </tr>
-        </tbody>
-        <tfoot id="tableFooter"></tfoot>
-      </table>
-    </div>
-  </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
+const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
+let ROWS = [], REC = [], tab = "due", bucket = "", shown = 60, cur = null, VIEW = [];
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
+const late = r => N(r.overdue_amt), toCollect = r => N(r.overdue_amt) + N(r.due_this_month);
 
-  <script>
-    const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+async function load() {
+  $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(3);
+  try {
+    const [ag, cb] = await Promise.all([ERP.db.aging(), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    ROWS = ag.map(a => ({ ...a, ...(m.get(String(a.account_no).trim()) || {}), account_no: a.account_no }));
+    const cros = [...new Set(ROWS.map(r => r.cro).filter(Boolean))].sort(); const v = $("fCro").value;
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+  } catch (e) { $("body").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/08_installments.sql if this mentions v_customer_aging.</small></div>`; }
+}
+async function loadDay() {
+  $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div></div>';
+  try { const [rc, cb] = await Promise.all([ERP.db.receipts.list({ from: $("dFrom").value, to: $("dTo").value }), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    REC = rc.map(r => ({ ...r, cro: (m.get(String(r.account_no).trim()) || {}).cro || "(none)" })); const cros = [...new Set(REC.map(r => r.cro))].sort(); const v = $("fCro").value;
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+  } catch (e) { $("body").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+}
+const match = r => { const q = $("q").value.trim().toLowerCase(), c = $("fCro").value; return (!c || r.cro === c) && (!q || [r.account_no, r.account_title, r.mobile_number, r.voucher_no].join(" ").toLowerCase().includes(q)); };
 
-    let globalResponse = null;
+function render() { shown = 60; tab === "day" ? renderDay() : tab === "age" ? renderAge() : renderDue(); }
+function sorted(rows) { const s = $("fSort").value; return rows.sort(s === "name" ? (a, b) => String(a.account_title).localeCompare(String(b.account_title)) : s === "old" ? (a, b) => String(a.oldest_unpaid_month || "9").localeCompare(String(b.oldest_unpaid_month || "9")) : (a, b) => late(b) - late(a) || N(b.due_this_month) - N(a.due_this_month)); }
+const stat = (l, v, c) => `<div class="stat ${c || ""}"><small>${l}</small><b>${v}</b></div>`;
+function waUrl(r) { let d = digits(r.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const o = late(r), t = N(r.due_this_month);
+  const msg = `Assalam o Alaikum ${r.account_title}, CAF ${r.account_no} ki ${o > 0 ? "pichli qist ka Rs " + M(o) + " baqi hai" : ""}${o > 0 && t > 0 ? " aur " : ""}${t > 0 ? "is mahine ki qist Rs " + M(t) + " hai" : ""}. Meherbani karke ada kar dein. Shukriya - Al Meezan`;
+  return `https://wa.me/${d}?text=${encodeURIComponent(msg)}`; }
 
-    function toggleMobileView() {
-      document.body.classList.toggle('mobile-mode');
-      const isMobile = document.body.classList.contains('mobile-mode');
-      const icon = document.getElementById('toggleIcon');
-      const btn = document.getElementById('mobileToggleBtn');
-      if (isMobile) {
-        icon.className = "fa fa-desktop";
-        btn.title = 'Switch to Desktop View';
-      } else {
-        icon.className = "fa fa-mobile-alt";
-        btn.title = 'Switch to Mobile View';
-      }
-    }
+function listHtml(rows, cols) {
+  return `<div class="head"><span>Customer</span><span>CRO</span><span class="r">Late by</span>${cols.map(c => `<span class="r">${c[0]}</span>`).join("")}<span></span></div>`
+  + rows.slice(0, shown).map(r => { const ml = N(r.overdue_months), has = digits(r.mobile_number);
+    return `<article class="row" data-a="${E(r.account_no)}" tabindex="0"><div class="n"><b>${E(r.account_title)}</b><small>CAF ${E(r.account_no)} · ${E(r.mobile_number)}</small></div><div class="cm">${E(r.cro)}</div>
+      <div class="r c1 num ${ml ? "late" : ""}">${ml ? ml + " mo" : "-"}</div>${cols.map((c, i) => `<div class="r c${i + 2} num ${c[2] || ""}">${N(r[c[1]]) ? M(r[c[1]]) : "-"}</div>`).join("")}
+      <div class="a num ${late(r) ? "late" : "warn"}">Rs ${M(toCollect(r))}</div><div class="m">${E(r.cro)}${ml ? " · " + ml + " months late" : ""}</div>
+      <div class="act"><button data-act="wa" ${has ? "" : "disabled"} title="WhatsApp">💬</button><button data-act="call" ${has ? "" : "disabled"} title="Call">📞</button></div></article>`; }).join("")
+  || '<div class="empty">Nothing here. 🎉</div>';
+}
+function renderDue() {
+  let rows = sorted(ROWS.filter(r => match(r) && toCollect(r) > 0)); VIEW = rows;
+  $("stats").innerHTML = stat("Customers to collect from", M(rows.length)) + stat("Overdue (earlier months)", "Rs " + M(rows.reduce((s, r) => s + late(r), 0)), "bad") + stat("Due this month", "Rs " + M(rows.reduce((s, r) => s + N(r.due_this_month), 0))) + stat("Total to collect", "Rs " + M(rows.reduce((s, r) => s + toCollect(r), 0)));
+  $("sub").textContent = new Date().toLocaleString("en", { month: "long", year: "numeric" });
+  $("body").innerHTML = listHtml(rows, [["Overdue", "overdue_amt", "late"], ["This month", "due_this_month"], ["Oldest", "oldest_unpaid_month"]].map(c => c)); fixOldest(); more(rows.length);
+}
+function fixOldest() { document.querySelectorAll("#body .row").forEach(el => { const r = ROWS.find(x => String(x.account_no) === el.dataset.a), c = el.querySelector(".c4"); if (c) c.textContent = r && r.oldest_unpaid_month ? mon(r.oldest_unpaid_month) : "-"; }); }
+function renderAge() {
+  let rows = sorted(ROWS.filter(r => match(r) && late(r) > 0 && (!bucket || N(r[bucket]) > 0))); VIEW = rows;
+  const sum = k => rows.reduce((s, r) => s + N(r[k]), 0), cro = new Map();
+  rows.forEach(r => { const k = r.cro || "(none)", o = cro.get(k) || cro.set(k, { n: 0, a: 0, b: 0, c: 0 }).get(k); o.n++; o.a += N(r.late_1_month); o.b += N(r.late_2_months); o.c += N(r.late_3_plus); });
+  $("stats").innerHTML = stat("1 month late", "Rs " + M(sum("late_1_month")), "") + stat("2 months late", "Rs " + M(sum("late_2_months")), "") + stat("3+ months late", "Rs " + M(sum("late_3_plus")), "bad") + stat("Total overdue", "Rs " + M(sum("overdue_amt")), "bad");
+  $("sub").textContent = `${M(rows.length)} customers overdue`;
+  const t = `<div class="table-wrap sumtab"><table style="min-width:520px"><thead><tr><th>CRO</th><th class="num">Customers</th><th class="num">1 month</th><th class="num">2 months</th><th class="num">3+ months</th><th class="num">Total</th></tr></thead><tbody>${[...cro].sort().map(([k, o]) => `<tr><td>${E(k)}</td><td class="num">${o.n}</td><td class="num">${M(o.a)}</td><td class="num">${M(o.b)}</td><td class="num late">${M(o.c)}</td><td class="num"><b>${M(o.a + o.b + o.c)}</b></td></tr>`).join("")}</tbody></table></div>`;
+  $("body").innerHTML = (rows.length ? t : "") + listHtml(rows, [["1 month", "late_1_month"], ["2 months", "late_2_months"], ["3+ months", "late_3_plus", "late"]]); more(rows.length);
+}
+function renderDay() {
+  const rows = REC.filter(match); VIEW = rows; const tot = rows.reduce((s, r) => s + N(r.amount), 0), by = (k) => { const m = new Map(); rows.forEach(r => m.set(r[k] || "(none)", (m.get(r[k] || "(none)") || 0) + N(r.amount))); return [...m].sort((a, b) => b[1] - a[1]); };
+  $("stats").innerHTML = stat("Total recovered", "Rs " + M(tot)) + stat("Receipts", M(rows.length)) + stat("Cash / bank accounts", M(by("pay_mode").length)) + stat("CROs", M(by("cro").length));
+  $("sub").textContent = `${$("dFrom").value} to ${$("dTo").value}`;
+  const tb = (t, a) => `<div class="table-wrap sumtab" style="flex:1;min-width:240px"><table style="min-width:0"><thead><tr><th>${t}</th><th class="num">Amount</th></tr></thead><tbody>${a.map(([k, v]) => `<tr><td>${E(k)}</td><td class="num"><b>${M(v)}</b></td></tr>`).join("")}</tbody></table></div>`;
+  $("body").innerHTML = (rows.length ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${tb("By CRO", by("cro"))}${tb("By account", by("pay_mode"))}</div>` : "")
+    + `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Account</th><th>Customer</th><th>CRO</th><th>Mode</th><th class="num">Amount</th></tr></thead><tbody>${rows.slice(0, shown).map(r => `<tr><td>${E(r.date)}</td><td>${E(r.voucher_no)}</td><td>${E(r.account_no)}</td><td>${E(r.account_title)}</td><td>${E(r.cro)}</td><td>${E(r.pay_mode)}</td><td class="num"><b>${M(r.amount)}</b></td></tr>`).join("") || '<tr><td colspan="7" class="empty">No receipts in this period.</td></tr>'}</tbody></table></div>`;
+  more(rows.length);
+}
+function more(n) { $("more").hidden = n <= shown; $("more").textContent = `Show more (${M(n - shown)} remaining)`; }
+$("more").onclick = () => { shown += 60; tab === "day" ? renderDay() : tab === "age" ? renderAge() : (renderDue()); };
 
-    function parseCustomDate(dateString) {
-      if (!dateString) return null;
-      if (dateString instanceof Date) return isNaN(dateString.getTime()) ? null : dateString;
-      let str = String(dateString).trim();
-      if (!str) return null;
-      let isoMatch = str.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})/);
-      if (isoMatch) {
-        return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
-      }
-      let d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    }
+/* ---------- row actions ---------- */
+$("body").onclick = async e => { const row = e.target.closest(".row"); if (!row) return; const r = ROWS.find(x => String(x.account_no) === row.dataset.a), act = e.target.closest("[data-act]");
+  if (act) { e.stopPropagation(); return act.dataset.act === "wa" ? window.open(waUrl(r), "_blank", "noopener") : (location.href = "tel:" + digits(r.mobile_number)); }
+  cur = r; $("dT").textContent = r.account_title; $("dS").textContent = `CAF ${r.account_no} · ${r.mobile_number || ""} · CRO ${r.cro || "-"}`; $("dLed").href = "LedgerView.html?accNo=" + encodeURIComponent(r.account_no);
+  $("dWa").disabled = !digits(r.mobile_number); $("dB").innerHTML = '<div class="skeleton"></div>'; $("dlg").showModal();
+  try { const s = await ERP.db.schedule(r.account_no);
+    $("dB").innerHTML = `<div class="stats" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">${stat("Balance", "Rs " + M(r.balance))}${stat("Overdue", "Rs " + M(r.overdue_amt), "bad")}${stat("This month", "Rs " + M(r.due_this_month))}</div>
+      <div class="table-wrap"><table style="min-width:380px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th>Status</th></tr></thead><tbody>${s.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("")}</tbody></table></div>`;
+  } catch (er) { $("dB").innerHTML = `<div class="empty">${E(er.message)}</div>`; } };
+$("body").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("row")) e.target.click(); };
+$("dWa").onclick = () => cur && window.open(waUrl(cur), "_blank", "noopener");
 
-    function formatDateDDMMYY(dateString) {
-      let d = parseCustomDate(dateString);
-      if (!d) return String(dateString || '');
-      let day = String(d.getDate()).padStart(2, '0');
-      let month = String(d.getMonth() + 1).padStart(2, '0');
-      let year = String(d.getFullYear()).slice(-2);
-      return `${day}-${month}-${year}`;
-    }
-
-    function formatMonthYearName(dateObj) {
-      if (!dateObj || isNaN(dateObj.getTime())) return '';
-      let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      return `${months[dateObj.getMonth()]}-${String(dateObj.getFullYear()).slice(-2)}`;
-    }
-
-    async function fetchAndFilterData(forceReload = false) {
-      if (globalResponse !== null && !forceReload) {
-        applySearchFilter();
-        return;
-      }
-
-      let loadingContainer = document.getElementById('loadingContainer');
-      let loadingMsg = document.getElementById('loadingMsg');
-      if (loadingContainer) loadingContainer.style.display = 'block';
-      if (loadingMsg) loadingMsg.innerText = "Fetching aging records from Supabase... Please wait.";
-
-      try {
-        let [custRes, salesRes, receiptsRes] = await Promise.all([
-          _supabase.from('customers').select('*'),
-          _supabase.from('sales').select('*'),
-          _supabase.from('receipts').select('*')
-        ]);
-
-        if (custRes.error) throw custRes.error;
-        if (salesRes.error) throw salesRes.error;
-        if (receiptsRes.error) throw receiptsRes.error;
-
-        let customers = custRes.data || [];
-        let sales = salesRes.data || [];
-        let receipts = receiptsRes.data || [];
-
-        // Map sales by account number (handling all possible column names)
-        let salesMap = {};
-        sales.forEach(s => {
-          let acc = String(s.account_no || s.acc_no || s.accountNo || '').trim();
-          if (!salesMap[acc]) salesMap[acc] = [];
-          salesMap[acc].push(s);
-        });
-
-        // Map receipts by account number
-        let receiptsMap = {};
-        receipts.forEach(r => {
-          let acc = String(r.account_no || r.acc_no || r.accountNo || '').trim();
-          if (!receiptsMap[acc]) receiptsMap[acc] = [];
-          receiptsMap[acc].push(r);
-        });
-
-        let agingRows = customers.map(cust => {
-          let accNo = String(cust.account_no || cust.acc_no || cust.accountNo || '').trim();
-          let custSales = salesMap[accNo] || [];
-          let custReceipts = receiptsMap[accNo] || [];
-
-          let primarySale = custSales[0] || {};
-          
-          // Total Sales calculation from sales table or customer table
-          let totalSales = custSales.reduce((sum, s) => sum + (parseFloat(s.total_amt || s.total_amount || s.amount || s.totalSales) || 0), 0);
-          if (totalSales === 0) {
-            totalSales = parseFloat(cust.total_amt || cust.total_amount || cust.totalSales || 0);
-          }
-
-          let planMonths = parseInt(primarySale.plan_months || primarySale.plan || cust.plan_months || cust.plan || 12, 10);
-          let monthlyInst = parseFloat(primarySale.installment_per_month || primarySale.monthlyInst || cust.installment_per_month || cust.monthlyInst || 0);
-          
-          if (monthlyInst === 0 && planMonths > 0 && totalSales > 0) {
-            monthlyInst = Math.round(totalSales / planMonths);
-          }
-
-          let deliveryDate = primarySale.date || primarySale.delivery_date || cust.delivery_date || cust.date || '';
-          let productDesc = [primarySale.company_name, primarySale.product_category, primarySale.model].filter(Boolean).join(' ') || cust.product || cust.model || '';
-
-          let lpd = '';
-          let lpAmount = 0;
-          if (custReceipts.length > 0) {
-            custReceipts.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-            lpd = custReceipts[0].date || '';
-            lpAmount = parseFloat(custReceipts[0].amount || custReceipts[0].credit || 0);
-          }
-
-          return {
-            accNo: accNo,
-            accTitle: cust.account_title || cust.name || cust.accTitle || '',
-            approvedBy: cust.approved_by || cust.salesman || cust.approvedBy || '',
-            cro: cust.cro || cust.sub_salesman || '',
-            mobile: cust.mobile_number || cust.mobile || cust.phone || '',
-            monthlyInst: monthlyInst,
-            plan: planMonths,
-            totalSales: totalSales,
-            deliveryDate: deliveryDate,
-            product: productDesc,
-            lpd: lpd,
-            lpAmount: lpAmount,
-            ledger: custReceipts.map(r => ({
-              date: r.date,
-              credit: parseFloat(r.amount || r.credit || 0)
-            }))
-          };
-        });
-
-        globalResponse = { data: agingRows, monthHeaders: {} };
-        if (loadingContainer) loadingContainer.style.display = 'none';
-        applySearchFilter();
-
-      } catch (err) {
-        if (loadingContainer) loadingContainer.style.display = 'none';
-        let tbody = document.getElementById('tableBody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #d32f2f; padding: 15px;">Supabase Error: ${err.message || err}</td></tr>`;
-      }
-    }
-
-    function getPlanMonthsCount(row) {
-      let num = parseInt(row.plan, 10);
-      return isNaN(num) || num <= 0 ? 12 : num;
-    }
-
-    function calculateMonthlyInstallment(row) {
-      return Number(row.monthlyInst) || 0;
-    }
-
-    function calculateEndingMonthObject(row) {
-      let baseDate = parseCustomDate(row.deliveryDate);
-      if (!baseDate || isNaN(baseDate.getTime())) return null;
-      let planMonths = getPlanMonthsCount(row);
-      let endDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-      endDate.setMonth(endDate.getMonth() + (planMonths - 1));
-      return endDate;
-    }
-
-    function calculateEndingMonth(row) {
-      let endDate = calculateEndingMonthObject(row);
-      return !endDate ? '' : formatMonthYearName(endDate);
-    }
-
-    function getBenchmarkDate() {
-      let endDateVal = document.getElementById('endDateInput') ? document.getElementById('endDateInput').value : '';
-      if (endDateVal) {
-        let d = parseCustomDate(endDateVal);
-        if (d && !isNaN(d.getTime())) {
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-        }
-      }
-      let now = new Date();
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-    }
-
-    function getDynamicMonthPayments(row) {
-      let bench = getBenchmarkDate();
-      let bYear = bench.getFullYear();
-      let bMonth = bench.getMonth();
-
-      let m1Start = new Date(bYear, bMonth, 1, 0, 0, 0);
-      let m1End = bench;
-      let m2Start = new Date(bYear, bMonth - 1, 1, 0, 0, 0);
-      let m2End = new Date(bYear, bMonth, 0, 23, 59, 59);
-      let m3Start = new Date(bYear, bMonth - 2, 1, 0, 0, 0);
-      let m3End = new Date(bYear, bMonth - 1, 0, 23, 59, 59);
-      let m4Start = new Date(bYear, bMonth - 3, 1, 0, 0, 0);
-      let m4End = new Date(bYear, bMonth - 2, 0, 23, 59, 59);
-
-      let ledger = row.ledger || [];
-      let m1Amt = 0, m2Amt = 0, m3Amt = 0, m4Amt = 0;
-
-      ledger.forEach(p => {
-        let pDate = parseCustomDate(p.date);
-        let pAmt = Number(p.credit) || 0;
-        if (pDate && !isNaN(pDate.getTime())) {
-          if (pDate >= m1Start && pDate <= m1End) m1Amt += pAmt;
-          else if (pDate >= m2Start && pDate <= m2End) m2Amt += pAmt;
-          else if (pDate >= m3Start && pDate <= m3End) m3Amt += pAmt;
-          else if (pDate >= m4Start && pDate <= m4End) m4Amt += pAmt;
-        }
-      });
-
-      return { m4: m4Amt, m3: m3Amt, m2: m2Amt, m1: m1Amt };
-    }
-
-    function calculateDynamicTotalPaid(row) {
-      let ledger = row.ledger || [];
-      let bench = getBenchmarkDate();
-      let total = 0;
-      ledger.forEach(p => {
-        let pDate = parseCustomDate(p.date);
-        let pAmt = Number(p.credit) || 0;
-        if (pDate && !isNaN(pDate.getTime()) && pDate <= bench) {
-          total += pAmt;
-        }
-      });
-      return total;
-    }
-
-    function calculateDynamicBalance(row) {
-      return Math.max(0, (Number(row.totalSales) || 0) - calculateDynamicTotalPaid(row));
-    }
-
-    function calculateCMD(row) {
-      let tBal = calculateDynamicBalance(row);
-      if (tBal <= 0) return 0;
-      let inst = calculateMonthlyInstallment(row);
-      if (inst <= 0) return tBal;
-
-      let benchDate = getBenchmarkDate();
-      let endDt = calculateEndingMonthObject(row);
-      if (!endDt) return Math.min(inst, tBal);
-
-      let remainingMonths = ((endDt.getFullYear() - benchDate.getFullYear()) * 12) + (endDt.getMonth() - benchDate.getMonth()) + 1;
-      if (remainingMonths <= 1) return tBal;
-
-      return tBal - (inst * (remainingMonths - 1));
-    }
-
-    function applySearchFilter() {
-      if (!globalResponse || !globalResponse.data) return;
-      let startDate = document.getElementById('startDateInput').value;
-      let endDate = document.getElementById('endDateInput').value;
-      let accQuery = document.getElementById('searchAccInput').value.toLowerCase().trim();
-      let titleQuery = document.getElementById('searchTitleInput').value.toLowerCase().trim();
-      let mobileQuery = document.getElementById('searchMobileInput').value.toLowerCase().trim();
-      let startFromAcctQuery = document.getElementById('startFromAcctInput').value.toLowerCase().trim();
-
-      let filtered = globalResponse.data.filter(row => {
-        if (startDate || endDate) {
-          let dDate = parseCustomDate(row.deliveryDate);
-          if (!dDate) return false;
-          if (startDate && dDate < parseCustomDate(startDate)) return false;
-          if (endDate && dDate > parseCustomDate(endDate)) return false;
-        }
-
-        if (accQuery && !String(row.accNo || '').toLowerCase().includes(accQuery)) return false;
-        if (titleQuery && !String(row.accTitle || '').toLowerCase().includes(titleQuery)) return false;
-        if (mobileQuery && !String(row.mobile || '').toLowerCase().includes(mobileQuery)) return false;
-
-        if (startFromAcctQuery) {
-          if ((parseFloat(row.accNo) || 0) < (parseFloat(startFromAcctQuery) || 0)) return false;
-        }
-        return true;
-      });
-
-      renderTableRows(filtered);
-    }
-
-    function getDynamicMonthLabels() {
-      let bench = getBenchmarkDate();
-      return {
-        m1: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth(), 1)),
-        m2: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 1, 1)),
-        m3: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 2, 1)),
-        m4: formatMonthYearName(new Date(bench.getFullYear(), bench.getMonth() - 3, 1))
-      };
-    }
-
-    let currentFilteredData = [];
-
-    function renderTableRows(data) {
-      let tbody = document.getElementById('tableBody');
-      let tfoot = document.getElementById('tableFooter');
-      let dynLabels = getDynamicMonthLabels();
-
-      document.getElementById('thM4').innerText = dynLabels.m4;
-      document.getElementById('thM3').innerText = dynLabels.m3;
-      document.getElementById('thM2').innerText = dynLabels.m2;
-      document.getElementById('thM1').innerText = dynLabels.m1;
-
-      currentFilteredData = data;
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="21" style="text-align: center; color: #777; padding: 10px;">No records found.</td></tr>`;
-        tfoot.innerHTML = ``;
-        return;
-      }
-
-      let html = "";
-      let sumInst = 0, sumSales = 0, sumPaid = 0, sumBal = 0, sumLpAmt = 0, sumM4 = 0, sumM3 = 0, sumM2 = 0, sumM1 = 0, sumCmd = 0;
-
-      data.forEach(row => {
-        let tBal = calculateDynamicBalance(row);
-        let inst = calculateMonthlyInstallment(row);
-        let planNum = getPlanMonthsCount(row);
-        let approvedVal = row.approvedBy || '';
-        let endVal = calculateEndingMonth(row);
-        let prodVal = row.product || '';
-        let lpdVal = formatDateDDMMYY(row.lpd);
-        let lpAmt = Number(row.lpAmount) || 0;
-        let mPmts = getDynamicMonthPayments(row);
-        let totalSales = Number(row.totalSales) || 0;
-        let totalPaid = calculateDynamicTotalPaid(row);
-        let formattedDate = formatDateDDMMYY(row.deliveryDate);
-        let cmd = calculateCMD(row);
-
-        sumInst += inst; sumSales += totalSales; sumPaid += totalPaid; sumBal += tBal; sumLpAmt += lpAmt;
-        sumM4 += mPmts.m4; sumM3 += mPmts.m3; sumM2 += mPmts.m2; sumM1 += mPmts.m1; sumCmd += cmd;
-
-        html += `<tr>
-          <td class="col-accNo"><span class="account-link" onclick="openLedgerNewTab('${row.accNo}')">${row.accNo || ''}</span></td>
-          <td class="col-accTitle">${row.accTitle || ''}</td>
-          <td class="col-approvedBy">${approvedVal}</td>
-          <td class="col-cro">${row.cro || ''}</td>
-          <td class="col-mobile">${row.mobile || ''}</td>
-          <td class="col-monthlyInst" style="text-align: right;">${inst || ''}</td>
-          <td class="col-remarks"></td>
-          <td class="col-cmd" style="text-align: right;">${cmd || ''}</td>
-          <td class="col-plan" style="text-align: center;">${planNum || ''}</td>
-          <td class="col-totalSales" style="text-align: right;">${totalSales || ''}</td>
-          <td class="col-totalReceived" style="text-align: right;">${totalPaid || ''}</td>
-          <td class="col-balance" style="text-align: right; color: #b71c1c;">${tBal || ''}</td>
-          <td class="col-lpd">${lpdVal}</td>
-          <td class="col-lpAmount" style="text-align: right;">${lpAmt || ''}</td>
-          <td class="col-deliveryDate">${formattedDate}</td>
-          <td class="col-endingMonth">${endVal}</td>
-          <td class="col-product">${prodVal}</td>
-          <td class="col-m4" style="text-align: right;">${mPmts.m4 || ''}</td>
-          <td class="col-m3" style="text-align: right;">${mPmts.m3 || ''}</td>
-          <td class="col-m2" style="text-align: right;">${mPmts.m2 || ''}</td>
-          <td class="col-m1" style="text-align: right;">${mPmts.m1 || ''}</td>
-        </tr>`;
-      });
-
-      tbody.innerHTML = html;
-      tfoot.innerHTML = `<tr class="table-footer-row">
-        <td class="col-accNo" style="text-align:center;">Total</td>
-        <td class="col-accTitle">(${data.length} Accts)</td>
-        <td class="col-approvedBy"></td><td class="col-cro"></td><td class="col-mobile"></td>
-        <td class="col-monthlyInst" style="text-align: right;">${sumInst}</td>
-        <td class="col-remarks"></td>
-        <td class="col-cmd" style="text-align: right;">${sumCmd}</td>
-        <td class="col-plan"></td>
-        <td class="col-totalSales" style="text-align: right;">${sumSales}</td>
-        <td class="col-totalReceived" style="text-align: right;">${sumPaid}</td>
-        <td class="col-balance" style="text-align: right;">${sumBal}</td>
-        <td class="col-lpd"></td>
-        <td class="col-lpAmount" style="text-align: right;">${sumLpAmt || ''}</td>
-        <td class="col-deliveryDate"></td><td class="col-endingMonth"></td><td class="col-product"></td>
-        <td class="col-m4" style="text-align: right;">${sumM4}</td>
-        <td class="col-m3" style="text-align: right;">${sumM3}</td>
-        <td class="col-m2" style="text-align: right;">${sumM2}</td>
-        <td class="col-m1" style="text-align: right;">${sumM1}</td>
-      </tr>`;
-    }
-
-    function exportToExcel() {
-      if (!currentFilteredData.length) return alert("No data to export!");
-      let dynLabels = getDynamicMonthLabels();
-      let excelHTML = `<table><thead><tr><th>Acct Num</th><th>Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th>M Inst</th><th>Remarks</th><th>CMD</th><th>Plan</th><th>Total Sale</th><th>Total Paid</th><th>T Balance</th><th>LPD</th><th>L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th><th>${dynLabels.m4}</th><th>${dynLabels.m3}</th><th>${dynLabels.m2}</th><th>${dynLabels.m1}</th></tr></thead><tbody>`;
-      
-      currentFilteredData.forEach(row => {
-        let mPmts = getDynamicMonthPayments(row);
-        excelHTML += `<tr><td>${row.accNo || ''}</td><td>${row.accTitle || ''}</td><td>${row.approvedBy || ''}</td><td>${row.cro || ''}</td><td>${row.mobile || ''}</td><td>${calculateMonthlyInstallment(row)}</td><td></td><td>${calculateCMD(row)}</td><td>${getPlanMonthsCount(row)}</td><td>${row.totalSales || 0}</td><td>${calculateDynamicTotalPaid(row)}</td><td>${calculateDynamicBalance(row)}</td><td>${formatDateDDMMYY(row.lpd)}</td><td>${row.lpAmount || ''}</td><td>${formatDateDDMMYY(row.deliveryDate)}</td><td>${calculateEndingMonth(row)}</td><td>${row.product || ''}</td><td>${mPmts.m4}</td><td>${mPmts.m3}</td><td>${mPmts.m2}</td><td>${mPmts.m1}</td></tr>`;
-      });
-      excelHTML += `</tbody></table>`;
-
-      let blob = new Blob([excelHTML], { type: 'application/vnd.ms-excel' });
-      let a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'Customer_Aging_Report.xls';
-      a.click();
-    }
-
-    function openLedgerNewTab(accNo) {
-      if (!accNo) return alert('Account number is missing!');
-      window.open(`CustomerLedgerView.html?accNo=${encodeURIComponent(accNo)}`, '_blank');
-    }
-
-    function resetFilters() {
-      ['startDateInput', 'endDateInput', 'searchAccInput', 'searchTitleInput', 'searchMobileInput', 'startFromAcctInput'].forEach(id => document.getElementById(id).value = '');
-      if (globalResponse && globalResponse.data) renderTableRows(globalResponse.data);
-    }
-
-    function printReport() {
-      setTimeout(() => window.print(), 300);
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchAndFilterData();
-      ['startDateInput', 'endDateInput'].forEach(id => document.getElementById(id).addEventListener('change', applySearchFilter));
-      ['searchAccInput', 'searchTitleInput', 'searchMobileInput', 'startFromAcctInput'].forEach(id => document.getElementById(id).addEventListener('input', applySearchFilter));
-    });
-  </script>
+/* ---------- tabs & filters ---------- */
+function setTab(t) { tab = t; ["Due", "Age", "Day"].forEach(x => $("t" + x).setAttribute("aria-selected", x.toLowerCase() === t)); $("gSort").hidden = t === "day"; $("gFrom").hidden = $("gTo").hidden = t !== "day"; $("chips").hidden = t !== "age"; $("q").value = ""; t === "day" ? loadDay() : (ROWS.length ? render() : load()); }
+$("tDue").onclick = () => setTab("due"); $("tAge").onclick = () => setTab("age"); $("tDay").onclick = () => setTab("day");
+$("chips").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; bucket = b.dataset.b; $("chips").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); render(); };
+$("q").oninput = ERP.ui.debounce(render, 200); $("fCro").onchange = $("fSort").onchange = render; $("dFrom").onchange = $("dTo").onchange = loadDay;
+$("btnPrint").onclick = () => { shown = 1e9; render(); window.print(); };
+$("btnCsv").onclick = () => ERP.ui.downloadCSV("recovery_" + tab + "_" + ERP.ui.today() + ".csv", tab === "day" ? VIEW.map(r => ({ date: r.date, receipt: r.voucher_no, account: r.account_no, customer: r.account_title, cro: r.cro, mode: r.pay_mode, amount: r.amount }))
+  : VIEW.map(r => ({ account: r.account_no, customer: r.account_title, mobile: r.mobile_number, cro: r.cro, overdue: r.overdue_amt, overdue_months: r.overdue_months, due_this_month: r.due_this_month, late_1: r.late_1_month, late_2: r.late_2_months, late_3_plus: r.late_3_plus, balance: r.balance })));
+(async () => { await ERP.auth.guard(); $("dFrom").value = $("dTo").value = ERP.ui.today(); load(); })();
+</script>
 </body>
 </html>
