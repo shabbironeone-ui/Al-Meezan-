@@ -33,7 +33,7 @@
     .shell-nav{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);transition:transform .2s}
     body.open .shell-nav{transform:none}
     body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
-    .burger{display:inline-block}.who,#newtab{display:none}
+    .burger{display:inline-block}.who,#newtab,#recBtn{display:none}
     .bottom-bar{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
     .bottom-bar button{flex:1;min-height:58px;background:none;border:0;border-top:3px solid transparent;font:inherit;font-size:11px;color:var(--muted);cursor:pointer}
     .bottom-bar button[aria-current="page"]{border-top-color:var(--brand);color:var(--brand-dark);font-weight:700}
@@ -52,6 +52,7 @@
   <header class="topbar">
     <button class="btn ghost burger" id="burger" aria-label="Open menu">☰</button>
     <button class="btn ghost" id="homeBtn" hidden title="Back to Home">🏠 Home</button>
+    <button class="btn" id="recBtn" title="Enter a receipt">💵 Receipt</button>
     <h1 id="title">Home</h1>
     <span class="who no-print" id="who"></span>
     <button class="btn ghost" id="logout" hidden>Logout</button>
@@ -70,12 +71,12 @@
 <script>
 /* Menu is data: add a page here and it appears in the sidebar, home tiles, bottom bar and routing. */
 const GROUPS = [
-  ["Sales & Customers", [["customer.html","👤","Customers"],["SalesForm.html","🛒","Sales"],["LedgerView.html","📒","Customer Ledger"]]],
-  ["Accounts", [["receipts.html","💵","Receipts"],["Accounts.html","📖","Accounts & Day Book"],["ReconciliationView.html","🔄","Reconciliation"]]],
+  ["Daily work", [["receipts.html","💵","Receipts"],["SalesForm.html","🛒","Sales"],["customer.html","👤","Customers"],["LedgerView.html","📒","Customer Ledger"]]],
+  ["Accounts", [["Accounts.html","📖","Accounts & Day Book"],["ReconciliationView.html","🔄","Reconciliation"]]],
   ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
   ["Reports", [["DashboardView.html","📈","Dashboard"],["Recovery.html","💰","Recovery & Aging"]]]
 ];
-const QUICK = ["customer.html","SalesForm.html","receipts.html","Accounts.html"];
+const QUICK = ["receipts.html","SalesForm.html","customer.html","Accounts.html"];
 const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
 const $ = id => document.getElementById(id);
 const mk = (cls, html, fn, key) => { const b = document.createElement("button"); b.className = cls || ""; b.innerHTML = html; b.dataset.p = key; b.onclick = fn; return b; };
@@ -121,7 +122,7 @@ $("frame").onload = () => { try { const w = $("frame").contentWindow, f = w.loca
 
 $("burger").onclick = () => document.body.classList.add("open");
 $("scrim").onclick = () => document.body.classList.remove("open");
-$("homeBtn").onclick = () => go(null); $("brand").onclick = () => go(null);
+$("homeBtn").onclick = () => go(null); $("recBtn").onclick = () => go("receipts.html"); $("brand").onclick = () => go(null);
 $("newtab").onclick = () => { const t = location.hash.slice(1); if (ALL[t.split("?")[0]]) window.open(t, "_blank"); };
 $("logout").onclick = () => ERP.auth.signOut();
 (async () => {
