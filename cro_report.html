@@ -6,8 +6,7 @@
 <title>CRO Report</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .ctl{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
-  @media(min-width:900px){.ctl{grid-template-columns:1.2fr 150px 1fr 1fr 1fr}}
+  .ctl{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));padding:12px;align-items:end}.ctl .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chk{display:flex;gap:8px;align-items:center;min-height:var(--tap);cursor:pointer;font-weight:600;color:var(--muted)}.chk input{width:auto;min-height:0}
   .legend{font-size:12px;color:var(--muted);margin:0 0 8px}
   .grp{margin-bottom:22px}.gh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#e8edf3;border-radius:10px 10px 0 0;padding:8px 12px;font-weight:700}
@@ -33,10 +32,17 @@
     <div class="bar-actions"><button class="btn ghost" id="bCsv">Export</button><button class="btn" id="bPrint">🖨 Print</button></div></header>
   <section class="card ctl noprint">
     <div><label for="fCro">CRO</label><select id="fCro"></select></div>
+    <div><label for="fSort">Sort by</label><select id="fSort"><option value="acc" selected>Account number</option><option value="name">Name A-Z</option><option value="late">Most late first</option></select></div>
+    <div><label for="fQ">Search</label><input id="fQ" type="search" placeholder="Name, account, mobile, product" autocomplete="off"></div>
+    <div><label for="fStart">Start from account</label><input id="fStart" inputmode="numeric" placeholder="e.g. 7865250" autocomplete="off"></div>
+    <div><label for="fDateBy">Date filter on</label><select id="fDateBy"><option value="sale">Sale date (Deliv Date)</option><option value="lpd">Last payment date (LPD)</option></select></div>
+    <div><label for="fFrom">From date</label><input type="date" id="fFrom"></div>
+    <div><label for="fTo">To date</label><input type="date" id="fTo"></div>
+    <div><label>Remaining balance</label><div class="two"><select id="fBalOp"><option value="">Any</option><option value="lt">Less than</option><option value="gt">Greater than</option></select><input id="fBalVal" type="number" inputmode="decimal" placeholder="Rs"></div></div>
     <div><label for="fN">Months shown</label><select id="fN"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
     <label class="chk"><input type="checkbox" id="fCur"> Include current month</label>
     <label class="chk"><input type="checkbox" id="fDue"> Only customers with balance</label>
-    <div><label for="fSort">Sort</label><select id="fSort"><option value="name">Name A-Z</option><option value="acc">Account number</option><option value="late">Most late first</option></select></div>
+    <div><button class="btn ghost" id="bClear" style="width:100%">Clear filters</button></div>
   </section>
   <p class="legend legend-screen noprint">In the month columns: the amount received that month · <b>—</b> nothing received although an installment was due · <b>*</b> received less than the installment due. Advance and processing fee are not counted. <b>CMD</b> = everything pending until today (overdue + this month).</p>
   <div id="out"></div>
@@ -69,29 +75,47 @@ async function load() {
     rc.forEach(r => { const t = String(r.voucher_no || "").trim().toLowerCase(); if (t === "advance" || t === "processing fee") return; const k = String(r.account_no).trim() + "|" + String(r.date).slice(0, 7); REC.set(k, (REC.get(k) || 0) + N(r.amount)); });
     sch.forEach(r => DUE.set(String(r.account_no).trim() + "|" + String(r.due_month).slice(0, 7), N(r.due_amt)));
     const cros = [...new Set(BASE.map(c => c.cro).filter(Boolean))].sort(), v = $("fCro").value;
-    $("fCro").innerHTML = '<option value="">All CROs (each on its own page)</option>' + cros.map(c => `<option>${E(c)}</option>`).join("") + (BASE.some(c => !c.cro) ? '<option value="__none">(no CRO)</option>' : ""); $("fCro").value = v; render();
+    $("fCro").innerHTML = '<option value="">All (one list, with or without CRO)</option><option value="__sep">All CROs, each on its own page</option>' + cros.map(c => `<option>${E(c)}</option>`).join("") + (BASE.some(c => !c.cro) ? '<option value="__none">(no CRO)</option>' : ""); $("fCro").value = v; render();
   } catch (e) { $("out").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/13_cro_report.sql (and 08) if this mentions v_cro_base.</small></div>`; }
 }
+const digits = s => String(s || "").replace(/\D/g, "");
 function render() {
-  const c = $("fCro").value, onlyDue = $("fDue").checked, s = $("fSort").value;
-  let rows = BASE.filter(r => (!c || (c === "__none" ? !r.cro : r.cro === c)) && (!onlyDue || N(r.balance) > 0.5));
-  rows.sort(s === "acc" ? (a, b) => String(a.account_no).localeCompare(String(b.account_no)) : s === "late" ? (a, b) => N(b.overdue_amt) - N(a.overdue_amt) : (a, b) => String(a.account_title).localeCompare(String(b.account_title), undefined, { sensitivity: "base" }));
-  VIEW = rows; const g = new Map(); rows.forEach(r => { const k = r.cro || "(no CRO)"; (g.get(k) || g.set(k, []).get(k)).push(r); });
+  const c = $("fCro").value, onlyDue = $("fDue").checked, sort = $("fSort").value, q = $("fQ").value.trim().toLowerCase(), st = digits($("fStart").value),
+    by = $("fDateBy").value, df = $("fFrom").value, dt = $("fTo").value, op = $("fBalOp").value, bv = $("fBalVal").value, note = [];
+  if (c === "__none") note.push("no CRO"); else if (c && c !== "__sep") note.push("CRO " + c);
+  if (st) note.push("from account " + st); if (q) note.push("search “" + q + "”"); if (onlyDue) note.push("with balance only");
+  if (df || dt) note.push((by === "lpd" ? "last payment date " : "sale date ") + (df || "…") + " to " + (dt || "…"));
+  if (op && bv !== "") note.push("balance " + (op === "lt" ? "less than " : "greater than ") + M(bv));
+  const rows = BASE.filter(r => {
+    if (c && c !== "__sep" && (c === "__none" ? r.cro : r.cro !== c)) return false;
+    if (onlyDue && N(r.balance) <= 0.5) return false;
+    if (st && Number(digits(r.account_no)) < Number(st)) return false;                       // this account and everything after it
+    if (q && ![r.account_no, r.account_title, r.mobile_number, r.products, r.address, r.cro].join(" ").toLowerCase().includes(q)) return false;
+    if (df || dt) { const d = by === "lpd" ? r.lpd : r.sale_date; if (!d || (df && d < df) || (dt && d > dt)) return false; }
+    if (op && bv !== "") { const b = N(r.balance), v = Number(bv); if (!(op === "lt" ? b < v : b > v)) return false; }
+    return true; });
+  const an = r => Number(digits(r.account_no)) || 0;
+  rows.sort(sort === "name" ? (a, b) => String(a.account_title).localeCompare(String(b.account_title), undefined, { sensitivity: "base" }) : sort === "late" ? (a, b) => N(b.overdue_amt) - N(a.overdue_amt) || an(a) - an(b) : (a, b) => an(a) - an(b));
+  VIEW = rows; const g = new Map(), sep = c === "__sep";
+  rows.forEach(r => { const k = sep ? (r.cro || "(no CRO)") : (c === "__none" ? "No CRO" : c ? "CRO: " + c : "All customers"); (g.get(k) || g.set(k, []).get(k)).push(r); });
   const today = new Date().toLocaleDateString("en-GB"), head = `<tr><th>Acct Num</th><th>Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th class="n">M Inst</th><th>Remarks</th><th class="n">CMD</th><th class="n">Late</th><th class="n">Overdue</th><th class="n">Plan</th><th class="n">Total Sale</th><th class="n">Total Paid</th><th class="n">T Balance</th><th>LPD</th><th class="n">L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th>${MONTHS.map(m => `<th class="n">${E(m.label)}</th>`).join("")}</tr>`;
-  const sum = (a, f) => a.reduce((t, r) => t + f(r), 0);
-  $("sub").textContent = `${M(rows.length)} customers · ${today}`;
-  $("out").innerHTML = [...g].sort((x, y) => x[0].localeCompare(y[0])).map(([cro, rs]) => {
+  const sum = (a, f) => a.reduce((t, r) => t + f(r), 0), noteTxt = note.length ? " · " + note.join(" · ") : "";
+  $("sub").textContent = `${M(rows.length)} of ${M(BASE.length)} customers${noteTxt}`;
+  $("out").innerHTML = [...g].sort((x, y) => sep ? x[0].localeCompare(y[0]) : 0).map(([name, rs]) => {
     const mt = MONTHS.map(m => sum(rs, r => REC.get(String(r.account_no).trim() + "|" + m.key) || 0));
-    return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}</div>
-      <div class="gh"><span>CRO: ${E(cro)} <small>· ${M(rs.length)} customers</small></span><span><small>Balance</small> Rs ${M(sum(rs, r => N(r.balance)))} · <small>CMD</small> Rs ${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</span></div>
+    return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}${E(noteTxt)}</div>
+      <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Balance</small> Rs ${M(sum(rs, r => N(r.balance)))} · <small>CMD</small> Rs ${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</span></div>
       <div class="table-wrap"><table class="rep"><thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = N(r.overdue_amt) + N(r.due_this_month);
         return `<tr><td>${E(acc)}</td><td class="w"><b>${E(r.account_title)}</b>${r.address ? `<small>${E(String(r.address).slice(0, 45))}</small>` : ""}</td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}${r.guarantor_mobile ? `<small>G: ${E(r.guarantor_mobile)}</small>` : ""}</td>
           <td class="n">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm"></td><td class="n ${cmd > 0 ? "bad" : ""}">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
           <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td class="w">${E(r.products)}</td>
           ${MONTHS.map(m => `<td class="mc">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
-        <tr class="tot"><td colspan="5">Total · ${M(rs.length)} customers</td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td colspan="4"></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></div></section>`; }).join("") || '<div class="empty">No customers.</div>';
+        <tr class="tot"><td colspan="5">Total · ${M(rs.length)} customers</td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td colspan="4"></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></div></section>`; }).join("") || '<div class="empty">No customers match these filters.</div>';
 }
-["fN", "fCur"].forEach(i => $(i).onchange = load); ["fCro", "fDue", "fSort"].forEach(i => $(i).onchange = render);
+["fN", "fCur"].forEach(i => $(i).onchange = load);
+["fCro", "fDue", "fSort", "fDateBy", "fFrom", "fTo", "fBalOp"].forEach(i => $(i).onchange = render);
+["fQ", "fStart", "fBalVal"].forEach(i => $(i).oninput = ERP.ui.debounce(render, 250));
+$("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fCro").value = ""; $("fSort").value = "acc"; render(); };
 $("bPrint").onclick = () => window.print();
 $("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Acct Num": acc, "Acct Title": r.account_title, "Aprv by": r.approved_by, CRO: r.cro, "Mobile Nu": r.mobile_number, "M Inst": r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), Late: r.overdue_months, Overdue: r.overdue_amt, Plan: r.plan, "Total Sale": r.total_sale, "Total Paid": r.total_paid, "T Balance": r.balance, LPD: r.lpd, "L.Pamount": r.lpa, "Deliv Date": r.sale_date, End: r.end_month, Product: r.products };
   MONTHS.forEach(m => o[m.label] = REC.get(acc + "|" + m.key) || 0); return o; }));
