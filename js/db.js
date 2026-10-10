@@ -136,6 +136,14 @@ ERP.db = (function () {
     saleDues: () => fetchAll("v_sale_dues", { order: "account_no" }),
     aging: () => fetchAll("v_customer_aging", { order: "account_no" }),
 
+    /* bank statement lines for Reconciliation (12_bank.sql) */
+    bank: {
+      listAll: () => fetchAll("bank_statement", { order: "id" }),
+      async add(rows) { return must(await sb.from("bank_statement").insert(rows).select()); },
+      async remove(ids) { const r = must(await sb.from("bank_statement").delete().in("id", ids).select("id")); if (r.length !== ids.length) throw new Error("Not deleted: you do not have permission"); },
+      async setMatch(id, src, rid) { const r = must(await sb.from("bank_statement").update({ match_src: src, match_rid: rid }).eq("id", id).select("id")); if (!r.length) throw new Error("Not saved: you do not have permission"); }
+    },
+
     stock: {
       /* every stock movement up to a date (oldest first). Used by the Stock Ledger page. */
       ledger: ({ to } = {}) => fetchAll("stock_ledger", { order: "transaction_id", build: q => { if (to) q = q.lte("date", to); return q.order("date", { ascending: true }).order("created_date", { ascending: true }); } }),
