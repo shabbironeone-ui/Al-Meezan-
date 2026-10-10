@@ -36,7 +36,7 @@
     <section class="stats six" id="stats"></section>
     <div class="tabs"><button id="tL" aria-selected="true">Ledger</button><button id="tP" aria-selected="false">Installment plan</button></div>
     <div id="ledTab" class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Ref</th><th>Particulars</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead><tbody id="lBody"></tbody></table></div>
-    <div id="planTab" hidden><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
+    <div id="planTab" hidden><div class="card no-print" id="fmBox" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:170px"><label for="fmIn">First installment month</label><input type="month" id="fmIn"></div><button class="btn sm soft" id="fmSet">Set</button><button class="btn sm ghost" id="fmAuto">Automatic</button><small id="fmNote" style="flex-basis:100%;color:var(--muted)"></small></div><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
   </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -75,8 +75,9 @@ async function pick(acc) {
     const [c, sales, rcs] = await Promise.all([ERP.db.customers.get(acc), ERP.db.sales.list({ accNo: acc }), ERP.db.receipts.list({ accNo: acc })]);
     if (!c) { $("view").hidden = true; $("hint").hidden = false; $("hint").textContent = "No customer found with CAF " + acc; return; }
     let sch = [], schErr = ""; try { sch = await ERP.db.schedule(acc); } catch (e) { schErr = e.message; }      // the plan is optional: the ledger shows even if it fails
+    let manual = false; try { manual = !!(await ERP.db.firstMonthOf(acc)); } catch (e) {}
     const led = buildLedger(acc, sales, rcs), bal = led.reduce((t, r) => t + N(r.debit) - N(r.credit), 0);
-    cur = { c, b: { installment: sales.reduce((t, r) => t + N(r.installment_per_month), 0), balance: Math.max(bal, 0) }, led, sch, schErr };
+    cur = { manual, c, b: { installment: sales.reduce((t, r) => t + N(r.installment_per_month), 0), balance: Math.max(bal, 0) }, led, sch, schErr, sales: sales.length, hasPlan: sales.some(r => N(r.plan_months) > 0) };
     $("q").value = c.account_title + " (" + c.account_no + ")"; history.replaceState(null, "", "?accNo=" + encodeURIComponent(c.account_no)); draw();
   } catch (e) { $("hint").hidden = false; $("view").hidden = true; $("hint").innerHTML = "Could not load the ledger:<br><b>" + E(e.message) + "</b>"; }
 }
@@ -90,12 +91,17 @@ function draw() {
   $("stats").innerHTML = stat("Total sale", "Rs " + M(tD)) + stat("Total received", "Rs " + M(tC)) + stat("Installment / month", "Rs " + M(b.installment)) + stat("Overdue", "Rs " + M(over), over > 0 ? "bad" : "") + stat("Due this month", "Rs " + M(month)) + stat("Next due", next ? mon(next.due_month) : "-");
   $("lBody").innerHTML = rows.map(r => `<tr class="${r.kind === "Sale" ? "sale" : ""}"><td>${E(r.date)}</td><td>${E(r.kind)}</td><td>${E(r.ref)}</td><td style="white-space:normal;min-width:180px">${E(r.particulars)}</td><td class="num deb">${N(r.debit) ? M(r.debit) : ""}</td><td class="num cre">${N(r.credit) ? M(r.credit) : ""}</td><td class="num"><b>${M(r.run)}</b></td></tr>`).join("")
     + (rows.length ? `<tr style="font-weight:700;background:#eef2f7"><td colspan="4">Total</td><td class="num">${M(tD)}</td><td class="num">${M(tC)}</td><td class="num">${M(bl)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries for this customer.</td></tr>');
-  $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || (cur.schErr ? '<tr><td colspan="6" class="empty">Plan could not be loaded: ' + E(cur.schErr) + '</td></tr>' : '<tr><td colspan="6" class="empty">No installment plan found for this customer.</td></tr>');
+  $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || (cur.schErr ? '<tr><td colspan="6" class="empty">Plan could not be loaded: ' + E(cur.schErr) + '</td></tr>' : '<tr><td colspan="6" class="empty">' + (cur.sales === 0 ? "No sale found for this customer." : !cur.hasPlan ? "This sale has no installment plan (plan months is empty or 0)." : "The plan could not be built. Set the first installment month above.") + '</td></tr>');
+  const fm = sch.map(x => x.due_month).sort()[0]; $("fmIn").value = fm ? fm.slice(0, 7) : ""; $("fmBox").hidden = !ERP.auth.can("edit");
+  $("fmNote").textContent = cur.manual ? "Set by hand. Press Automatic to go back to the automatic month." : fm ? "Automatic: taken from the sale, or from this customer's first installment." : "";
   $("bRec").href = "receipts.html"; $("bWa").disabled = !digits(c.mobile_number);
 }
 $("bWa").onclick = () => { const { c, b } = cur; let d = digits(c.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const bl = N(b.balance);
   window.open(`https://wa.me/${d}?text=${encodeURIComponent(`Assalam o Alaikum ${c.account_title}, aap ki CAF ${c.account_no} ka baqaya Rs ${M(bl)} hai. Meherbani karke ada kar dein. Shukriya - Al Meezan`)}`, "_blank", "noopener"); };
 $("bPrint").onclick = () => { $("prShop").textContent = ERP_CONFIG.APP_NAME.replace(" ERP", ""); $("prDate").textContent = new Date().toLocaleDateString("en-GB"); $("ledTab").hidden = false; window.print(); };
+async function setFm(v) { try { await ERP.db.setFirstMonth(cur.c.account_no, v); ERP.ui.toast(v ? "First installment month saved" : "Back to automatic"); const a = cur.c.account_no; await pick(a); $("tP").click(); } catch (e) { ERP.ui.toast(e.message, "err"); } }
+$("fmSet").onclick = () => { if (!$("fmIn").value) return ERP.ui.toast("Choose a month", "err"); setFm($("fmIn").value + "-01"); };
+$("fmAuto").onclick = () => setFm(null);
 $("tL").onclick = () => { $("tL").setAttribute("aria-selected", true); $("tP").setAttribute("aria-selected", false); $("ledTab").hidden = false; $("planTab").hidden = true; };
 $("tP").onclick = () => { $("tP").setAttribute("aria-selected", true); $("tL").setAttribute("aria-selected", false); $("ledTab").hidden = true; $("planTab").hidden = false; };
 (async () => { await ERP.auth.guard(); try { LIST = await ERP.db.customers.balances(); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); }
