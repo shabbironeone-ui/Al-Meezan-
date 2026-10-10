@@ -89,6 +89,7 @@
 
 <dialog id="schd" class="sheet"><div class="sh-head"><div><h2>Installment schedule</h2><p id="scS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
   <div class="sh-body"><p style="margin:0 0 10px;font-size:13px;color:var(--muted)">A tick means an installment is due that month. <b>Untick a month</b> if the customer will not pay in it: the installments after it move one month ahead, and that month will not show as due in Aging.</p>
+    <div class="fsec" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:160px"><label for="scFm">First installment month</label><input type="month" id="scFm"></div><button class="btn sm soft" id="scFmSet">Set</button><button class="btn sm ghost" id="scFmAuto">Automatic</button></div>
     <div class="table-wrap"><table style="min-width:340px"><thead><tr><th style="width:52px">Due</th><th>Month</th><th class="num">Installment</th><th>Status</th></tr></thead><tbody id="scBody"></tbody></table></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Close</button><button class="btn" id="scSave">Save schedule</button></div></dialog>
 <div id="printArea"></div>
@@ -294,7 +295,7 @@ async function openSchedule(acc, name) {
   try {
     const rows = await ERP.db.schedule(acc), inst = rows.filter(r => !r.is_skipped).sort((a, b) => a.inst_no - b.inst_no).map(r => ({ due: N(r.due_amt), paid: N(r.paid_amt) }));
     if (!inst.length) { SC = null; $("scBody").innerHTML = '<tr><td colspan="4" class="empty">No installment plan found for this sale (check the first installment month).</td></tr>'; return; }
-    SC = { acc, inst, skip: new Set(rows.filter(r => r.is_skipped).map(r => r.due_month)), first: rows.map(r => r.due_month).sort()[0] }; drawSchedule();
+    $("scFm").value = (rows.map(r => r.due_month).sort()[0] || "").slice(0, 7); SC = { name, acc, inst, skip: new Set(rows.filter(r => r.is_skipped).map(r => r.due_month)), first: rows.map(r => r.due_month).sort()[0] }; drawSchedule();
   } catch (e) { SC = null; $("scBody").innerHTML = `<tr><td colspan="4" class="empty">${E(e.message)}<br><small>Run the latest sql/08_installments.sql if this mentions installment_skips or is_skipped.</small></td></tr>`; }
 }
 function calendar() { const [y, m] = SC.first.split("-").map(Number), out = []; let i = 0, k = 0;
@@ -307,6 +308,9 @@ function drawSchedule() {
     return `<tr><td><input ${ck} checked ${paid ? "disabled" : ""}></td><td>${mon(r.iso)}</td><td class="num"><b>${M(x.due)}</b></td><td><span class="badge ${st[0]}">${st[1]}</span></td></tr>`; }).join("");
 }
 $("scBody").addEventListener("change", e => { const c = e.target.closest("input[data-m]"); if (!c || !SC) return; if (c.checked) SC.skip.delete(c.dataset.m); else SC.skip.add(c.dataset.m); drawSchedule(); });
+async function scSetFm(v) { try { await ERP.db.setFirstMonth(SC.acc, v); ERP.ui.toast(v ? "First installment month saved" : "Back to automatic"); openSchedule(SC.acc, SC.name); loadHist(); } catch (e) { ERP.ui.toast(e.message, "err"); } }
+$("scFmSet").onclick = () => { if (!SC) return; if (!$("scFm").value) return ERP.ui.toast("Choose a month", "err"); scSetFm($("scFm").value + "-01"); };
+$("scFmAuto").onclick = () => { if (SC) scSetFm(null); };
 $("scSave").onclick = () => ERP.ui.busy($("scSave"), async () => { if (!SC) return $("schd").close();
   try { await ERP.db.setSkips(SC.acc, calendar().filter(r => r.skipped).map(r => r.iso)); ERP.ui.toast("Schedule saved"); $("schd").close(); loadHist(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
