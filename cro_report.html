@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRO Report</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .ctl{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
+  @media(min-width:900px){.ctl{grid-template-columns:1.2fr 150px 1fr 1fr 1fr}}
+  .chk{display:flex;gap:8px;align-items:center;min-height:var(--tap);cursor:pointer;font-weight:600;color:var(--muted)}.chk input{width:auto;min-height:0}
+  .legend{font-size:12px;color:var(--muted);margin:0 0 8px}
+  .grp{margin-bottom:22px}.gh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#e8edf3;border-radius:10px 10px 0 0;padding:8px 12px;font-weight:700}
+  .gh small{font-weight:500;color:var(--muted)}
+  .rep{border-collapse:collapse;width:100%;min-width:1500px;font-size:12.5px;background:#fff}
+  .rep th{position:sticky;top:0;background:#f1f5f9;border:1px solid #cbd5e1;padding:5px 6px;text-align:left;font-size:11.5px;white-space:nowrap;z-index:1}
+  .rep td{border:1px solid #cbd5e1;padding:4px 6px;vertical-align:top;white-space:nowrap}
+  .rep td.w{white-space:normal;min-width:140px}.rep td.rm{min-width:150px}.rep small{display:block;color:#64748b;font-size:10.5px;white-space:normal}
+  .rep .n{text-align:right;font-variant-numeric:tabular-nums}.rep .bad{color:#b91c1c;font-weight:700}.rep tr.tot td{background:#eef2f7;font-weight:700}
+  .rep td.mc{text-align:right}
+  .head-print{display:none}
+  @page{size:A4 landscape;margin:6mm}
+  @media print{
+    body{background:#fff}.page{max-width:none;padding:0}.noprint,.appbar,.legend-screen{display:none!important}.head-print{display:block;margin:0 0 4px;font-size:11px}
+    .grp{break-after:page;margin:0}.grp:last-child{break-after:auto}.gh{background:#fff;border:1px solid #000;border-radius:0;font-size:11px;padding:3px 6px}
+    .table-wrap{border:0;overflow:visible}.rep{min-width:0;font-size:7.5pt}.rep th{position:static;background:#eee;font-size:7pt;padding:2px 3px}.rep td{padding:2px 3px}.rep thead{display:table-header-group}.rep tr{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar noprint"><div><h1>CRO Follow-up Report</h1><p id="sub">Hard copy for the CROs: every customer, A to Z</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="bCsv">Export</button><button class="btn" id="bPrint">🖨 Print</button></div></header>
+  <section class="card ctl noprint">
+    <div><label for="fCro">CRO</label><select id="fCro"></select></div>
+    <div><label for="fN">Months shown</label><select id="fN"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></div>
+    <label class="chk"><input type="checkbox" id="fCur"> Include current month</label>
+    <label class="chk"><input type="checkbox" id="fDue"> Only customers with balance</label>
+    <div><label for="fSort">Sort</label><select id="fSort"><option value="name">Name A-Z</option><option value="acc">Account number</option><option value="late">Most late first</option></select></div>
+  </section>
+  <p class="legend legend-screen noprint">In the month columns: the amount received that month · <b>—</b> nothing received although an installment was due · <b>*</b> received less than the installment due. Advance and processing fee are not counted. <b>CMD</b> = everything pending until today (overdue + this month).</p>
+  <div id="out"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0;
+let BASE = [], REC = new Map(), DUE = new Map(), MONTHS = [], VIEW = [];
+const d2 = d => d ? String(d).slice(8, 10) + "-" + String(d).slice(5, 7) + "-" + String(d).slice(2, 4) : "";
+const mlabel = iso => new Date(iso + "T12:00").toLocaleString("en", { month: "short", year: "2-digit" }).replace(" ", "-");
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const cell = (v, d) => v > 0 ? M(v) + (d > 0 && v < d - 0.5 ? "*" : "") : d > 0 ? "—" : "";
+
+function months() {
+  const n = +$("fN").value, t = new Date(), out = [];
+  for (let k = n; k >= 1; k--) { const d = new Date(t.getFullYear(), t.getMonth() - k, 1, 12); out.push({ iso: iso(d), key: iso(d).slice(0, 7), label: mlabel(iso(d)) }); }
+  if ($("fCur").checked) { const d = new Date(t.getFullYear(), t.getMonth(), 1, 12); out.push({ iso: iso(d), key: iso(d).slice(0, 7), label: mlabel(iso(d)) }); }
+  return out;
+}
+async function load() {
+  $("out").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'; MONTHS = months();
+  const from = MONTHS[0].iso, last = new Date(MONTHS[MONTHS.length - 1].iso + "T12:00"), to = iso(new Date(last.getFullYear(), last.getMonth() + 1, 0, 12));
+  try {
+    const [base, rc, sch] = await Promise.all([
+      ERP.db.fetchAll("v_cro_base", { order: "account_no" }),
+      ERP.db.fetchAll("receipts", { order: "id", build: q => q.gte("date", from).lte("date", to) }),
+      ERP.db.fetchAll("v_installment_schedule", { order: "account_no", build: q => q.eq("is_skipped", false).gte("due_month", from).lte("due_month", to).order("due_month") })]);
+    BASE = base; REC = new Map(); DUE = new Map();
+    rc.forEach(r => { const t = String(r.voucher_no || "").trim().toLowerCase(); if (t === "advance" || t === "processing fee") return; const k = String(r.account_no).trim() + "|" + String(r.date).slice(0, 7); REC.set(k, (REC.get(k) || 0) + N(r.amount)); });
+    sch.forEach(r => DUE.set(String(r.account_no).trim() + "|" + String(r.due_month).slice(0, 7), N(r.due_amt)));
+    const cros = [...new Set(BASE.map(c => c.cro).filter(Boolean))].sort(), v = $("fCro").value;
+    $("fCro").innerHTML = '<option value="">All CROs (each on its own page)</option>' + cros.map(c => `<option>${E(c)}</option>`).join("") + (BASE.some(c => !c.cro) ? '<option value="__none">(no CRO)</option>' : ""); $("fCro").value = v; render();
+  } catch (e) { $("out").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/13_cro_report.sql (and 08) if this mentions v_cro_base.</small></div>`; }
+}
+function render() {
+  const c = $("fCro").value, onlyDue = $("fDue").checked, s = $("fSort").value;
+  let rows = BASE.filter(r => (!c || (c === "__none" ? !r.cro : r.cro === c)) && (!onlyDue || N(r.balance) > 0.5));
+  rows.sort(s === "acc" ? (a, b) => String(a.account_no).localeCompare(String(b.account_no)) : s === "late" ? (a, b) => N(b.overdue_amt) - N(a.overdue_amt) : (a, b) => String(a.account_title).localeCompare(String(b.account_title), undefined, { sensitivity: "base" }));
+  VIEW = rows; const g = new Map(); rows.forEach(r => { const k = r.cro || "(no CRO)"; (g.get(k) || g.set(k, []).get(k)).push(r); });
+  const today = new Date().toLocaleDateString("en-GB"), head = `<tr><th>Acct Num</th><th>Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th class="n">M Inst</th><th>Remarks</th><th class="n">CMD</th><th class="n">Late</th><th class="n">Overdue</th><th class="n">Plan</th><th class="n">Total Sale</th><th class="n">Total Paid</th><th class="n">T Balance</th><th>LPD</th><th class="n">L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th>${MONTHS.map(m => `<th class="n">${E(m.label)}</th>`).join("")}</tr>`;
+  const sum = (a, f) => a.reduce((t, r) => t + f(r), 0);
+  $("sub").textContent = `${M(rows.length)} customers · ${today}`;
+  $("out").innerHTML = [...g].sort((x, y) => x[0].localeCompare(y[0])).map(([cro, rs]) => {
+    const mt = MONTHS.map(m => sum(rs, r => REC.get(String(r.account_no).trim() + "|" + m.key) || 0));
+    return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}</div>
+      <div class="gh"><span>CRO: ${E(cro)} <small>· ${M(rs.length)} customers</small></span><span><small>Balance</small> Rs ${M(sum(rs, r => N(r.balance)))} · <small>CMD</small> Rs ${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</span></div>
+      <div class="table-wrap"><table class="rep"><thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = N(r.overdue_amt) + N(r.due_this_month);
+        return `<tr><td>${E(acc)}</td><td class="w"><b>${E(r.account_title)}</b>${r.address ? `<small>${E(String(r.address).slice(0, 45))}</small>` : ""}</td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}${r.guarantor_mobile ? `<small>G: ${E(r.guarantor_mobile)}</small>` : ""}</td>
+          <td class="n">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm"></td><td class="n ${cmd > 0 ? "bad" : ""}">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
+          <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td class="w">${E(r.products)}</td>
+          ${MONTHS.map(m => `<td class="mc">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
+        <tr class="tot"><td colspan="5">Total · ${M(rs.length)} customers</td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td colspan="4"></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></div></section>`; }).join("") || '<div class="empty">No customers.</div>';
+}
+["fN", "fCur"].forEach(i => $(i).onchange = load); ["fCro", "fDue", "fSort"].forEach(i => $(i).onchange = render);
+$("bPrint").onclick = () => window.print();
+$("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Acct Num": acc, "Acct Title": r.account_title, "Aprv by": r.approved_by, CRO: r.cro, "Mobile Nu": r.mobile_number, "M Inst": r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), Late: r.overdue_months, Overdue: r.overdue_amt, Plan: r.plan, "Total Sale": r.total_sale, "Total Paid": r.total_paid, "T Balance": r.balance, LPD: r.lpd, "L.Pamount": r.lpa, "Deliv Date": r.sale_date, End: r.end_month, Product: r.products };
+  MONTHS.forEach(m => o[m.label] = REC.get(acc + "|" + m.key) || 0); return o; }));
+(async () => { await ERP.auth.guard(); load(); })();
+</script>
+</body>
+</html>
