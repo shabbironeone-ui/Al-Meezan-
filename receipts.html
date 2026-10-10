@@ -1,1652 +1,208 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Al Meezan ERP Receipts - Supabase Professional</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <style>
-    :root {
-      --primary: #1b5e20;
-      --primary-hover: #2e7d32;
-      --accent: #81c784;
-      --danger: #c62828;
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --text: #333333;
-      --border: #cccccc;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 4px;
-      font-size: 12px;
-    }
-
-    .container {
-      background: var(--surface);
-      border-radius: 6px;
-      padding: 8px 12px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-      max-width: 1350px;
-      margin: auto;
-      position: relative;
-    }
-
-    .floating-mobile-toggle {
-      position: absolute;
-      top: 6px;
-      right: 8px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      z-index: 100;
-    }
-
-    body.mobile-mode { padding: 2px !important; }
-    body.mobile-mode .container { max-width: 100% !important; padding: 4px 6px !important; }
-
-    h2 {
-      margin-top: 0;
-      margin-bottom: 4px;
-      color: var(--primary);
-      text-align: center;
-      font-size: 15px;
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 2px;
-    }
-
-    .nav-bar-container {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 4px;
-    }
-
-    .tab {
-      flex: 1;
-      padding: 6px;
-      text-align: center;
-      cursor: pointer;
-      font-weight: bold;
-      color: #666;
-      background: #e0e0e0;
-      border-radius: 4px;
-      font-size: 11px;
-      transition: 0.3s;
-    }
-    .tab.active { background: var(--primary); color: #fff; }
-
-    .form-section { display: none; }
-    .form-section.active { display: block; }
-
-    label { display: block; margin-bottom: 1px; font-weight: 600; color: #444; font-size: 10.5px; }
-
-    input, select {
-      width: 100%;
-      padding: 4px 6px;
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      box-sizing: border-box;
-      font-size: 11.5px;
-    }
-    input:focus, select:focus { border-color: var(--primary); outline: none; }
-    input.listening-input { border-color: var(--danger) !important; background-color: #ffebee !important; }
-    input[readonly] { background-color: #eaeded; color: #555; }
-
-    .input-with-mic { display: flex; gap: 2px; align-items: center; }
-    .mic-btn {
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 3px;
-      padding: 0 5px;
-      cursor: pointer;
-      height: 24px;
-      font-size: 10px;
-    }
-    .mic-btn.listening { background-color: var(--danger); animation: pulse 1s infinite; }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
-    }
-
-    .btn-row { display: flex; gap: 6px; margin-top: 6px; }
-    .action-btn {
-      padding: 5px 8px;
-      border: none;
-      border-radius: 3px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 11px;
-      color: #fff;
-    }
-    .btn-primary { background-color: var(--primary); }
-    .btn-primary:hover { background-color: var(--primary-hover); }
-    .btn-danger { background-color: var(--danger); }
-    .btn-secondary { background-color: #546e7a; }
-
-    .table-responsive {
-      width: 100%;
-      overflow-x: auto;
-      margin-top: 3px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      max-height: 420px;
-      overflow-y: auto;
-    }
-
-    table.edit-table, table.batch-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-    table.edit-table th, table.batch-table th,
-    table.edit-table td, table.batch-table td {
-      border: 1px solid #ddd;
-      padding: 3px 5px;
-      text-align: center;
-      vertical-align: middle;
-    }
-    table.edit-table th, table.batch-table th {
-      background-color: #f1f8e9;
-      color: var(--primary);
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-
-    /* Header Filter & Sort Styling */
-    .th-filter-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      gap: 2px;
-    }
-    .th-sort-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-weight: bold;
-      cursor: pointer;
-      text-align: left;
-      flex: 1;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      gap: 2px;
-      font-size: 11px;
-    }
-    .th-filter-toggle {
-      background: none;
-      border: none;
-      color: var(--primary);
-      cursor: pointer;
-      padding: 1px 3px;
-    }
-    .filter-dropdown-content {
-      display: none;
-      position: absolute;
-      background-color: #fff;
-      min-width: 180px;
-      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-      z-index: 10;
-      padding: 6px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      text-align: left;
-      left: 0;
-      top: 100%;
-    }
-    .filter-dropdown-content.show { display: block; }
-    .filter-search-input {
-      width: 100%;
-      padding: 3px 5px;
-      margin-bottom: 4px;
-      font-size: 11px;
-      border: 1px solid var(--border);
-      border-radius: 3px;
-    }
-    .filter-dropdown-list {
-      max-height: 140px;
-      overflow-y: auto;
-      margin-bottom: 4px;
-    }
-    .filter-dropdown-content label {
-      font-weight: normal;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 6px;
-      margin-bottom: 3px;
-      cursor: pointer;
-      color: #333;
-      text-align: left;
-    }
-    .filter-dropdown-content input[type="checkbox"] {
-      width: auto !important;
-      margin: 0 !important;
-      cursor: pointer;
-    }
-
-    .recent-section {
-      margin-top: 10px;
-      border-top: 2px solid var(--border);
-      padding-top: 6px;
-    }
-    .recent-section h3 { margin: 0 0 4px 0; font-size: 13px; color: var(--primary); }
-    
-    .recent-filters-box {
-      background: #f1f8e9;
-      border: 1px solid #c8e6c9;
-      padding: 6px 8px;
-      border-radius: 4px;
-      margin-bottom: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .filter-row-vertical {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-
-    tr.editing { background-color: #fffde7 !important; }
-
-    #printArea { display: none; }
-    @media print {
-      .container { display: none !important; }
-      #printArea { display: block !important; padding: 15px; }
-      #printArea table { width: 100%; border-collapse: collapse; font-size: 12px; }
-      #printArea th, #printArea td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
-      #printArea h2 { text-align: center; margin-bottom: 4px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipts</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:12px}
+  .tabs button{min-height:40px;padding:6px 18px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .hdr{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+  @media(min-width:760px){.hdr{grid-template-columns:150px 140px 1fr 1.4fr}}
+  .hdr .wide{grid-column:1/-1}@media(min-width:760px){.hdr .wide{grid-column:auto}}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 10px}.tags small{color:var(--muted);font-weight:600}
+  .rrow{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .rgrid{display:grid;gap:8px;grid-template-columns:1fr 1fr auto}
+  .rgrid .acc{grid-column:1/-1}
+  @media(min-width:760px){.rgrid{grid-template-columns:160px 1fr 140px auto}.rgrid .acc{grid-column:auto}}
+  .rgrid label{font-size:11px}.rgrid .del{align-self:end;min-width:44px}
+  .rinfo{margin-top:6px;font-size:13px;color:var(--muted);min-height:20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .rinfo b{color:var(--ink)}
+  .sumbar{position:sticky;bottom:0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff;border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));margin:0 -12px;box-shadow:0 -6px 18px rgba(15,23,42,.08);z-index:5}
+  .sumbar b{font-size:20px;font-variant-numeric:tabular-nums}.sumbar small{color:var(--muted);display:block}
+  .ft{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
+  @media(min-width:900px){.ft{grid-template-columns:140px 140px 1.4fr 1fr 1fr auto}}
+  .ft .wide{grid-column:1/-1}@media(min-width:900px){.ft .wide{grid-column:auto}}
+  td .badge{white-space:nowrap}
+  .selbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
+  .tr-click{cursor:pointer}.tr-click:hover td{background:#f8fafc}
+  @media print{body{background:#fff}.page>*:not(#pList){display:none!important}#pList .no-print,.ft,.tabs,.selbar{display:none!important}th:first-child,td:first-child,th:last-child,td:last-child{display:none}.table-wrap{border:0;overflow:visible}table{min-width:0;font-size:11px}}
+</style>
 </head>
 <body>
+<main class="page">
+  <header class="appbar"><div><h1>Receipts</h1><p>Recovery from customers</p></div></header>
+  <div class="tabs" role="tablist"><button role="tab" id="tNew" aria-selected="true">New receipts</button><button role="tab" id="tList" aria-selected="false">All receipts</button></div>
 
-<div class="container">
-  <button class="floating-mobile-toggle" onclick="toggleMobileView()" id="mobileToggleBtn" title="Switch View">
-    <i class="fa fa-mobile-alt" id="toggleIcon"></i>
-  </button>
-  <h2>Al Meezan ERP Receipts - Supabase Professional</h2>
+  <!-- ENTRY -->
+  <section id="pNew">
+    <div class="card"><div class="hdr">
+      <div><label for="rDate">Receipt date</label><input id="rDate" type="date"></div>
+      <div><label for="rType">Type</label><select id="rType"><option>Cash</option><option>Bank</option></select></div>
+      <div><label for="rMode">Account / pay mode</label><select id="rMode"></select></div>
+      <div class="wide"><label for="rRem">Remarks (for all rows)</label><input id="rRem" autocomplete="off"></div></div></div>
+    <div class="tags"><small>Quick receipt no:</small><span id="tags"></span></div>
+    <div id="rows"></div>
+    <button class="btn soft" id="addRow" style="width:100%;margin-bottom:12px">＋ Add row</button>
+    <div class="sumbar"><div><small id="sCount">0 receipts</small><b id="sTotal">Rs 0</b></div><button class="btn" id="btnSave">Save receipts</button></div>
+  </section>
 
-  <!-- Navigation Tabs -->
-  <div class="nav-bar-container">
-    <div class="tab active" onclick="switchTab('new')"><i class="fas fa-file-invoice"></i> New Receipts Entry</div>
-    <div class="tab" onclick="switchTab('edit')"><i class="fas fa-edit"></i> Edit & Search Receipts</div>
-  </div>
+  <!-- LIST -->
+  <section id="pList" hidden>
+    <div class="card ft">
+      <div><label>From</label><input type="date" id="fFrom"></div><div><label>To</label><input type="date" id="fTo"></div>
+      <div class="wide"><label>Search</label><input id="fQ" type="search" placeholder="Receipt no, account no or name"></div>
+      <div><label>Account / mode</label><select id="fMode"></select></div>
+      <div><label>Head</label><select id="fHead"></select></div>
+      <button class="btn ghost no-print" id="btnPrint">Print</button></div>
+    <div class="selbar no-print"><span id="lSum" style="color:var(--muted);font-size:13px"></span><button class="btn sm danger" id="btnBulk" hidden>Delete selected</button></div>
+    <div class="table-wrap"><table><thead><tr><th style="width:36px"><input type="checkbox" id="selAll" aria-label="Select all"></th><th>Date</th><th>Receipt</th><th>Account</th><th>Name</th><th>Head</th><th>Mode</th><th class="num">Amount</th></tr></thead><tbody id="lBody"></tbody></table></div>
+    <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
+  </section>
+</main>
 
-  <!-- SECTION 1: NEW RECEIPTS ENTRY -->
-  <div id="sectionNew" class="form-section active">
-    <div id="batchReceiptsSection">
-      <div style="display: flex; gap: 6px; margin-bottom: 4px;" class="form-group">
-        <div style="flex: 1.2;">
-          <label for="batchReceiptDate">Receipt Date</label>
-          <input type="date" id="batchReceiptDate">
-        </div>
-        <div style="flex: 1;">
-          <label for="batchPaymentMode">Payment Type</label>
-          <select id="batchPaymentMode" onchange="onBatchPaymentModeChange()">
-            <option value="Cash" selected>Cash</option>
-            <option value="Bank">Bank</option>
-          </select>
-        </div>
-        <div style="flex: 1.2;">
-          <label for="batchReceiptSuffix">Pay Mode / Subhead</label>
-          <select id="batchReceiptSuffix">
-            <option value="Daybook (Cash)">Daybook (Cash)</option>
-          </select>
-        </div>
-        <div style="flex: 0.8; display: flex; align-items: flex-end;">
-          <button type="button" class="action-btn btn-secondary" style="padding: 4px 6px; font-size: 11px; width: 100%;" onclick="addBatchRow()"><i class="fas fa-plus"></i> Add Row</button>
-        </div>
-      </div>
+<dialog id="dlg" class="sheet"><div class="sh-head"><div><h2>Edit receipt</h2><p id="dSub"></p></div><button class="x" data-close>✕</button></div>
+  <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
+    <div><label>Date</label><input id="eDate" type="date"></div><div><label>Receipt no</label><input id="eRct"></div>
+    <div><label>Account no</label><input id="eAcc" inputmode="numeric"><small class="err" id="eAccErr"></small></div><div><label>Customer name</label><input id="eTitle"></div>
+    <div><label>Head</label><input id="eHead" list="dHead"></div><div><label>Account / pay mode</label><select id="eMode"></select></div>
+    <div><label>Amount (Rs)</label><input id="eAmt" type="number" inputmode="decimal" min="0"></div><div><label>Remarks</label><input id="eRem"></div></div></div></form>
+  <div class="sh-foot"><button class="btn danger" id="eDel" hidden style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="eSave">Save changes</button></div>
+  <datalist id="dHead"></datalist></dialog>
 
-      <div style="text-align: left; font-weight: bold; font-size: 11.5px; color: var(--primary); margin-bottom: 2px;">
-        Qty: <span id="totalReceiptsQty">0</span> &nbsp;|&nbsp; Amount: <span id="totalReceiptsAmount">0</span>
-      </div>
-
-      <div class="table-responsive" id="batchTableWrapper" style="max-height: 180px;">
-        <table class="batch-table" id="batchTable">
-          <thead>
-            <tr>
-              <th style="width: 15%;">Account No</th>
-              <th style="width: 18%;">Receipt No</th>
-              <th style="width: 10%;">Amount</th>
-              <th style="width: 17%;">Customer Name</th>
-              <th style="width: 7%;">Inst</th>
-              <th style="width: 12%;">Total Sale Amount</th>
-              <th style="width: 10%;">Paid Amount</th>
-              <th style="width: 10%;">Balance</th>
-              <th style="width: 4%;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="batchTableBody"></tbody>
-        </table>
-      </div>
-
-      <div style="margin-top: 6px;">
-        <label for="batchRemarks">Remarks (Common for all entries)</label>
-        <div class="input-with-mic">
-          <input type="text" id="batchRemarks" placeholder="Enter remarks (optional)..." onkeydown="handleRemarksKey(event)" inputmode="text">
-          <button type="button" class="mic-btn" onclick="startCleanVoiceInput('batchRemarks', false)"><i class="fas fa-microphone"></i></button>
-        </div>
-      </div>
-
-      <div class="btn-row" style="margin-top: 4px;">
-        <button id="saveBatchBtn" class="action-btn btn-primary" style="flex:1;" onclick="submitBatchReceipts()">Save All Receipts to Supabase</button>
-        <button class="action-btn btn-secondary" style="flex:1;" onclick="clearBatchForm()">Reset</button>
-      </div>
-    </div>
-
-    <!-- RECENT SAVED RECEIPTS -->
-    <div class="recent-section">
-      <h3><span>Recent Saved Receipts</span></h3>
-      
-      <!-- Vertical Compact Filters -->
-      <div class="recent-filters-box">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px;">
-          <div class="filter-row-vertical">
-            <label>FROM DATE</label>
-            <input type="date" id="filterFromDate" oninput="onDateFilterChange()">
-          </div>
-          <div class="filter-row-vertical">
-            <label>TO DATE</label>
-            <input type="date" id="filterToDate" oninput="onDateFilterChange()">
-          </div>
-          <div class="filter-row-vertical">
-            <label>SEARCH ACCOUNT NO</label>
-            <input type="text" id="filterAccNo" placeholder="Acc No..." oninput="renderRecentReceipts()" inputmode="numeric">
-          </div>
-          <div class="filter-row-vertical">
-            <label>SEARCH ACCOUNT NAME</label>
-            <input type="text" id="filterAccName" placeholder="Name..." oninput="renderRecentReceipts()">
-          </div>
-          <div class="filter-row-vertical">
-            <label>SEARCH RECEIPT / VOUCHER</label>
-            <input type="text" id="filterReceiptNo" placeholder="Voucher No..." oninput="renderRecentReceipts()">
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px; margin-top: 2px;">
-          <label style="display:flex; align-items:center; gap:4px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterDaybook" checked onchange="onDateFilterChange()" style="width:auto; margin:0;"> Daybook</label>
-          <label style="display:flex; align-items:center; gap:4px; margin:0; cursor:pointer; font-weight:bold;"><input type="checkbox" id="filterBank" onchange="onDateFilterChange()" style="width:auto; margin:0;"> Bank</label>
-        </div>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <div style="font-weight: bold; font-size: 11.5px; color: var(--primary);">
-          Qty: <span id="recentTotalsQty">0</span> &nbsp;|&nbsp; Amount: <span id="recentTotalsAmount">0</span>
-        </div>
-        <div>
-          <button class="action-btn btn-secondary" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="resetRecentFilter()">Reset Filter</button>
-          <button class="action-btn btn-primary" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="loadRecentReceipts()"><i class="fas fa-sync-alt"></i> Refresh</button>
-          <button class="action-btn btn-danger" style="height: 24px; font-size:10.5px; padding:2px 6px;" onclick="deleteSelectedRecentReceipts()"><i class="fas fa-trash"></i> Delete</button>
-          <button class="action-btn btn-secondary" style="height: 24px; font-size:10.5px; padding:2px 6px; background:#37474f;" onclick="printRecentReceipts()"><i class="fas fa-print"></i> Print</button>
-        </div>
-      </div>
-
-      <div class="table-responsive">
-        <table class="edit-table" id="recentReceiptsTable">
-          <thead>
-            <tr>
-              <th style="width:25px;"><input type="checkbox" id="selectAllRecent" onclick="toggleSelectAllRecent(this)"></th>
-              
-              <!-- Date Header -->
-              <th>
-                <button type="button" class="th-sort-btn" onclick="sortTableData('date')">Date <i class="fas fa-sort-down" id="sortIcon_date"></i></button>
-              </th>
-
-              <!-- Voucher No Header -->
-              <th>
-                <div class="th-filter-wrapper">
-                  <button type="button" class="th-sort-btn" onclick="sortTableData('voucher_no')">Voucher No <i class="fas fa-sort" id="sortIcon_voucher_no"></i></button>
-                  <button type="button" class="th-filter-toggle" id="filterBtn_voucher" onclick="toggleHeaderDropdown(event, 'voucherDropdown')"><i class="fas fa-filter"></i></button>
-                  <div id="voucherDropdown" class="filter-dropdown-content">
-                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('voucher', this.value)">
-                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllVoucher" onchange="toggleSelectAllColumn('voucher', this)"> Select All</label>
-                    </div>
-                    <div class="filter-dropdown-list" id="voucherCheckboxesContainer"></div>
-                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('voucher')">Apply</button>
-                  </div>
-                </div>
-              </th>
-
-              <!-- Acc No Header -->
-              <th>
-                <div class="th-filter-wrapper">
-                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_no')">Acc No <i class="fas fa-sort" id="sortIcon_account_no"></i></button>
-                  <button type="button" class="th-filter-toggle" id="filterBtn_acc" onclick="toggleHeaderDropdown(event, 'accDropdown')"><i class="fas fa-filter"></i></button>
-                  <div id="accDropdown" class="filter-dropdown-content">
-                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('acc', this.value)">
-                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllAcc" onchange="toggleSelectAllColumn('acc', this)"> Select All</label>
-                    </div>
-                    <div class="filter-dropdown-list" id="accCheckboxesContainer"></div>
-                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('acc')">Apply</button>
-                  </div>
-                </div>
-              </th>
-
-              <!-- Customer Title Header -->
-              <th style="text-align:left;">
-                <div class="th-filter-wrapper">
-                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_title')">Customer Title <i class="fas fa-sort" id="sortIcon_account_title"></i></button>
-                  <button type="button" class="th-filter-toggle" id="filterBtn_title" onclick="toggleHeaderDropdown(event, 'titleDropdown')"><i class="fas fa-filter"></i></button>
-                  <div id="titleDropdown" class="filter-dropdown-content">
-                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('title', this.value)">
-                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllTitle" onchange="toggleSelectAllColumn('title', this)"> Select All</label>
-                    </div>
-                    <div class="filter-dropdown-list" id="titleCheckboxesContainer"></div>
-                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('title')">Apply</button>
-                  </div>
-                </div>
-              </th>
-
-              <!-- Account Head Header -->
-              <th>
-                <div class="th-filter-wrapper">
-                  <button type="button" class="th-sort-btn" onclick="sortTableData('account_head')">Account Head <i class="fas fa-sort" id="sortIcon_account_head"></i></button>
-                  <button type="button" class="th-filter-toggle" id="filterBtn_head" onclick="toggleHeaderDropdown(event, 'headDropdown')"><i class="fas fa-filter"></i></button>
-                  <div id="headDropdown" class="filter-dropdown-content">
-                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('head', this.value)">
-                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllHead" onchange="toggleSelectAllColumn('head', this)"> Select All</label>
-                    </div>
-                    <div class="filter-dropdown-list" id="headCheckboxesContainer"></div>
-                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('head')">Apply</button>
-                  </div>
-                </div>
-              </th>
-
-              <!-- Pay Mode Header -->
-              <th>
-                <div class="th-filter-wrapper">
-                  <button type="button" class="th-sort-btn" onclick="sortTableData('pay_mode')">Pay Mode <i class="fas fa-sort" id="sortIcon_pay_mode"></i></button>
-                  <button type="button" class="th-filter-toggle" id="filterBtn_mode" onclick="toggleHeaderDropdown(event, 'modeDropdown')"><i class="fas fa-filter"></i></button>
-                  <div id="modeDropdown" class="filter-dropdown-content">
-                    <input type="text" class="filter-search-input" placeholder="Search..." oninput="filterDropdownOptions('mode', this.value)">
-                    <div style="margin-bottom:4px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                      <label style="font-weight:bold;"><input type="checkbox" id="selectAllMode" onchange="toggleSelectAllColumn('mode', this)"> Select All</label>
-                    </div>
-                    <div class="filter-dropdown-list" id="modeCheckboxesContainer"></div>
-                    <button type="button" class="action-btn btn-primary" style="width:100%; padding:3px; font-size:10px; margin-top:2px;" onclick="applyColumnFilter('mode')">Apply</button>
-                  </div>
-                </div>
-              </th>
-
-              <!-- Amount Header -->
-              <th style="text-align:right;">
-                <button type="button" class="th-sort-btn" style="justify-content: flex-end;" onclick="sortTableData('amount')">Amount <i class="fas fa-sort" id="sortIcon_amount"></i></button>
-              </th>
-            </tr>
-          </thead>
-          <tbody id="recentReceiptsBody">
-            <tr><td colspan="8" style="text-align:center;">Fetching receipts from Supabase...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- SECTION 2: EDIT & SEARCH RECEIPTS TAB -->
-  <div id="sectionEdit" class="form-section">
-    <div class="search-box-card" style="background:#fff; border:1px solid var(--border); padding:8px; border-radius:4px; margin-bottom:8px;">
-      <h3 style="margin-top:0; color:var(--primary); font-size:12px;"><i class="fas fa-search"></i> Search Receipts for Edit / Bulk Delete</h3>
-      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
-        <div style="flex:1; min-width:160px;">
-          <label>Search by Receipt Number</label>
-          <input type="text" id="editSearchReceiptNo" placeholder="Enter Receipt No..." oninput="filterEditTabTable()" inputmode="numeric">
-        </div>
-        <div style="flex:1; min-width:160px;">
-          <label>Search by Account Number</label>
-          <input type="text" id="editSearchAccountNo" placeholder="Enter Account No (786...)" oninput="filterEditTabTable()" inputmode="numeric">
-        </div>
-        <div style="flex:1; min-width:160px;">
-          <label>Search by Customer Name</label>
-          <input type="text" id="editSearchName" placeholder="Enter Name..." oninput="filterEditTabTable()">
-        </div>
-        <div style="display:flex; gap:4px;">
-          <button class="action-btn btn-secondary" style="height:28px;" onclick="resetEditTabSearch()"><i class="fas fa-undo"></i> Reset</button>
-          <button class="action-btn btn-danger" style="height:28px;" onclick="bulkDeleteSelectedReceipts()"><i class="fas fa-trash"></i> Delete Selected</button>
-        </div>
-      </div>
-    </div>
-
-    <div style="text-align: left; font-weight: bold; font-size: 11.5px; color: var(--primary); margin-bottom: 2px;">
-      Found Items: <span id="editTabTotalsQty">0</span> &nbsp;|&nbsp; Total Amount: <span id="editTabTotalsAmount">0</span>
-    </div>
-
-    <div class="table-responsive" style="max-height: 380px;">
-      <table class="edit-table" id="editTabTable">
-        <thead>
-          <tr>
-            <th style="width:25px;"><input type="checkbox" id="selectAllEditTab" onclick="toggleSelectAllEditTab(this)"></th>
-            <th>Date</th>
-            <th>Receipt No</th>
-            <th>Acc No</th>
-            <th style="text-align:left;">Customer Name</th>
-            <th>Account Head</th>
-            <th>Pay Mode</th>
-            <th style="text-align:right;">Amount</th>
-            <th style="width:100px;">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="editTabBody">
-          <tr><td colspan="9" style="text-align:center;">Fetching all receipts from Supabase...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<div id="printArea"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
-  // Supabase Configuration
-  const SUPABASE_URL = "https://ofplfqawiupcmqvzkhfp.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_8VV3n9Dr_XXgDnkuonMTqg_Hkfm59z_";
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  let settingsOptions = { 
-    cash: ["Cash", "Head Office Cash", "Collection Cash"], 
-    bank: ["Bank Transfer", "Online Meezan", "Cheque", "Allied Bank (1870014)"] 
-  };
-  let customerCache = {}; 
-  let recentReceiptsData = [];
-  let editTabResultsData = [];
-  
-  let activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-  let tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-  
-  let isInitialLoad = true;
-  let currentSortColumn = 'date';
-  let currentSortAsc = false;
-
-  window.onload = function() {
-    document.getElementById('batchReceiptDate').value = new Date().toISOString().split('T')[0];
-
-    addBatchRow();
-    loadCustomersCache();
-    loadRecentReceipts();
-    loadAllReceiptsForEditTab();
-
-    window.onclick = function(event) {
-      if (!event.target.closest('.th-filter-wrapper')) {
-        document.querySelectorAll('.filter-dropdown-content').forEach(d => d.classList.remove('show'));
-      }
-    };
-  };
-
-  function toggleHeaderDropdown(event, dropdownId) {
-    event.stopPropagation();
-    document.querySelectorAll('.filter-dropdown-content').forEach(d => {
-      if (d.id !== dropdownId) d.classList.remove('show');
-    });
-    document.getElementById(dropdownId).classList.toggle('show');
-  }
-
-  function sortTableData(column) {
-    if (currentSortColumn === column) {
-      currentSortAsc = !currentSortAsc;
-    } else {
-      currentSortColumn = column;
-      currentSortAsc = true;
-    }
-
-    document.querySelectorAll('.th-sort-btn i').forEach(i => i.className = "fas fa-sort");
-    let icon = document.getElementById('sortIcon_' + column);
-    if (icon) {
-      icon.className = currentSortAsc ? "fas fa-sort-up" : "fas fa-sort-down";
-    }
-
-    executeSorting();
-    renderRecentReceiptsTableOnly();
-  }
-
-  function executeSorting() {
-    if (!currentSortColumn) return;
-    recentReceiptsData.sort((a, b) => {
-      let valA = a[currentSortColumn] !== undefined && a[currentSortColumn] !== null ? a[currentSortColumn] : '';
-      let valB = b[currentSortColumn] !== undefined && b[currentSortColumn] !== null ? b[currentSortColumn] : '';
-
-      if (currentSortColumn === 'amount') {
-        valA = Number(valA) || 0;
-        valB = Number(valB) || 0;
-      } else {
-        valA = String(valA).toLowerCase();
-        valB = String(valB).toLowerCase();
-      }
-
-      if (valA < valB) return currentSortAsc ? -1 : 1;
-      if (valA > valB) return currentSortAsc ? 1 : -1;
-      return 0;
-    });
-  }
-
-  function switchTab(tabName) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
-
-    if (tabName === 'new') {
-      document.querySelectorAll('.tab')[0].classList.add('active');
-      document.getElementById('sectionNew').classList.add('active');
-    } else {
-      document.querySelectorAll('.tab')[1].classList.add('active');
-      document.getElementById('sectionEdit').classList.add('active');
-      loadAllReceiptsForEditTab();
-    }
-  }
-
-  async function loadCustomersCache() {
-    try {
-      let tempMap = {};
-
-      let { data: salesData } = await _supabase.from('sales').select('account_no, account_title, total_amt, installment_per_month');
-      if (salesData) {
-        salesData.forEach(row => {
-          let acc = String(row.account_no || '').trim();
-          if (acc) {
-            if (!tempMap[acc]) {
-              tempMap[acc] = { accountNo: acc, accountTitle: row.account_title || 'Customer', totalSale: 0, paidAmount: 0, balance: 0, installment: 0 };
-            }
-            tempMap[acc].totalSale += Number(row.total_amt) || 0;
-            tempMap[acc].installment += Number(row.installment_per_month) || 0;
-            if (row.account_title) tempMap[acc].accountTitle = row.account_title;
-          }
-        });
-      }
-
-      let { data: receiptsData } = await _supabase.from('receipts').select('account_no, account_title, amount');
-      if (receiptsData) {
-        receiptsData.forEach(row => {
-          let acc = String(row.account_no || '').trim();
-          if (acc) {
-            if (!tempMap[acc]) {
-              tempMap[acc] = { accountNo: acc, accountTitle: row.account_title || 'Customer', totalSale: 0, paidAmount: 0, balance: 0, installment: 0 };
-            }
-            tempMap[acc].paidAmount += Number(row.amount) || 0;
-            if (!tempMap[acc].accountTitle || tempMap[acc].accountTitle === 'Customer') {
-              tempMap[acc].accountTitle = row.account_title || 'Customer';
-            }
-          }
-        });
-      }
-
-      Object.keys(tempMap).forEach(acc => {
-        let cust = tempMap[acc];
-        cust.balance = cust.totalSale - cust.paidAmount;
-      });
-
-      customerCache = tempMap;
-    } catch (e) {
-      console.error("Cache load error:", e);
-    }
-  }
-
-  function addBatchRow() {
-    let tbody = document.getElementById('batchTableBody');
-    let rows = tbody.querySelectorAll('tr');
-    let isMobile = document.body.classList.contains('mobile-mode');
-    let lastReceiptNo = "";
-    if (rows.length > 0) {
-      let mostRecentRow = isMobile ? rows[0] : rows[rows.length - 1];
-      let lastRctInput = mostRecentRow.querySelector('.batch-rct');
-      if (lastRctInput && !['Processing Fee', 'Advance', '1st Installment'].includes(lastRctInput.value)) {
-        lastReceiptNo = lastRctInput.value;
-      }
-    }
-
-    let row = document.createElement('tr');
-    row.innerHTML = `
-      <td data-label="Account No">
-        <div class="input-with-mic">
-          <input type="text" class="batch-acc" value="786" oninput="onBatchAccountInput(this)" onblur="onBatchAccountBlur(this)" onkeydown="handleBatchKey(event, this, 'acc')" placeholder="786XXXX" inputmode="numeric">
-          <button type="button" class="mic-btn" onclick="startCleanVoiceInputForElement(this, true)"><i class="fas fa-microphone"></i></button>
-        </div>
-      </td>
-      <td data-label="Receipt No">
-        <div class="input-with-mic">
-          <input type="text" class="batch-rct" value="${lastReceiptNo}" list="quickReceiptsList" placeholder="Receipt No..." oninput="calculateBatchTotal()" onkeydown="handleBatchKey(event, this, 'rct')" inputmode="numeric">
-          <datalist id="quickReceiptsList">
-            <option value="Processing Fee">
-            <option value="Advance">
-            <option value="1st Installment">
-          </datalist>
-          <button type="button" class="mic-btn" onclick="startCleanVoiceInputForElement(this, false)"><i class="fas fa-microphone"></i></button>
-        </div>
-      </td>
-      <td data-label="Amount">
-        <div class="input-with-mic">
-          <input type="number" class="batch-amt" placeholder="" oninput="calculateBatchTotal()" onkeydown="handleBatchKey(event, this, 'amt')" inputmode="decimal">
-          <button type="button" class="mic-btn" onclick="startCleanVoiceInputForElement(this, true)"><i class="fas fa-microphone"></i></button>
-        </div>
-      </td>
-      <td data-label="Customer Name"><input type="text" class="batch-title" readonly placeholder="Auto..." style="background-color: #eaeded; text-align: left;"></td>
-      <td data-label="Inst"><input type="text" class="batch-inst" readonly placeholder="--" style="background-color: #eaeded; text-align: center;"></td>
-      <td data-label="Total Sale Amount"><input type="text" class="batch-total-sale" readonly placeholder="--" style="background-color: #eaeded; text-align: center;"></td>
-      <td data-label="Paid Amount"><input type="text" class="batch-paid-amt" readonly placeholder="--" style="background-color: #eaeded; text-align: center;"></td>
-      <td data-label="Balance"><input type="text" class="batch-bal" readonly placeholder="--" style="background-color: #eaeded; text-align: center;"></td>
-      <td data-label="Action"><button type="button" class="action-btn btn-danger" style="padding: 2px 5px; font-size: 10px;" onclick="removeBatchRow(this)"><i class="fas fa-trash"></i></button></td>
-    `;
-    if (isMobile && tbody.firstChild) {
-      tbody.insertBefore(row, tbody.firstChild);
-    } else {
-      tbody.appendChild(row);
-    }
-    calculateBatchTotal();
-    return row;
-  }
-
-  function handleBatchKey(event, inputElement, fieldType) {
-    let currentRow = inputElement.closest('tr');
-    if (event.key === 'Backspace' && inputElement.value === '') {
-      event.preventDefault();
-      if (fieldType === 'amt') {
-        let rctInput = currentRow.querySelector('.batch-rct');
-        if (rctInput) { rctInput.focus(); rctInput.select(); }
-      } else if (fieldType === 'rct') {
-        let accInput = currentRow.querySelector('.batch-acc');
-        if (accInput) { accInput.focus(); accInput.select(); }
-      }
-      return;
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (fieldType === 'acc') {
-        let rctInput = currentRow.querySelector('.batch-rct');
-        if (rctInput) { rctInput.focus(); rctInput.select(); }
-      } else if (fieldType === 'rct') {
-        let amtInput = currentRow.querySelector('.batch-amt');
-        if (amtInput) { amtInput.focus(); amtInput.select(); }
-      } else if (fieldType === 'amt') {
-        let tbody = document.getElementById('batchTableBody');
-        let isMobile = document.body.classList.contains('mobile-mode');
-        let isLastRow = isMobile ? (currentRow === tbody.firstElementChild) : (currentRow === tbody.lastElementChild);
-        if (isLastRow) {
-          let newRow = addBatchRow();
-          newRow.querySelector('.batch-acc').focus();
-        } else {
-          let nextRow = isMobile ? currentRow.previousElementSibling : currentRow.nextElementSibling;
-          if (nextRow) nextRow.querySelector('.batch-acc').focus();
-        }
-      }
-    }
-  }
-
-  function handleRemarksKey(event) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      let lastRow = document.getElementById('batchTableBody').lastElementChild;
-      if (lastRow) lastRow.querySelector('.batch-acc').focus();
-    }
-  }
-
-  function onBatchAccountInput(input) {
-    if (!input.value.startsWith('786')) {
-      input.value = '786' + input.value.replace(/786/g, '');
-    }
-    let accNo = input.value.trim();
-    let row = input.closest('tr');
-    if (accNo.length > 3 && customerCache[accNo]) {
-      populateBatchRowDetails(row, customerCache[accNo]);
-    } else if (accNo.length <= 3) {
-      clearBatchRowDetails(row);
-    }
-  }
-
-  async function onBatchAccountBlur(input) {
-    let accNo = input.value.trim();
-    if (accNo.length > 3) {
-      let row = input.closest('tr');
-      if (customerCache[accNo]) {
-        populateBatchRowDetails(row, customerCache[accNo]);
-      } else {
-        let { data: salesData } = await _supabase.from('sales').select('account_title, total_amt, installment_per_month').eq('account_no', accNo);
-        let { data: receiptsData } = await _supabase.from('receipts').select('account_title, amount').eq('account_no', accNo);
-
-        if ((salesData && salesData.length > 0) || (receiptsData && receiptsData.length > 0)) {
-          let title = 'Customer';
-          let totalSale = 0;
-          let inst = 0;
-          let paid = 0;
-
-          if (salesData && salesData.length > 0) {
-            title = salesData[0].account_title || 'Customer';
-            salesData.forEach(s => {
-              totalSale += Number(s.total_amt) || 0;
-              inst += Number(s.installment_per_month) || 0;
-            });
-          }
-
-          if (receiptsData && receiptsData.length > 0) {
-            if (title === 'Customer') title = receiptsData[0].account_title || 'Customer';
-            receiptsData.forEach(r => {
-              paid += Number(r.amount) || 0;
-            });
-          }
-
-          let custObj = {
-            accountTitle: title,
-            totalSale: totalSale,
-            paidAmount: paid,
-            balance: totalSale - paid,
-            installment: inst
-          };
-          customerCache[accNo] = custObj;
-          populateBatchRowDetails(row, custObj);
-        }
-      }
-    }
-  }
-
-  function clearBatchRowDetails(row) {
-    row.querySelector('.batch-title').value = '';
-    row.querySelector('.batch-inst').value = '';
-    row.querySelector('.batch-total-sale').value = '';
-    row.querySelector('.batch-paid-amt').value = '';
-    row.querySelector('.batch-bal').value = '';
-    calculateBatchTotal();
-  }
-
-  function populateBatchRowDetails(row, data) {
-    row.querySelector('.batch-title').value = data.accountTitle || "";
-    row.querySelector('.batch-inst').value = (data.installment !== undefined ? data.installment : 0).toLocaleString();
-    row.querySelector('.batch-total-sale').value = (data.totalSale !== undefined ? data.totalSale : 0).toLocaleString();
-    row.querySelector('.batch-paid-amt').value = (data.paidAmount !== undefined ? data.paidAmount : 0).toLocaleString();
-    row.querySelector('.batch-bal').value = (data.balance !== undefined ? data.balance : 0).toLocaleString();
-  }
-
-  function removeBatchRow(btn) {
-    let tbody = document.getElementById('batchTableBody');
-    if (tbody.children.length > 1) {
-      btn.closest('tr').remove();
-      calculateBatchTotal();
-    } else { alert("Kam az kam aik row honi zaroori hai."); }
-  }
-
-  function calculateBatchTotal() {
-    let rows = document.querySelectorAll('#batchTableBody tr');
-    let total = 0;
-    let uniqueReceipts = new Set();
-    rows.forEach(row => {
-      let amt = Number(row.querySelector('.batch-amt').value) || 0;
-      total += amt;
-      let rct = row.querySelector('.batch-rct').value.trim();
-      if (rct) uniqueReceipts.add(rct);
-    });
-    document.getElementById('totalReceiptsAmount').innerText = total.toLocaleString();
-    document.getElementById('totalReceiptsQty').innerText = uniqueReceipts.size;
-  }
-
-  function onBatchPaymentModeChange() {
-    let mode = document.getElementById('batchPaymentMode').value;
-    let suffixSelect = document.getElementById('batchReceiptSuffix');
-    if (!suffixSelect) return;
-    suffixSelect.innerHTML = "";
-    let list = (mode === 'Cash') ? settingsOptions.cash : settingsOptions.bank;
-    list.forEach(item => {
-      let opt = document.createElement('option');
-      opt.value = item; opt.textContent = item;
-      suffixSelect.appendChild(opt);
-    });
-  }
-
-  async function submitBatchReceipts() {
-    let commonDate = document.getElementById('batchReceiptDate').value;
-    let commonSuffix = document.getElementById('batchReceiptSuffix').value;
-    let commonRemarks = document.getElementById('batchRemarks').value.trim();
-    let recordsToInsert = [];
-    let enteredVoucherNos = [];
-    let specialKeywords = ["processing fee", "advance", "1st installment"];
-
-    document.querySelectorAll('#batchTableBody tr').forEach(row => {
-      let accNo = row.querySelector('.batch-acc').value.trim();
-      let rctNo = row.querySelector('.batch-rct').value.trim();
-      let amt = Number(row.querySelector('.batch-amt').value) || 0;
-      let title = row.querySelector('.batch-title').value.trim();
-      if (accNo && rctNo && amt > 0) {
-        if (!specialKeywords.includes(rctNo.toLowerCase())) {
-          enteredVoucherNos.push(rctNo);
-        }
-        recordsToInsert.push({
-          voucher_no: rctNo,
-          date: commonDate,
-          account_no: accNo,
-          account_title: title || 'Walk-in Customer',
-          account_head: 'Recovery',
-          pay_mode: commonSuffix,
-          amount: amt,
-          remarks: commonRemarks
-        });
-      }
-    });
-
-    if (recordsToInsert.length === 0) {
-      alert("Kam az kam aik mukammal row enter karein!");
-      return;
-    }
-
-    if (enteredVoucherNos.length > 0) {
-      let { data: existingData, error: checkError } = await _supabase
-        .from('receipts')
-        .select('voucher_no')
-        .in('voucher_no', enteredVoucherNos);
-
-      if (!checkError && existingData && existingData.length > 0) {
-        let duplicates = [...new Set(existingData.map(d => d.voucher_no))];
-        alert(`Duplicate Error! Ye Receipt Number(s) pehle se saved hain: ${duplicates.join(', ')}. Dobara enter nahi ho sakte.`);
-        return;
-      }
-    }
-
-    let saveBtn = document.getElementById('saveBatchBtn');
-    saveBtn.disabled = true;
-    saveBtn.innerText = "Saving to Supabase...";
-
-    let { error } = await _supabase.from('receipts').insert(recordsToInsert);
-    saveBtn.disabled = false;
-    saveBtn.innerText = "Save All Receipts to Supabase";
-
-    if (error) {
-      alert("Error saving: " + error.message);
-    } else {
-      alert("All Receipts Saved Successfully to Supabase!");
-      clearBatchForm();
-      loadRecentReceipts();
-      loadAllReceiptsForEditTab();
-      loadCustomersCache();
-    }
-  }
-
-  function clearBatchForm() {
-    document.getElementById('batchTableBody').innerHTML = '';
-    let newR = addBatchRow();
-    newR.querySelector('.batch-acc').focus();
-    calculateBatchTotal();
-    document.getElementById('batchRemarks').value = '';
-    document.getElementById('batchReceiptDate').value = new Date().toISOString().split('T')[0];
-  }
-
-  // ================= RECENT SAVED RECEIPTS =================
-  async function loadRecentReceipts() {
-    const tbody = document.getElementById('recentReceiptsBody');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Fetching receipts from Supabase...</td></tr>';
-
-    let allData = [];
-    let page = 0;
-    let pageSize = 1000;
-    let fetchMore = true;
-
-    while (fetchMore) {
-      let { data, error } = await _supabase
-        .from('receipts')
-        .select('*')
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      if (error) {
-        console.error("Fetch error:", error.message);
-        break;
-      }
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        if (data.length < pageSize) fetchMore = false;
-        else page++;
-      } else {
-        fetchMore = false;
-      }
-    }
-
-    recentReceiptsData = allData;
-    
-    currentSortColumn = 'date';
-    currentSortAsc = false;
-    let icon = document.getElementById('sortIcon_date');
-    if (icon) icon.className = "fas fa-sort-down";
-    executeSorting();
-
-    isInitialLoad = true;
-    renderRecentReceipts();
-  }
-
-  function onDateFilterChange() {
-    activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-    tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-    isInitialLoad = true;
-    
-    ['voucher', 'acc', 'title', 'head', 'mode'].forEach(colKey => {
-      let btn = document.getElementById('filterBtn_' + colKey);
-      if (btn) {
-        btn.style.fontWeight = 'normal';
-        btn.style.color = 'var(--primary)';
-      }
-    });
-
-    renderRecentReceipts();
-  }
-
-  function updateHeaderFiltersDynamic() {
-    const fromVal = document.getElementById('filterFromDate').value.trim();
-    const toVal = document.getElementById('filterToDate').value.trim();
-    const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
-    const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
-    const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
-    const daybookChecked = document.getElementById('filterDaybook').checked;
-    const bankChecked = document.getElementById('filterBank').checked;
-
-    let baseFiltered = recentReceiptsData.filter(r => {
-      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
-      if (fromVal && toVal) {
-        if (rDate < fromVal || rDate > toVal) return false;
-      } else if (fromVal) {
-        if (rDate !== fromVal) return false;
-      } else if (toVal) {
-        if (rDate > toVal) return false;
-      }
-
-      let accNo = String(r.account_no || '').toLowerCase();
-      if (accQuery && !accNo.includes(accQuery)) return false;
-      let accTitle = String(r.account_title || '').toLowerCase();
-      if (nameQuery && !accTitle.includes(nameQuery)) return false;
-      let voucherNo = String(r.voucher_no || '').toLowerCase();
-      if (rctQuery && !voucherNo.includes(rctQuery)) return false;
-
-      let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
-      let isBank = /bank|online|cheque|allied/i.test(mode);
-      if (daybookChecked && bankChecked) {}
-      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
-      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
-      else { return false; }
-      return true;
-    });
-
-    updateSingleHeaderFilter('voucherCheckboxesContainer', baseFiltered.map(r => r.voucher_no || ''), 'voucher', activeColumnFilters.voucher, tempColumnFilters.voucher);
-    updateSingleHeaderFilter('accCheckboxesContainer', baseFiltered.map(r => r.account_no || ''), 'acc', activeColumnFilters.acc, tempColumnFilters.acc);
-    updateSingleHeaderFilter('titleCheckboxesContainer', baseFiltered.map(r => r.account_title || ''), 'title', activeColumnFilters.title, tempColumnFilters.title);
-    updateSingleHeaderFilter('headCheckboxesContainer', baseFiltered.map(r => r.account_head || ''), 'head', activeColumnFilters.head, tempColumnFilters.head);
-    updateSingleHeaderFilter('modeCheckboxesContainer', baseFiltered.map(r => r.pay_mode || ''), 'mode', activeColumnFilters.mode, tempColumnFilters.mode);
-
-    if (isInitialLoad) {
-      let selectAllVoucher = document.getElementById('selectAllVoucher');
-      let selectAllAcc = document.getElementById('selectAllAcc');
-      let selectAllTitle = document.getElementById('selectAllTitle');
-      let selectAllHead = document.getElementById('selectAllHead');
-      let selectAllMode = document.getElementById('selectAllMode');
-
-      if (selectAllVoucher) selectAllVoucher.checked = true;
-      if (selectAllAcc) selectAllAcc.checked = true;
-      if (selectAllTitle) selectAllTitle.checked = true;
-      if (selectAllHead) selectAllHead.checked = true;
-      if (selectAllMode) selectAllMode.checked = true;
-
-      isInitialLoad = false;
-    }
-  }
-
-  function updateSingleHeaderFilter(containerId, itemsArray, colKey, activeSet, tempSet) {
-    let container = document.getElementById(containerId);
-    if (!container) return;
-    let uniqueItems = [...new Set(itemsArray)].sort();
-    
-    if (activeSet.size === 0 && isInitialLoad) {
-      uniqueItems.forEach(item => {
-        activeSet.add(String(item));
-        tempSet.add(String(item));
-      });
-    }
-
-    renderCheckboxList(containerId, uniqueItems, colKey, tempSet, "");
-  }
-
-  function renderCheckboxList(containerId, items, colKey, tempSet, filterText) {
-    let container = document.getElementById(containerId);
-    if (!container) return;
-    let html = '';
-    items.forEach(item => {
-      let strItem = String(item);
-      if (filterText && !strItem.toLowerCase().includes(filterText.toLowerCase())) return;
-      let isChecked = tempSet.has(strItem) ? 'checked' : '';
-      html += `
-        <label><input type="checkbox" value="${strItem}" ${isChecked} onchange="onTempColumnFilterChange('${colKey}', '${strItem}', this.checked)"> <span>${strItem || '(Blank)'}</span></label>
-      `;
-    });
-    container.innerHTML = html;
-  }
-
-  function filterDropdownOptions(colKey, query) {
-    const fromVal = document.getElementById('filterFromDate').value.trim();
-    const toVal = document.getElementById('filterToDate').value.trim();
-    const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
-    const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
-    const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
-    const daybookChecked = document.getElementById('filterDaybook').checked;
-    const bankChecked = document.getElementById('filterBank').checked;
-
-    let baseFiltered = recentReceiptsData.filter(r => {
-      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
-      if (fromVal && toVal) {
-        if (rDate < fromVal || rDate > toVal) return false;
-      } else if (fromVal) {
-        if (rDate !== fromVal) return false;
-      } else if (toVal) {
-        if (rDate > toVal) return false;
-      }
-
-      let accNo = String(r.account_no || '').toLowerCase();
-      if (accQuery && !accNo.includes(accQuery)) return false;
-      let accTitle = String(r.account_title || '').toLowerCase();
-      if (nameQuery && !accTitle.includes(nameQuery)) return false;
-      let voucherNo = String(r.voucher_no || '').toLowerCase();
-      if (rctQuery && !voucherNo.includes(rctQuery)) return false;
-
-      let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
-      let isBank = /bank|online|cheque|allied/i.test(mode);
-      if (daybookChecked && bankChecked) {}
-      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
-      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
-      else { return false; }
-      return true;
-    });
-
-    let mapKey = { voucher: 'voucher_no', acc: 'account_no', title: 'account_title', head: 'account_head', mode: 'pay_mode' }[colKey];
-    let uniqueItems = [...new Set(baseFiltered.map(r => r[mapKey] || ''))].sort();
-    renderCheckboxList(colKey + 'CheckboxesContainer', uniqueItems, colKey, tempColumnFilters[colKey], query);
-  }
-
-  function onTempColumnFilterChange(colKey, val, isChecked) {
-    if (isChecked) {
-      tempColumnFilters[colKey].add(String(val));
-    } else {
-      tempColumnFilters[colKey].delete(String(val));
-    }
-  }
-
-  function toggleSelectAllColumn(colKey, master) {
-    let containerId = colKey + 'CheckboxesContainer';
-    let checkboxes = document.querySelectorAll(`#${containerId} input[type="checkbox"]`);
-    checkboxes.forEach(chk => {
-      chk.checked = master.checked;
-      let val = chk.value;
-      if (master.checked) {
-        tempColumnFilters[colKey].add(String(val));
-      } else {
-        tempColumnFilters[colKey].delete(String(val));
-      }
-    });
-  }
-
-  function applyColumnFilter(colKey) {
-    activeColumnFilters[colKey] = new Set(tempColumnFilters[colKey]);
-    document.getElementById(colKey + 'Dropdown').classList.remove('show');
-    
-    let btn = document.getElementById('filterBtn_' + colKey);
-    if (btn) {
-      btn.style.fontWeight = 'bold';
-      btn.style.color = '#c62828';
-    }
-
-    renderRecentReceipts();
-  }
-
-  function getFilteredRecentReceipts() {
-    const fromVal = document.getElementById('filterFromDate').value.trim();
-    const toVal = document.getElementById('filterToDate').value.trim();
-    const accQuery = document.getElementById('filterAccNo').value.trim().toLowerCase();
-    const nameQuery = document.getElementById('filterAccName').value.trim().toLowerCase();
-    const rctQuery = document.getElementById('filterReceiptNo').value.trim().toLowerCase();
-    const daybookChecked = document.getElementById('filterDaybook').checked;
-    const bankChecked = document.getElementById('filterBank').checked;
-
-    return recentReceiptsData.filter(r => {
-      let rDate = r.date ? String(r.date).trim().substring(0, 10) : '';
-      
-      if (fromVal && toVal) {
-        if (rDate < fromVal || rDate > toVal) return false;
-      } else if (fromVal) {
-        if (rDate !== fromVal) return false;
-      } else if (toVal) {
-        if (rDate > toVal) return false;
-      }
-
-      let accNo = String(r.account_no || '').toLowerCase();
-      if (accQuery && !accNo.includes(accQuery)) return false;
-
-      let accTitle = String(r.account_title || '').toLowerCase();
-      if (nameQuery && !accTitle.includes(nameQuery)) return false;
-
-      let voucherNo = String(r.voucher_no || '').toLowerCase();
-      if (rctQuery && !voucherNo.includes(rctQuery)) return false;
-
-      let mode = String(r.pay_mode || r.account_head || '').toLowerCase();
-      let isBank = /bank|online|cheque|allied/i.test(mode);
-
-      if (daybookChecked && bankChecked) {}
-      else if (daybookChecked && !bankChecked) { if (isBank) return false; }
-      else if (!daybookChecked && bankChecked) { if (!isBank) return false; }
-      else { return false; }
-
-      if (activeColumnFilters.voucher.size > 0 && !activeColumnFilters.voucher.has(String(r.voucher_no || ''))) return false;
-      if (activeColumnFilters.acc.size > 0 && !activeColumnFilters.acc.has(String(r.account_no || ''))) return false;
-      if (activeColumnFilters.title.size > 0 && !activeColumnFilters.title.has(String(r.account_title || ''))) return false;
-      if (activeColumnFilters.head.size > 0 && !activeColumnFilters.head.has(String(r.account_head || ''))) return false;
-      if (activeColumnFilters.mode.size > 0 && !activeColumnFilters.mode.has(String(r.pay_mode || ''))) return false;
-
-      return true;
-    });
-  }
-
-  function renderRecentReceipts() {
-    updateHeaderFiltersDynamic();
-    renderRecentReceiptsTableOnly();
-  }
-
-  function renderRecentReceiptsTableOnly() {
-    const tbody = document.getElementById('recentReceiptsBody');
-    const filtered = getFilteredRecentReceipts();
-
-    let total = 0;
-    let uniqueReceiptsSet = new Set();
-    filtered.forEach(r => {
-      total += Number(r.amount) || 0;
-      if (r.voucher_no) uniqueReceiptsSet.add(String(r.voucher_no).trim());
-    });
-    document.getElementById('recentTotalsQty').innerText = uniqueReceiptsSet.size;
-    document.getElementById('recentTotalsAmount').innerText = total.toLocaleString();
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No records found.</td></tr>';
-      return;
-    }
-
-    let html = '';
-    filtered.forEach(row => {
-      let displayDate = row.date ? String(row.date).trim().substring(0, 10) : '';
-      html += `
-        <tr>
-          <td><input type="checkbox" class="recent-row-chk" value="${row.id}"></td>
-          <td>${displayDate}</td>
-          <td><b>${row.voucher_no || ''}</b></td>
-          <td>${row.account_no || ''}</td>
-          <td style="text-align:left;">${row.account_title || ''}</td>
-          <td>${row.account_head || 'Recovery'}</td>
-          <td><span style="background:#e8f5e9; color:#1b5e20; padding:2px 5px; border-radius:3px; font-weight:bold; font-size:10px;">${row.pay_mode || ''}</span></td>
-          <td style="text-align:right; font-weight:bold; color:var(--primary);">${(Number(row.amount) || 0).toLocaleString()}</td>
-        </tr>
-      `;
-    });
-    tbody.innerHTML = html;
-  }
-
-  function toggleSelectAllRecent(master) {
-    document.querySelectorAll('.recent-row-chk').forEach(chk => chk.checked = master.checked);
-  }
-
-  async function deleteSelectedRecentReceipts() {
-    let checkboxes = document.querySelectorAll('.recent-row-chk:checked');
-    if (checkboxes.length === 0) {
-      alert("Delete karne ke liye kam az kam aik receipt select karein.");
-      return;
-    }
-    if (!confirm(`Kya aap waqai select ki gayi ${checkboxes.length} receipts delete karna chahte hain?`)) return;
-
-    let ids = Array.from(checkboxes).map(chk => Number(chk.value));
-    let { error } = await _supabase.from('receipts').delete().in('id', ids);
-    if (error) {
-      alert("Delete error: " + error.message);
-    } else {
-      alert("Selected receipts delete ho gayi hain.");
-      loadRecentReceipts();
-      loadAllReceiptsForEditTab();
-      loadCustomersCache();
-    }
-  }
-
-  function resetRecentFilter() {
-    document.getElementById('filterFromDate').value = '';
-    document.getElementById('filterToDate').value = '';
-    document.getElementById('filterAccNo').value = '';
-    document.getElementById('filterAccName').value = '';
-    document.getElementById('filterReceiptNo').value = '';
-    document.getElementById('filterDaybook').checked = true;
-    document.getElementById('filterBank').checked = false;
-    isInitialLoad = true;
-    activeColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-    tempColumnFilters = { voucher: new Set(), acc: new Set(), title: new Set(), head: new Set(), mode: new Set() };
-    
-    ['voucher', 'acc', 'title', 'head', 'mode'].forEach(colKey => {
-      let btn = document.getElementById('filterBtn_' + colKey);
-      if (btn) {
-        btn.style.fontWeight = 'normal';
-        btn.style.color = 'var(--primary)';
-      }
-    });
-
-    loadRecentReceipts();
-  }
-
-  function printRecentReceipts() {
-    const filtered = getFilteredRecentReceipts();
-    let total = 0;
-    let uniquePrintReceipts = new Set();
-    let rowsHtml = '';
-    
-    filtered.forEach(r => {
-      total += Number(r.amount) || 0;
-      if (r.voucher_no) uniquePrintReceipts.add(String(r.voucher_no).trim());
-      let dStr = r.date ? String(r.date).trim().substring(0, 10) : '';
-      rowsHtml += `
-        <tr>
-          <td>${dStr}</td>
-          <td>${r.voucher_no || ''}</td>
-          <td>${r.account_no || ''}</td>
-          <td>${r.account_title || ''}</td>
-          <td>${r.account_head || ''}</td>
-          <td>${r.pay_mode || ''}</td>
-          <td style="text-align:right;">${(Number(r.amount) || 0).toLocaleString()}</td>
-        </tr>
-      `;
-    });
-
-    document.getElementById('printArea').innerHTML = `
-      <h2>Al Meezan ERP - Receipts Report</h2>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Receipt No</th><th>Acc No</th><th>Customer Name</th><th>Account Head</th><th>Pay Mode</th><th>Amount</th></tr>
-        </thead>
-        <tbody>${rowsHtml || '<tr><td colspan="7" style="text-align:center;">No records</td></tr>'}</tbody>
-      </table>
-      <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:10px; font-size:12px;">
-        <span>Unique Receipt Qty: <b>${uniquePrintReceipts.size}</b> &nbsp;|&nbsp; Total Records: <b>${filtered.length}</b></span>
-        <span>Total Amount: Rs <b>${total.toLocaleString()}</b></span>
-      </div>
-    `;
-    setTimeout(() => window.print(), 150);
-  }
-
-  // ================= EDIT & SEARCH TAB LOGIC =================
-  async function loadAllReceiptsForEditTab() {
-    const tbody = document.getElementById('editTabBody');
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Fetching all receipts from Supabase...</td></tr>';
-
-    let allData = [];
-    let page = 0;
-    let pageSize = 1000;
-    let fetchMore = true;
-
-    while (fetchMore) {
-      let { data, error } = await _supabase
-        .from('receipts')
-        .select('*')
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      if (error) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
-        return;
-      }
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        if (data.length < pageSize) fetchMore = false;
-        else page++;
-      } else {
-        fetchMore = false;
-      }
-    }
-
-    allData.sort((a, b) => {
-      let dateA = a.date ? String(a.date) : '';
-      let dateB = b.date ? String(b.date) : '';
-      return dateB.localeCompare(dateA);
-    });
-
-    editTabResultsData = allData;
-    renderEditTabResults(editTabResultsData);
-  }
-
-  function filterEditTabTable() {
-    let rctQuery = document.getElementById('editSearchReceiptNo').value.trim().toLowerCase();
-    let accQuery = document.getElementById('editSearchAccountNo').value.trim().toLowerCase();
-    let nameQuery = document.getElementById('editSearchName').value.trim().toLowerCase();
-
-    let filtered = editTabResultsData.filter(r => {
-      let rct = String(r.voucher_no || '').toLowerCase();
-      let acc = String(r.account_no || '').toLowerCase();
-      let name = String(r.account_title || '').toLowerCase();
-
-      if (rctQuery && !rct.includes(rctQuery)) return false;
-      if (accQuery && !acc.includes(accQuery)) return false;
-      if (nameQuery && !name.includes(nameQuery)) return false;
-      return true;
-    });
-
-    renderEditTabResults(filtered);
-  }
-
-  function resetEditTabSearch() {
-    document.getElementById('editSearchReceiptNo').value = '';
-    document.getElementById('editSearchAccountNo').value = '';
-    document.getElementById('editSearchName').value = '';
-    renderEditTabResults(editTabResultsData);
-  }
-
-  function renderEditTabResults(dataArray) {
-    const tbody = document.getElementById('editTabBody');
-    let total = 0;
-    dataArray.forEach(r => { total += Number(r.amount) || 0; });
-
-    document.getElementById('editTabTotalsQty').innerText = dataArray.length;
-    document.getElementById('editTabTotalsAmount').innerText = total.toLocaleString();
-
-    if (dataArray.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No records found.</td></tr>';
-      return;
-    }
-
-    let html = '';
-    dataArray.forEach((entry, idx) => {
-      let dStr = entry.date ? String(entry.date).trim().substring(0, 10) : '';
-      html += `
-        <tr data-index="${idx}" data-id="${entry.id}">
-          <td><input type="checkbox" class="edit-tab-chk" value="${entry.id}"></td>
-          <td class="edit-cell-date">${dStr}</td>
-          <td class="edit-cell-rct">${entry.voucher_no || ''}</td>
-          <td class="edit-cell-acc">${entry.account_no || ''}</td>
-          <td style="text-align:left;" class="edit-cell-title">${entry.account_title || ''}</td>
-          <td class="edit-cell-head">${entry.account_head || ''}</td>
-          <td class="edit-cell-mode">${entry.pay_mode || ''}</td>
-          <td style="text-align:right;" class="edit-cell-amt">${(Number(entry.amount) || 0).toLocaleString()}</td>
-          <td style="white-space:nowrap;">
-            <button class="action-btn btn-secondary" style="padding:2px 5px; font-size:10px;" onclick="toggleEditTabRow(this)"><i class="fas fa-pen"></i> Edit</button>
-            <button class="action-btn btn-danger" style="padding:2px 5px; font-size:10px;" onclick="deleteEditTabSingleRow(${entry.id})"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>
-      `;
-    });
-    tbody.innerHTML = html;
-  }
-
-  function toggleSelectAllEditTab(master) {
-    document.querySelectorAll('.edit-tab-chk').forEach(chk => chk.checked = master.checked);
-  }
-
-  function toggleEditTabRow(btn) {
-    const tr = btn.closest('tr');
-    if (tr.classList.contains('editing')) {
-      saveEditTabRow(tr, btn);
-      return;
-    }
-
-    tr.classList.add('editing');
-    let idx = tr.getAttribute('data-index');
-    let entry = editTabResultsData[idx];
-    let dStr = entry.date ? String(entry.date).trim().substring(0, 10) : '';
-
-    tr.querySelector('.edit-cell-date').innerHTML = `<input type="date" value="${dStr}" class="edit-date-input" style="padding:2px; width:100px;">`;
-    tr.querySelector('.edit-cell-rct').innerHTML = `<input type="text" value="${entry.voucher_no || ''}" class="edit-rct-input" style="padding:2px; width:60px; text-align:center;" inputmode="numeric">`;
-    tr.querySelector('.edit-cell-acc').innerHTML = `<input type="text" value="${entry.account_no || ''}" class="edit-acc-input" style="padding:2px; width:70px;" inputmode="numeric">`;
-    tr.querySelector('.edit-cell-title').innerHTML = `<input type="text" value="${entry.account_title || ''}" class="edit-title-input" style="padding:2px; width:100%;">`;
-    tr.querySelector('.edit-cell-head').innerHTML = `<input type="text" value="${entry.account_head || ''}" class="edit-head-input" style="padding:2px; width:100%;">`;
-    tr.querySelector('.edit-cell-mode').innerHTML = `<input type="text" value="${entry.pay_mode || ''}" class="edit-mode-input" style="padding:2px; width:100%;">`;
-    tr.querySelector('.edit-cell-amt').innerHTML = `<input type="number" value="${entry.amount || 0}" class="edit-amt-input" style="padding:2px; width:65px; text-align:right;" inputmode="decimal">`;
-
-    btn.innerHTML = '<i class="fas fa-save"></i> Save';
-    btn.classList.remove('btn-secondary');
-    btn.classList.add('btn-primary');
-  }
-
-  async function saveEditTabRow(tr, btn) {
-    let id = tr.getAttribute('data-id');
-    let newDate = tr.querySelector('.edit-date-input').value;
-    let newRct = tr.querySelector('.edit-rct-input').value.trim();
-    let newAcc = tr.querySelector('.edit-acc-input').value.trim();
-    let newTitle = tr.querySelector('.edit-title-input').value.trim();
-    let newHead = tr.querySelector('.edit-head-input').value.trim();
-    let newMode = tr.querySelector('.edit-mode-input').value.trim();
-    let newAmt = Number(tr.querySelector('.edit-amt-input').value) || 0;
-
-    btn.disabled = true;
-    let { error } = await _supabase.from('receipts').update({
-      date: newDate,
-      voucher_no: newRct,
-      account_no: newAcc,
-      account_title: newTitle,
-      account_head: newHead,
-      pay_mode: newMode,
-      amount: newAmt
-    }).eq('id', id);
-
-    btn.disabled = false;
-    if (error) {
-      alert("Update error: " + error.message);
-    } else {
-      alert("Updated successfully!");
-      loadAllReceiptsForEditTab();
-      loadRecentReceipts();
-      loadCustomersCache();
-    }
-  }
-
-  async function deleteEditTabSingleRow(id) {
-    if (!confirm("Kya aap waqai is entry ko delete karna chahte hain?")) return;
-    let { error } = await _supabase.from('receipts').delete().eq('id', id);
-    if (error) {
-      alert("Delete error: " + error.message);
-    } else {
-      loadAllReceiptsForEditTab();
-      loadRecentReceipts();
-      loadCustomersCache();
-    }
-  }
-
-  async function bulkDeleteSelectedReceipts() {
-    let checkboxes = document.querySelectorAll('.edit-tab-chk:checked');
-    if (checkboxes.length === 0) {
-      alert("Delete karne ke liye kam az kam aik receipt select karein.");
-      return;
-    }
-    if (!confirm(`Kya aap waqai select ki gayi ${checkboxes.length} receipts delete karna chahte hain?`)) return;
-
-    let ids = Array.from(checkboxes).map(chk => Number(chk.value));
-    let { error } = await _supabase.from('receipts').delete().in('id', ids);
-    if (error) {
-      alert("Delete error: " + error.message);
-    } else {
-      alert("Selected receipts delete ho gayi hain.");
-      loadAllReceiptsForEditTab();
-      loadRecentReceipts();
-      loadCustomersCache();
-    }
-  }
-
-  // ================= UNIVERSAL MIC INPUT =================
-  (function() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let activeRec = null, activeBtn = null, activeInput = null;
-
-    function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-    function stopActiveMic() {
-      if (activeRec) {
-        activeRec.onend = null; activeRec.onresult = null;
-        try { activeRec.abort(); } catch (e) {}
-        activeRec = null;
-      }
-      if (activeBtn) activeBtn.classList.remove('listening');
-      if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-      activeBtn = null; activeInput = null;
-    }
-
-    function toggleMic(input, btn) {
-      if (!SR) { alert('Ye browser voice input support nahi karta.'); return; }
-      const isNumeric = input.type === 'number';
-      if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-      stopActiveMic();
-
-      const rec = new SR();
-      rec.lang = 'en-US';
-      rec.continuous = true;
-      rec.interimResults = true;
-      let finalText = '';
-
-      activeRec = rec; activeBtn = btn; activeInput = input;
-      btn.classList.add('listening');
-      input.dataset.origPh = input.placeholder || '';
-      input.placeholder = 'Sun raha hoon...';
-
-      rec.onresult = function(ev) {
-        let interim = '';
-        for (let i = ev.resultIndex; i < ev.results.length; i++) {
-          const t = ev.results[i][0].transcript;
-          if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-        }
-        let text = (finalText + interim).trim();
-        if (isNumeric) text = cleanNumeric(text);
-        input.value = text;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      rec.onerror = function() {};
-      rec.onend = function() {
-        btn.classList.remove('listening');
-        input.placeholder = input.dataset.origPh || '';
-        if (isNumeric) input.value = cleanNumeric(input.value);
-        if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-      };
-      try { rec.start(); } catch (e) {}
-    }
-
-    window.startCleanVoiceInput = function(inputId, isNum) {
-      let inp = document.getElementById(inputId);
-      if (inp) toggleMic(inp, inp.parentElement.querySelector('.mic-btn') || inp);
-    };
-
-    window.startCleanVoiceInputForElement = function(btn, isNum) {
-      let inp = btn.parentElement.querySelector('input');
-      if (inp) toggleMic(inp, btn);
-    };
-  })();
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, PM = ERP_CONFIG.PAY_MODES, TAGS = ERP_CONFIG.QUICK_RECEIPT_TAGS;
+const SPECIAL = ERP_CONFIG.SPECIAL_RECEIPT_NOS, isTag = v => SPECIAL.some(t => t.toLowerCase() === String(v).trim().toLowerCase());
+let CUST = new Map(), DUES = new Map(), REC = [], shown = 100, editing = null, lastRct = null;
+document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+
+/* ---------- entry rows ---------- */
+function addRow(prefill = {}) {
+  const prev = [...document.querySelectorAll("#rows .rct")].pop();
+  const rct = prefill.rct ?? (prev && !isTag(prev.value) ? prev.value : "");
+  const d = document.createElement("div"); d.className = "rrow";
+  d.innerHTML = `<div class="rgrid">
+    <div class="acc"><label>Account no</label><div class="inp"><input class="acc-in" value="786" inputmode="numeric" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div>
+    <div><label>Receipt no</label><input class="rct" value="${E(rct)}" list="dTags" autocomplete="off"></div>
+    <div><label>Amount</label><input class="amt" type="number" inputmode="decimal" min="0"></div>
+    <button type="button" class="btn sm ghost del" aria-label="Remove row" style="color:var(--danger)">✕</button></div>
+    <div class="rinfo"></div>`;
+  $("rows").appendChild(d); ERP.voice.wire(d); totals(); return d;
+}
+function lookup(row) {
+  const acc = row.querySelector(".acc-in").value.trim(), info = row.querySelector(".rinfo"), c = CUST.get(acc);
+  row._c = c || null;
+  if (!acc || acc === "786" || acc.length < 5) { info.innerHTML = ""; return; }
+  if (!c) { info.innerHTML = '<span class="badge bad">Account not found</span>'; return; }
+  const b = Number(c.balance) || 0, inst = Number(c.installment) || 0;
+  const d = DUES.get(acc), mk = (t, tag, v) => Number(v) > 0 ? `<button type="button" class="chip" style="min-height:30px;padding:0 10px" data-due="${tag}|${v}">${t} ${M(v)}</button>` : "";
+  info.innerHTML = `<b>${E(c.account_title)}</b>${inst ? `<span>· Inst Rs ${M(inst)}</span>` : ""}<span class="badge ${b > 0 ? "warn" : "ok"}">${b > 0 ? "Balance Rs " + M(b) : "Clear"}</span>` + (d ? mk("Advance due", "Advance", d.advance_due) + mk("Fee due", "Processing Fee", d.fee_due) + mk("1st inst due", "1st Installment", d.first_due) : "");
+}
+function totals() {
+  let n = 0, t = 0; document.querySelectorAll("#rows .rrow").forEach(r => { const a = +r.querySelector(".amt").value || 0; if (a > 0) { n++; t += a; } });
+  $("sCount").textContent = n + " receipt" + (n === 1 ? "" : "s"); $("sTotal").textContent = "Rs " + M(t);
+}
+$("rows").addEventListener("input", e => { const r = e.target.closest(".rrow"); if (!r) return; if (e.target.matches(".acc-in")) lookup(r); totals(); });
+$("rows").addEventListener("click", e => { const b = e.target.closest("[data-due]"); if (!b) return; const r = b.closest(".rrow"), [tag, v] = b.dataset.due.split("|"); r.querySelector(".rct").value = tag; r.querySelector(".amt").value = v; totals(); r.querySelector(".amt").focus(); });
+$("rows").addEventListener("focusin", e => { if (e.target.matches(".rct")) lastRct = e.target; });
+$("rows").addEventListener("click", e => { const r = e.target.closest(".rrow"); if (r && e.target.closest(".del")) { if (document.querySelectorAll("#rows .rrow").length > 1) { r.remove(); totals(); } else { r.querySelector(".amt").value = ""; r.querySelector(".acc-in").value = "786"; lookup(r); totals(); } } });
+$("rows").addEventListener("keydown", e => {   // Enter flows: account -> receipt no -> amount -> next row
+  if (e.key !== "Enter") return; const r = e.target.closest(".rrow"); if (!r) return; e.preventDefault();
+  if (e.target.matches(".acc-in")) r.querySelector(".rct").focus();
+  else if (e.target.matches(".rct")) r.querySelector(".amt").focus();
+  else if (e.target.matches(".amt")) { const n = r.nextElementSibling && r.nextElementSibling.classList.contains("rrow") ? r.nextElementSibling : addRow(); n.querySelector(".acc-in").focus(); n.querySelector(".acc-in").select(); }
+});
+$("addRow").onclick = () => addRow().querySelector(".acc-in").focus();
+$("tags").innerHTML = TAGS.map(t => `<button type="button" class="chip" style="min-height:34px;padding:2px 12px" data-t="${E(t)}">${E(t)}</button>`).join("");
+$("tags").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; const t = lastRct && document.body.contains(lastRct) ? lastRct : document.querySelector("#rows .rct"); t.value = b.dataset.t; t.focus(); };
+const dl = document.createElement("datalist"); dl.id = "dTags"; dl.innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); document.body.appendChild(dl);
+
+function fillModes(sel, type, withAll) {
+  const list = type ? PM[type.toLowerCase()] : [...PM.cash, ...PM.bank];
+  sel.innerHTML = (withAll ? '<option value="">All</option>' : "") + list.map(x => `<option>${E(x)}</option>`).join("");
+}
+$("rType").onchange = () => fillModes($("rMode"), $("rType").value);
+
+function resetEntry() { $("rows").innerHTML = ""; addRow({ rct: "" }); $("rRem").value = ""; $("rDate").value = ERP.ui.today(); totals(); }
+$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
+  const date = $("rDate").value; if (!date) return ERP.ui.toast("Select the receipt date", "err");
+  const recs = [], seen = new Set(), vnos = []; let bad = null;
+  document.querySelectorAll("#rows .rrow").forEach((r, i) => { if (bad) return;
+    const acc = r.querySelector(".acc-in").value.trim(), rct = r.querySelector(".rct").value.trim(), amt = +r.querySelector(".amt").value || 0;
+    if ((acc === "786" || !acc) && !rct && !amt) return;            // untouched row
+    if (!CUST.get(acc)) bad = [r, `Row ${i + 1}: account ${acc} not found`]; else if (!rct) bad = [r, `Row ${i + 1}: enter the receipt number`];
+    else if (!(amt > 0)) bad = [r, `Row ${i + 1}: enter the amount`];
+    else if (!isTag(rct) && seen.has(rct.toLowerCase())) bad = [r, `Receipt no ${rct} is repeated in this list`];
+    else { seen.add(rct.toLowerCase()); if (!isTag(rct)) vnos.push(rct);
+      recs.push({ voucher_no: rct, date, account_no: acc, account_title: CUST.get(acc).account_title, account_head: "Recovery", pay_mode: $("rMode").value, amount: amt, remarks: $("rRem").value.trim() }); } });
+  if (bad) { bad[0].scrollIntoView({ block: "center" }); return ERP.ui.toast(bad[1], "err"); }
+  if (!recs.length) return ERP.ui.toast("Enter at least one complete receipt", "err");
+  try {
+    if (vnos.length) { const dup = await ERP.db.receipts.existing(vnos); if (dup.length) return ERP.ui.toast("Already saved: " + [...new Set(dup)].join(", "), "err"); }
+    await ERP.db.receipts.add(recs); ERP.ui.toast(recs.length + " receipt" + (recs.length > 1 ? "s" : "") + " saved"); resetEntry(); loadCust(); loadList();
+  } catch (e) { ERP.ui.toast(e.message, "err"); }
+});
+
+/* ---------- list ---------- */
+async function loadList() {
+  $("lBody").innerHTML = '<tr><td colspan="8"><div class="skeleton"></div></td></tr>';
+  try { REC = await ERP.db.receipts.list({ from: $("fFrom").value, to: $("fTo").value }); shown = 100;
+    const heads = [...new Set(REC.map(r => r.account_head).filter(Boolean))].sort(), modes = [...new Set([...PM.cash, ...PM.bank, ...REC.map(r => r.pay_mode).filter(Boolean)])];
+    const hv = $("fHead").value, mv = $("fMode").value;
+    $("fHead").innerHTML = '<option value="">All</option>' + heads.map(h => `<option>${E(h)}</option>`).join(""); $("fHead").value = hv;
+    $("fMode").innerHTML = '<option value="">All</option>' + modes.map(h => `<option>${E(h)}</option>`).join(""); $("fMode").value = mv;
+    $("dHead").innerHTML = heads.map(h => `<option value="${E(h)}">`).join(""); renderList();
+  } catch (e) { $("lBody").innerHTML = `<tr><td colspan="8">${E(e.message)}</td></tr>`; }
+}
+const filtered = () => { const q = $("fQ").value.trim().toLowerCase(), m = $("fMode").value, h = $("fHead").value;
+  return REC.filter(r => (!m || r.pay_mode === m) && (!h || r.account_head === h) && (!q || [r.voucher_no, r.account_no, r.account_title].join(" ").toLowerCase().includes(q))); };
+function renderList() {
+  const rows = filtered(), tot = rows.reduce((s, r) => s + (+r.amount || 0), 0);
+  $("lSum").textContent = `${M(rows.length)} receipts · Rs ${M(tot)}`; $("selAll").checked = false; $("btnBulk").hidden = true;
+  $("lBody").innerHTML = rows.slice(0, shown).map(r => `<tr class="tr-click" data-id="${r.id}"><td><input type="checkbox" class="sel" value="${r.id}" aria-label="Select"></td><td>${E(r.date)}</td><td>${E(r.voucher_no)}</td><td>${E(r.account_no)}</td><td>${E(r.account_title)}</td><td>${E(r.account_head)}</td><td>${E(r.pay_mode)}</td><td class="num"><b>${M(r.amount)}</b></td></tr>`).join("")
+    || '<tr><td colspan="8" class="empty">No receipts found.</td></tr>';
+  $("more").hidden = rows.length <= shown; $("more").textContent = `Show more (${M(rows.length - shown)} remaining)`;
+}
+function updBulk() { const n = document.querySelectorAll(".sel:checked").length; $("btnBulk").hidden = !(n && ERP.auth.can("delete")); $("btnBulk").textContent = `Delete selected (${n})`; }
+$("lBody").onclick = e => { if (e.target.classList.contains("sel")) return updBulk(); const tr = e.target.closest("tr[data-id]"); if (tr && ERP.auth.can("edit")) openEdit(REC.find(r => String(r.id) === tr.dataset.id)); };
+$("selAll").onchange = e => { document.querySelectorAll(".sel").forEach(c => c.checked = e.target.checked); updBulk(); };
+$("btnBulk").onclick = async () => { const ids = [...document.querySelectorAll(".sel:checked")].map(c => Number(c.value));
+  if (!confirm(`Delete ${ids.length} receipt(s)? This cannot be undone.`)) return;
+  try { await ERP.db.receipts.remove(ids); ERP.ui.toast(ids.length + " deleted"); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
+["fFrom", "fTo"].forEach(i => $(i).onchange = () => loadList()); ["fMode", "fHead"].forEach(i => $(i).onchange = renderList); $("fQ").oninput = ERP.ui.debounce(() => { shown = 100; renderList(); }, 200);
+$("more").onclick = () => { shown += 100; renderList(); };
+$("btnPrint").onclick = () => { shown = 1e9; renderList(); window.print(); };
+
+function openEdit(r) {
+  editing = r; $("dSub").textContent = "Receipt " + r.voucher_no; fillModes($("eMode"), null); if (r.pay_mode && ![...$("eMode").options].some(o => o.value === r.pay_mode)) $("eMode").add(new Option(r.pay_mode, r.pay_mode));
+  $("eDate").value = r.date; $("eRct").value = r.voucher_no || ""; $("eAcc").value = r.account_no || ""; $("eTitle").value = r.account_title || ""; $("eHead").value = r.account_head || "";
+  $("eMode").value = r.pay_mode || ""; $("eAmt").value = r.amount; $("eRem").value = r.remarks || ""; $("eAccErr").textContent = ""; $("eDel").hidden = !ERP.auth.can("delete"); $("dlg").showModal();
+}
+$("eAcc").oninput = () => { const c = CUST.get($("eAcc").value.trim()); $("eAccErr").textContent = ""; if (c) $("eTitle").value = c.account_title; };
+$("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
+  const f = { date: $("eDate").value, voucher_no: $("eRct").value.trim(), account_no: $("eAcc").value.trim(), account_title: $("eTitle").value.trim(), account_head: $("eHead").value.trim(), pay_mode: $("eMode").value, amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
+  if (!f.date || !f.voucher_no || !(f.amount > 0)) return ERP.ui.toast("Date, receipt no and amount are required", "err");
+  if (!CUST.get(f.account_no)) { $("eAccErr").textContent = "Account not found"; return; }
+  try { if (f.voucher_no !== editing.voucher_no && !isTag(f.voucher_no) && (await ERP.db.receipts.existing([f.voucher_no])).length) return ERP.ui.toast("That receipt no is already used", "err");
+    await ERP.db.receipts.update(editing.id, f); ERP.ui.toast("Receipt updated"); $("dlg").close(); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); }
+});
+$("eDel").onclick = async () => { if (!confirm("Delete this receipt?")) return; try { await ERP.db.receipts.remove([editing.id]); ERP.ui.toast("Receipt deleted"); $("dlg").close(); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
+
+/* ---------- start ---------- */
+$("tNew").onclick = () => { $("tNew").setAttribute("aria-selected", true); $("tList").setAttribute("aria-selected", false); $("pNew").hidden = false; $("pList").hidden = true; };
+$("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("tNew").setAttribute("aria-selected", false); $("pNew").hidden = true; $("pList").hidden = false; };
+async function loadCust() { try { CUST = new Map((await ERP.db.customers.balances()).map(c => [String(c.account_no).trim(), c])); try { DUES = new Map((await ERP.db.saleDues()).map(d => [String(d.account_no).trim(), d])); } catch (e) { DUES = new Map(); } document.querySelectorAll("#rows .rrow").forEach(lookup); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); } }
+(async () => {
+  await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
+  fillModes($("rMode"), "Cash"); fillModes($("eMode"), null); resetEntry();
+  const d = new Date(); $("fFrom").value = new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().slice(0, 10);
+  loadCust(); loadList();
+})();
 </script>
 </body>
 </html>
