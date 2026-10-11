@@ -8,10 +8,11 @@
 <style>
   html,body{height:100%}
   .page{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;padding:8px;gap:8px}
-  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bar .sp{flex:1}.bar .subtxt{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55vw}
-  .bar .info{cursor:help;color:var(--muted);font-size:18px}
-  #bFilt .ar{display:inline-block;transition:transform .15s;margin-right:4px}#bFilt[aria-expanded="false"] .ar{transform:rotate(-90deg)}
-  #fCnt{margin-left:6px;background:var(--brand);color:#fff}
+  .bar{display:flex;align-items:center;gap:8px;min-height:30px}.bar .subtxt{color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .bar .info{cursor:help;color:var(--muted);font-size:17px}
+  #bFilt{width:34px;height:30px;min-height:0;padding:0;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:17px;line-height:1;cursor:pointer;position:relative}
+  #bFilt[aria-expanded="true"]{background:var(--brand-soft);border-color:var(--brand)}
+  #fCnt{position:absolute;top:-7px;right:-7px;min-width:17px;height:17px;border-radius:99px;background:var(--brand);color:#fff;font-size:10.5px;display:grid;place-items:center;padding:0 4px}
   .ctl{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));padding:12px;align-items:end;margin:0}.ctl .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chk{display:flex;gap:8px;align-items:center;min-height:var(--tap);cursor:pointer;font-weight:600;color:var(--muted)}.chk input{width:auto;min-height:0}
   .ms{position:relative}.ms>button{width:100%;min-height:var(--tap);text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:6px}
@@ -22,14 +23,15 @@
   #out{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
   .gh{position:sticky;left:0;width:max-content;max-width:100vw;display:flex;gap:18px;flex-wrap:wrap;background:#e8edf3;padding:7px 12px;font-weight:700;border-bottom:1px solid #cbd5e1}
   .gh small{font-weight:500;color:var(--muted)}
-  .rep{border-collapse:separate;border-spacing:0;min-width:max-content;font-size:12.5px;background:#fff}
-  .rep th,.rep td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:4px 7px;white-space:nowrap;vertical-align:middle}
+  .rep{table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:12.5px;background:#fff}
+  .rep th,.rep td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:4px 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
   .rep thead th{position:sticky;top:0;z-index:3;background:#f1f5f9;border-top:1px solid #cbd5e1;font-size:11.5px;text-align:left}
-  .rep .c1{position:sticky;left:0;z-index:2;background:#fff;min-width:80px;width:80px;max-width:80px;border-left:1px solid #cbd5e1}
-  .rep .c2{position:sticky;left:80px;z-index:2;background:#fff;box-shadow:2px 0 0 #94a3b8}
+  .rep .c1{position:sticky;left:0;z-index:2;background:#fff;border-left:1px solid #cbd5e1}
+  .rep .c2{position:sticky;left:var(--w1,80px);z-index:2;background:#fff;box-shadow:2px 0 0 #94a3b8}
   .rep thead .c1,.rep thead .c2{z-index:5;background:#f1f5f9}
   .rep .n,.rep .mc{text-align:right;font-variant-numeric:tabular-nums}.rep .bad{color:#b91c1c;font-weight:700}
-  .rep td.rm{min-width:150px}
+  .rz{position:absolute;top:0;right:0;bottom:0;width:8px;cursor:col-resize;user-select:none;z-index:6}.rz:hover,.rz.on{background:rgba(15,118,110,.35)}
+  body.dragging{user-select:none;cursor:col-resize}
   .rep tr.tot td{background:#eef2f7;font-weight:700}
   .legend{font-size:11.5px;color:var(--muted);padding:8px 12px;position:sticky;left:0;width:max-content;max-width:100vw}
   .head-print{display:none}
@@ -40,7 +42,7 @@
     #out{overflow:visible;border:0;border-radius:0}
     .grp{break-after:page}.grp:last-of-type{break-after:auto}
     .gh{position:static;width:auto;background:#fff;border:1px solid #000;font-size:11px;padding:3px 6px}
-    .rep{min-width:0;font-size:7.5pt}.rep th,.rep td{position:static!important;padding:2px 3px;box-shadow:none!important}.rep thead th{background:#eee;font-size:7pt}
+    .rep{table-layout:auto;width:100%!important;font-size:7.5pt}.rep colgroup,.rz{display:none}.rep th,.rep td{position:static!important;padding:2px 3px;box-shadow:none!important;overflow:visible;text-overflow:clip}.rep thead th{background:#eee;font-size:7pt}
     .rep thead{display:table-header-group}.rep tr{break-inside:avoid}.legend{position:static;font-size:7pt}
   }
 </style>
@@ -48,13 +50,12 @@
 <body>
 <main class="page">
   <div class="bar noprint">
-    <button class="btn ghost" id="bFilt" aria-expanded="true"><span class="ar">▾</span>Filters<span class="badge" id="fCnt" hidden></span></button>
+    <button class="btn" id="bFilt" aria-expanded="true" aria-label="Show or hide filters" title="Filters">☰<span id="fCnt" hidden></span></button>
     <span class="subtxt" id="sub">Loading...</span>
-    <span class="info" title="Month columns: amount received that month. — = nothing received although an installment was due. * = less than the installment due. Advance and processing fee are not counted. CMD = everything pending until today (overdue + this month).">ⓘ</span>
-    <span class="sp"></span>
-    <button class="btn ghost sm" id="bCsv">Export</button><button class="btn sm" id="bPrint">🖨 Print</button>
+    <span class="info" title="Month columns: amount received that month. — = nothing received although an installment was due. * = less than the installment due. Advance and processing fee are not counted. CMD = everything pending until today (overdue + this month). Drag the edge of a column heading to resize it; double-click the edge to reset.">ⓘ</span>
   </div>
   <section class="card ctl noprint" id="fPanel">
+    <div><label for="fAp">Approved by</label><select id="fAp"></select></div>
     <div class="ms"><label>CRO</label><button type="button" id="croBtn"><span id="croTxt">All</span><span>▾</span></button><div class="mslist" id="croList" hidden></div></div>
     <label class="chk"><input type="checkbox" id="fSep"> Each CRO on its own page</label>
     <div><label for="fSort">Sort by</label><select id="fSort"><option value="acc" selected>Account number</option><option value="name">Name A-Z</option><option value="late">Most late first</option></select></div>
@@ -68,6 +69,7 @@
     <label class="chk"><input type="checkbox" id="fCur"> Include current month</label>
     <label class="chk"><input type="checkbox" id="fDue"> Only customers with balance</label>
     <div><button class="btn ghost" id="bClear" style="width:100%">Clear filters</button></div>
+    <div style="display:flex;gap:8px"><button class="btn ghost" id="bCsv" style="flex:1">Export</button><button class="btn" id="bPrint" style="flex:1">🖨 Print</button></div>
   </section>
   <div id="out"></div>
 </main>
@@ -75,7 +77,12 @@
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
+/* ----- column widths: drag the edge of a heading; the size is remembered until you drag again ----- */
+const COLS = [["acc","Acct Num",80],["title","Acct Title",190],["aprv","Aprv by",110],["cro","CRO",90],["mobile","Mobile Nu",105],["minst","M Inst",80],["remarks","Remarks",160],["cmd","CMD",85],["late","Late",55],["overdue","Overdue",85],["plan","Plan",50],["sale","Total Sale",90],["paid","Total Paid",90],["bal","T Balance",90],["lpd","LPD",80],["lpa","L.Pamount",85],["deliv","Deliv Date",80],["end","End",70],["product","Product",220]];
+const LSK = "cro_report_cols_v1"; let CW = {}; try { CW = JSON.parse(localStorage.getItem(LSK) || "{}") || {}; } catch (e) {}
+const defW = k => /^m\d+$/.test(k) ? 85 : (COLS.find(c => c[0] === k) || [0, 0, 100])[2], wOf = k => CW[k] || defW(k);
 let BASE = [], REC = new Map(), DUE = new Map(), MONTHS = [], VIEW = [], CROS = [], SEL = null;
+const keys = () => [...COLS.map(c => c[0]), ...MONTHS.map((m, i) => "m" + i)], totalW = () => keys().reduce((t, k) => t + wOf(k), 0);
 const d2 = d => d ? String(d).slice(8, 10) + "-" + String(d).slice(5, 7) + "-" + String(d).slice(2, 4) : "";
 const mlabel = iso => new Date(iso + "T12:00").toLocaleString("en", { month: "short", year: "2-digit" }).replace(" ", "-");
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -84,9 +91,18 @@ const cell = (v, d) => v > 0 ? M(v) + (d > 0 && v < d - 0.5 ? "*" : "") : d > 0 
 /* ---------- filters panel: show / hide, hides itself when you scroll down ---------- */
 function filt(open) { $("fPanel").hidden = !open; $("bFilt").setAttribute("aria-expanded", open); if (!open) $("croList").hidden = true; }
 $("bFilt").onclick = () => filt($("fPanel").hidden);
-$("out").addEventListener("scroll", () => { if (!$("fPanel").hidden && $("out").scrollTop > 30) filt(false); }, { passive: true });
+const autoHide = () => { if (!$("fPanel").hidden) filt(false); };
+$("out").addEventListener("scroll", () => { if ($("out").scrollTop > 20) autoHide(); }, { passive: true });
+$("out").addEventListener("wheel", e => { if (e.deltaY > 0) autoHide(); }, { passive: true });          // scrolling down with the mouse
+let ty = null; $("out").addEventListener("touchstart", e => { ty = e.touches[0].clientY; }, { passive: true });
+$("out").addEventListener("touchmove", e => { if (ty !== null && ty - e.touches[0].clientY > 25) autoHide(); }, { passive: true });
+window.addEventListener("scroll", () => { if (window.scrollY > 20) autoHide(); }, { passive: true });
 
 /* ---------- CRO check-box list ---------- */
+function buildAp() {
+  const list = [...new Set(BASE.map(c => (c.approved_by || "").trim()).filter(Boolean))].sort(), v = $("fAp").value;
+  $("fAp").innerHTML = '<option value="">All</option>' + list.map(a => `<option>${E(a)}</option>`).join("") + (BASE.some(c => !String(c.approved_by || "").trim()) ? '<option value="__none">(none)</option>' : ""); $("fAp").value = v;
+}
 function buildCro() {
   const list = [...new Set(BASE.map(c => c.cro).filter(Boolean))].sort(); CROS = BASE.some(c => !c.cro) ? [...list, "__none"] : list;
   SEL = SEL ? new Set([...SEL].filter(x => CROS.includes(x))) : new Set(CROS); croList();
@@ -118,17 +134,19 @@ async function load() {
     BASE = base; REC = new Map(); DUE = new Map();
     rc.forEach(r => { const t = String(r.voucher_no || "").trim().toLowerCase(); if (t === "advance" || t === "processing fee") return; const k = String(r.account_no).trim() + "|" + String(r.date).slice(0, 7); REC.set(k, (REC.get(k) || 0) + N(r.amount)); });
     sch.forEach(r => DUE.set(String(r.account_no).trim() + "|" + String(r.due_month).slice(0, 7), N(r.due_amt)));
-    buildCro(); render();
+    buildAp(); buildCro(); render();
   } catch (e) { $("out").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/13_cro_report.sql (and 08) if this mentions v_cro_base.</small></div>`; }
 }
 
 /* ---------- the report ---------- */
 function render() {
   const onlyDue = $("fDue").checked, sort = $("fSort").value, q = $("fQ").value.trim().toLowerCase(), st = digits($("fStart").value), by = $("fDateBy").value,
-    df = $("fFrom").value, dt = $("fTo").value, op = $("fBalOp").value, bv = $("fBalVal").value, sep = $("fSep").checked, allCro = SEL.size === CROS.length, note = [];
+    df = $("fFrom").value, dt = $("fTo").value, op = $("fBalOp").value, bv = $("fBalVal").value, sep = $("fSep").checked, ap = $("fAp").value, allCro = SEL.size === CROS.length, note = [];
+  if (ap) note.push("approved by " + (ap === "__none" ? "(none)" : ap));
   if (!allCro) note.push("CRO " + [...SEL].map(c => c === "__none" ? "(none)" : c).join(", ")); if (st) note.push("from account " + st); if (q) note.push("search “" + q + "”"); if (onlyDue) note.push("with balance only");
   if (df || dt) note.push((by === "lpd" ? "last payment " : "sale ") + "date " + (df || "…") + " to " + (dt || "…")); if (op && bv !== "") note.push("balance " + (op === "lt" ? "less than " : "greater than ") + M(bv));
   const rows = BASE.filter(r => {
+    if (ap && (ap === "__none" ? String(r.approved_by || "").trim() : String(r.approved_by || "").trim() !== ap)) return false;
     if (!allCro && !SEL.has(r.cro || "__none")) return false;
     if (onlyDue && N(r.balance) <= 0.5) return false;
     if (st && Number(digits(r.account_no)) < Number(st)) return false;                       // this account and everything after it
@@ -141,24 +159,36 @@ function render() {
   VIEW = rows; const g = new Map(); rows.forEach(r => { const k = sep ? (r.cro || "(no CRO)") : (allCro ? "All customers" : "Selected CROs"); (g.get(k) || g.set(k, []).get(k)).push(r); });
   const today = new Date().toLocaleDateString("en-GB"), noteTxt = note.length ? " · " + note.join(" · ") : "";
   $("sub").textContent = `${M(rows.length)} of ${M(BASE.length)} customers${noteTxt}`; $("fCnt").hidden = !note.length; $("fCnt").textContent = note.length;
-  const head = `<tr><th class="c1">Acct Num</th><th class="c2">Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th class="n">M Inst</th><th>Remarks</th><th class="n">CMD</th><th class="n">Late</th><th class="n">Overdue</th><th class="n">Plan</th><th class="n">Total Sale</th><th class="n">Total Paid</th><th class="n">T Balance</th><th>LPD</th><th class="n">L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th>${MONTHS.map(m => `<th class="n">${E(m.label)}</th>`).join("")}</tr>`;
+  const NUM = new Set(["minst", "cmd", "late", "overdue", "plan", "sale", "paid", "bal", "lpa"]), th = (k, label, cls) => `<th class="${cls}" data-k="${k}">${E(label)}<span class="rz" data-k="${k}" title="Drag to resize · double-click to reset"></span></th>`;
+  const head = "<tr>" + COLS.map(([k, label]) => th(k, label, k === "acc" ? "c1" : k === "title" ? "c2" : NUM.has(k) ? "n" : "")).join("") + MONTHS.map((m, i) => th("m" + i, m.label, "n")).join("") + "</tr>",
+    cg = "<colgroup>" + keys().map(k => `<col data-k="${k}" style="width:${wOf(k)}px">`).join("") + "</colgroup>";
   const sum = (a, f) => a.reduce((t, r) => t + f(r), 0), cmdOf = r => N(r.overdue_amt) + N(r.due_this_month);
   $("out").innerHTML = ([...g].sort((x, y) => sep ? x[0].localeCompare(y[0]) : 0).map(([name, rs]) => {
     const mt = MONTHS.map(m => sum(rs, r => REC.get(String(r.account_no).trim() + "|" + m.key) || 0));
     return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}${E(noteTxt)}</div>
       <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Total sale</small> Rs ${M(sum(rs, r => N(r.total_sale)))}</span><span><small>Total balance</small> Rs ${M(sum(rs, r => N(r.balance)))}</span><span><small>Total CMD</small> Rs ${M(sum(rs, cmdOf))}</span></div>
-      <table class="rep"><thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = cmdOf(r);
+      <table class="rep" style="width:${totalW()}px">${cg}<thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = cmdOf(r);
         return `<tr><td class="c1">${E(acc)}</td><td class="c2"><b>${E(r.account_title)}</b></td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}</td>
           <td class="n">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm"></td><td class="n ${cmd > 0 ? "bad" : ""}">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
           <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td>${E(r.products)}</td>
           ${MONTHS.map(m => `<td class="mc">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
         <tr class="tot"><td class="c1"></td><td class="c2">Total · ${M(rs.length)}</td><td></td><td></td><td></td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, cmdOf))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td></td><td></td><td></td><td></td><td></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></section>`; }).join("")
     + (rows.length ? '<p class="legend">Month columns: amount received that month · — nothing received although an installment was due · * less than the installment due · advance and processing fee not counted · CMD = overdue + this month</p>' : "")) || '<div class="empty">No customers match these filters.</div>';
+  applyW();
 }
+function applyW() {
+  document.querySelectorAll("#out col").forEach(c => { c.style.width = wOf(c.dataset.k) + "px"; });
+  document.querySelectorAll("#out table.rep").forEach(t => { t.style.width = totalW() + "px"; }); $("out").style.setProperty("--w1", wOf("acc") + "px");
+}
+let drag = null;
+$("out").addEventListener("mousedown", e => { const h = e.target.closest(".rz"); if (!h) return; e.preventDefault(); drag = { k: h.dataset.k, x: e.clientX, w: wOf(h.dataset.k), el: h }; h.classList.add("on"); document.body.classList.add("dragging"); });
+document.addEventListener("mousemove", e => { if (!drag) return; CW[drag.k] = Math.max(40, Math.round(drag.w + e.clientX - drag.x)); applyW(); });
+document.addEventListener("mouseup", () => { if (!drag) return; drag.el.classList.remove("on"); document.body.classList.remove("dragging"); try { localStorage.setItem(LSK, JSON.stringify(CW)); } catch (e) {} drag = null; });
+$("out").addEventListener("dblclick", e => { const h = e.target.closest(".rz"); if (!h) return; delete CW[h.dataset.k]; try { localStorage.setItem(LSK, JSON.stringify(CW)); } catch (er) {} applyW(); });
 ["fN", "fCur"].forEach(i => $(i).onchange = load);
-["fDue", "fSep", "fSort", "fDateBy", "fFrom", "fTo", "fBalOp"].forEach(i => $(i).onchange = render);
+["fAp", "fDue", "fSep", "fSort", "fDateBy", "fFrom", "fTo", "fBalOp"].forEach(i => $(i).onchange = render);
 ["fQ", "fStart", "fBalVal"].forEach(i => $(i).oninput = ERP.ui.debounce(render, 250));
-$("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fSep").checked = false; $("fSort").value = "acc"; SEL = new Set(CROS); croList(); render(); };
+$("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fSep").checked = false; $("fAp").value = ""; $("fSort").value = "acc"; SEL = new Set(CROS); croList(); render(); };
 $("bPrint").onclick = () => window.print();
 $("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Acct Num": acc, "Acct Title": r.account_title, "Aprv by": r.approved_by, CRO: r.cro, "Mobile Nu": r.mobile_number, "M Inst": r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), Late: r.overdue_months, Overdue: r.overdue_amt, Plan: r.plan, "Total Sale": r.total_sale, "Total Paid": r.total_paid, "T Balance": r.balance, LPD: r.lpd, "L.Pamount": r.lpa, "Deliv Date": r.sale_date, End: r.end_month, Product: r.products };
   MONTHS.forEach(m => o[m.label] = REC.get(acc + "|" + m.key) || 0); return o; }));
