@@ -6,32 +6,57 @@
 <title>CRO Report</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .ctl{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));padding:12px;align-items:end}.ctl .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  html,body{height:100%}
+  .page{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;padding:8px;gap:8px}
+  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bar .sp{flex:1}.bar .subtxt{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55vw}
+  .bar .info{cursor:help;color:var(--muted);font-size:18px}
+  #bFilt .ar{display:inline-block;transition:transform .15s;margin-right:4px}#bFilt[aria-expanded="false"] .ar{transform:rotate(-90deg)}
+  #fCnt{margin-left:6px;background:var(--brand);color:#fff}
+  .ctl{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));padding:12px;align-items:end;margin:0}.ctl .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .chk{display:flex;gap:8px;align-items:center;min-height:var(--tap);cursor:pointer;font-weight:600;color:var(--muted)}.chk input{width:auto;min-height:0}
-  .legend{font-size:12px;color:var(--muted);margin:0 0 8px}
-  .grp{margin-bottom:22px}.gh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#e8edf3;border-radius:10px 10px 0 0;padding:8px 12px;font-weight:700}
+  .ms{position:relative}.ms>button{width:100%;min-height:var(--tap);text-align:left;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:6px}
+  .ms>button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mslist{position:absolute;z-index:30;left:0;min-width:100%;max-height:300px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.2);margin-top:4px;padding:6px}
+  .mi{display:flex;gap:8px;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}.mi:hover{background:var(--brand-soft)}.mi input{width:18px;min-height:0;height:18px}
+  .mslist hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+  #out{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
+  .gh{position:sticky;left:0;width:max-content;max-width:100vw;display:flex;gap:18px;flex-wrap:wrap;background:#e8edf3;padding:7px 12px;font-weight:700;border-bottom:1px solid #cbd5e1}
   .gh small{font-weight:500;color:var(--muted)}
-  .rep{border-collapse:collapse;width:100%;min-width:1500px;font-size:12.5px;background:#fff}
-  .rep th{position:sticky;top:0;background:#f1f5f9;border:1px solid #cbd5e1;padding:5px 6px;text-align:left;font-size:11.5px;white-space:nowrap;z-index:1}
-  .rep td{border:1px solid #cbd5e1;padding:4px 6px;vertical-align:top;white-space:nowrap}
-  .rep td.w{white-space:normal;min-width:140px}.rep td.rm{min-width:150px}.rep small{display:block;color:#64748b;font-size:10.5px;white-space:normal}
-  .rep .n{text-align:right;font-variant-numeric:tabular-nums}.rep .bad{color:#b91c1c;font-weight:700}.rep tr.tot td{background:#eef2f7;font-weight:700}
-  .rep td.mc{text-align:right}
+  .rep{border-collapse:separate;border-spacing:0;min-width:max-content;font-size:12.5px;background:#fff}
+  .rep th,.rep td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:4px 7px;white-space:nowrap;vertical-align:middle}
+  .rep thead th{position:sticky;top:0;z-index:3;background:#f1f5f9;border-top:1px solid #cbd5e1;font-size:11.5px;text-align:left}
+  .rep .c1{position:sticky;left:0;z-index:2;background:#fff;min-width:80px;width:80px;max-width:80px;border-left:1px solid #cbd5e1}
+  .rep .c2{position:sticky;left:80px;z-index:2;background:#fff;box-shadow:2px 0 0 #94a3b8}
+  .rep thead .c1,.rep thead .c2{z-index:5;background:#f1f5f9}
+  .rep .n,.rep .mc{text-align:right;font-variant-numeric:tabular-nums}.rep .bad{color:#b91c1c;font-weight:700}
+  .rep td.rm{min-width:150px}
+  .rep tr.tot td{background:#eef2f7;font-weight:700}
+  .legend{font-size:11.5px;color:var(--muted);padding:8px 12px;position:sticky;left:0;width:max-content;max-width:100vw}
   .head-print{display:none}
   @page{size:A4 landscape;margin:6mm}
   @media print{
-    body{background:#fff}.page{max-width:none;padding:0}.noprint,.appbar,.legend-screen{display:none!important}.head-print{display:block;margin:0 0 4px;font-size:11px}
-    .grp{break-after:page;margin:0}.grp:last-child{break-after:auto}.gh{background:#fff;border:1px solid #000;border-radius:0;font-size:11px;padding:3px 6px}
-    .table-wrap{border:0;overflow:visible}.rep{min-width:0;font-size:7.5pt}.rep th{position:static;background:#eee;font-size:7pt;padding:2px 3px}.rep td{padding:2px 3px}.rep thead{display:table-header-group}.rep tr{break-inside:avoid}
+    html,body{height:auto}body{background:#fff}.page{display:block;height:auto;padding:0}
+    .noprint{display:none!important}.head-print{display:block;margin:0 0 4px;font-size:11px}
+    #out{overflow:visible;border:0;border-radius:0}
+    .grp{break-after:page}.grp:last-of-type{break-after:auto}
+    .gh{position:static;width:auto;background:#fff;border:1px solid #000;font-size:11px;padding:3px 6px}
+    .rep{min-width:0;font-size:7.5pt}.rep th,.rep td{position:static!important;padding:2px 3px;box-shadow:none!important}.rep thead th{background:#eee;font-size:7pt}
+    .rep thead{display:table-header-group}.rep tr{break-inside:avoid}.legend{position:static;font-size:7pt}
   }
 </style>
 </head>
 <body>
 <main class="page">
-  <header class="appbar noprint"><div><h1>CRO Follow-up Report</h1><p id="sub">Hard copy for the CROs: every customer, A to Z</p></div>
-    <div class="bar-actions"><button class="btn ghost" id="bCsv">Export</button><button class="btn" id="bPrint">🖨 Print</button></div></header>
-  <section class="card ctl noprint">
-    <div><label for="fCro">CRO</label><select id="fCro"></select></div>
+  <div class="bar noprint">
+    <button class="btn ghost" id="bFilt" aria-expanded="true"><span class="ar">▾</span>Filters<span class="badge" id="fCnt" hidden></span></button>
+    <span class="subtxt" id="sub">Loading...</span>
+    <span class="info" title="Month columns: amount received that month. — = nothing received although an installment was due. * = less than the installment due. Advance and processing fee are not counted. CMD = everything pending until today (overdue + this month).">ⓘ</span>
+    <span class="sp"></span>
+    <button class="btn ghost sm" id="bCsv">Export</button><button class="btn sm" id="bPrint">🖨 Print</button>
+  </div>
+  <section class="card ctl noprint" id="fPanel">
+    <div class="ms"><label>CRO</label><button type="button" id="croBtn"><span id="croTxt">All</span><span>▾</span></button><div class="mslist" id="croList" hidden></div></div>
+    <label class="chk"><input type="checkbox" id="fSep"> Each CRO on its own page</label>
     <div><label for="fSort">Sort by</label><select id="fSort"><option value="acc" selected>Account number</option><option value="name">Name A-Z</option><option value="late">Most late first</option></select></div>
     <div><label for="fQ">Search</label><input id="fQ" type="search" placeholder="Name, account, mobile, product" autocomplete="off"></div>
     <div><label for="fStart">Start from account</label><input id="fStart" inputmode="numeric" placeholder="e.g. 7865250" autocomplete="off"></div>
@@ -44,27 +69,46 @@
     <label class="chk"><input type="checkbox" id="fDue"> Only customers with balance</label>
     <div><button class="btn ghost" id="bClear" style="width:100%">Clear filters</button></div>
   </section>
-  <p class="legend legend-screen noprint">In the month columns: the amount received that month · <b>—</b> nothing received although an installment was due · <b>*</b> received less than the installment due. Advance and processing fee are not counted. <b>CMD</b> = everything pending until today (overdue + this month).</p>
   <div id="out"></div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
-const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0;
-let BASE = [], REC = new Map(), DUE = new Map(), MONTHS = [], VIEW = [];
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
+let BASE = [], REC = new Map(), DUE = new Map(), MONTHS = [], VIEW = [], CROS = [], SEL = null;
 const d2 = d => d ? String(d).slice(8, 10) + "-" + String(d).slice(5, 7) + "-" + String(d).slice(2, 4) : "";
 const mlabel = iso => new Date(iso + "T12:00").toLocaleString("en", { month: "short", year: "2-digit" }).replace(" ", "-");
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const cell = (v, d) => v > 0 ? M(v) + (d > 0 && v < d - 0.5 ? "*" : "") : d > 0 ? "—" : "";
 
+/* ---------- filters panel: show / hide, hides itself when you scroll down ---------- */
+function filt(open) { $("fPanel").hidden = !open; $("bFilt").setAttribute("aria-expanded", open); if (!open) $("croList").hidden = true; }
+$("bFilt").onclick = () => filt($("fPanel").hidden);
+$("out").addEventListener("scroll", () => { if (!$("fPanel").hidden && $("out").scrollTop > 30) filt(false); }, { passive: true });
+
+/* ---------- CRO check-box list ---------- */
+function buildCro() {
+  const list = [...new Set(BASE.map(c => c.cro).filter(Boolean))].sort(); CROS = BASE.some(c => !c.cro) ? [...list, "__none"] : list;
+  SEL = SEL ? new Set([...SEL].filter(x => CROS.includes(x))) : new Set(CROS); croList();
+}
+function croList() {
+  $("croList").innerHTML = `<label class="mi"><input type="checkbox" id="croAll" ${SEL.size === CROS.length ? "checked" : ""}> <b>All</b></label><hr>` + CROS.map(c => `<label class="mi"><input type="checkbox" class="croC" value="${E(c)}" ${SEL.has(c) ? "checked" : ""}> ${c === "__none" ? "(no CRO)" : E(c)}</label>`).join("");
+  $("croTxt").textContent = SEL.size === CROS.length ? "All" : !SEL.size ? "None selected" : [...SEL].map(c => c === "__none" ? "(no CRO)" : c).join(", ");
+}
+$("croBtn").onclick = e => { e.stopPropagation(); $("croList").hidden = !$("croList").hidden; };
+$("croList").onclick = e => e.stopPropagation();
+document.addEventListener("click", () => { $("croList").hidden = true; });
+$("croList").onchange = e => { if (e.target.id === "croAll") SEL = e.target.checked ? new Set(CROS) : new Set(); else { e.target.checked ? SEL.add(e.target.value) : SEL.delete(e.target.value); } croList(); render(); };
+
+/* ---------- data ---------- */
 function months() {
   const n = +$("fN").value, t = new Date(), out = [];
-  for (let k = n; k >= 1; k--) { const d = new Date(t.getFullYear(), t.getMonth() - k, 1, 12); out.push({ iso: iso(d), key: iso(d).slice(0, 7), label: mlabel(iso(d)) }); }
-  if ($("fCur").checked) { const d = new Date(t.getFullYear(), t.getMonth(), 1, 12); out.push({ iso: iso(d), key: iso(d).slice(0, 7), label: mlabel(iso(d)) }); }
+  for (let k = n; k >= 1; k--) { const d = new Date(t.getFullYear(), t.getMonth() - k, 1, 12); out.push({ key: iso(d).slice(0, 7), iso: iso(d), label: mlabel(iso(d)) }); }
+  if ($("fCur").checked) { const d = new Date(t.getFullYear(), t.getMonth(), 1, 12); out.push({ key: iso(d).slice(0, 7), iso: iso(d), label: mlabel(iso(d)) }); }
   return out;
 }
 async function load() {
-  $("out").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'; MONTHS = months();
+  $("out").innerHTML = '<div style="padding:16px"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'; MONTHS = months();
   const from = MONTHS[0].iso, last = new Date(MONTHS[MONTHS.length - 1].iso + "T12:00"), to = iso(new Date(last.getFullYear(), last.getMonth() + 1, 0, 12));
   try {
     const [base, rc, sch] = await Promise.all([
@@ -74,20 +118,18 @@ async function load() {
     BASE = base; REC = new Map(); DUE = new Map();
     rc.forEach(r => { const t = String(r.voucher_no || "").trim().toLowerCase(); if (t === "advance" || t === "processing fee") return; const k = String(r.account_no).trim() + "|" + String(r.date).slice(0, 7); REC.set(k, (REC.get(k) || 0) + N(r.amount)); });
     sch.forEach(r => DUE.set(String(r.account_no).trim() + "|" + String(r.due_month).slice(0, 7), N(r.due_amt)));
-    const cros = [...new Set(BASE.map(c => c.cro).filter(Boolean))].sort(), v = $("fCro").value;
-    $("fCro").innerHTML = '<option value="">All (one list, with or without CRO)</option><option value="__sep">All CROs, each on its own page</option>' + cros.map(c => `<option>${E(c)}</option>`).join("") + (BASE.some(c => !c.cro) ? '<option value="__none">(no CRO)</option>' : ""); $("fCro").value = v; render();
+    buildCro(); render();
   } catch (e) { $("out").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/13_cro_report.sql (and 08) if this mentions v_cro_base.</small></div>`; }
 }
-const digits = s => String(s || "").replace(/\D/g, "");
+
+/* ---------- the report ---------- */
 function render() {
-  const c = $("fCro").value, onlyDue = $("fDue").checked, sort = $("fSort").value, q = $("fQ").value.trim().toLowerCase(), st = digits($("fStart").value),
-    by = $("fDateBy").value, df = $("fFrom").value, dt = $("fTo").value, op = $("fBalOp").value, bv = $("fBalVal").value, note = [];
-  if (c === "__none") note.push("no CRO"); else if (c && c !== "__sep") note.push("CRO " + c);
-  if (st) note.push("from account " + st); if (q) note.push("search “" + q + "”"); if (onlyDue) note.push("with balance only");
-  if (df || dt) note.push((by === "lpd" ? "last payment date " : "sale date ") + (df || "…") + " to " + (dt || "…"));
-  if (op && bv !== "") note.push("balance " + (op === "lt" ? "less than " : "greater than ") + M(bv));
+  const onlyDue = $("fDue").checked, sort = $("fSort").value, q = $("fQ").value.trim().toLowerCase(), st = digits($("fStart").value), by = $("fDateBy").value,
+    df = $("fFrom").value, dt = $("fTo").value, op = $("fBalOp").value, bv = $("fBalVal").value, sep = $("fSep").checked, allCro = SEL.size === CROS.length, note = [];
+  if (!allCro) note.push("CRO " + [...SEL].map(c => c === "__none" ? "(none)" : c).join(", ")); if (st) note.push("from account " + st); if (q) note.push("search “" + q + "”"); if (onlyDue) note.push("with balance only");
+  if (df || dt) note.push((by === "lpd" ? "last payment " : "sale ") + "date " + (df || "…") + " to " + (dt || "…")); if (op && bv !== "") note.push("balance " + (op === "lt" ? "less than " : "greater than ") + M(bv));
   const rows = BASE.filter(r => {
-    if (c && c !== "__sep" && (c === "__none" ? r.cro : r.cro !== c)) return false;
+    if (!allCro && !SEL.has(r.cro || "__none")) return false;
     if (onlyDue && N(r.balance) <= 0.5) return false;
     if (st && Number(digits(r.account_no)) < Number(st)) return false;                       // this account and everything after it
     if (q && ![r.account_no, r.account_title, r.mobile_number, r.products, r.address, r.cro].join(" ").toLowerCase().includes(q)) return false;
@@ -96,26 +138,27 @@ function render() {
     return true; });
   const an = r => Number(digits(r.account_no)) || 0;
   rows.sort(sort === "name" ? (a, b) => String(a.account_title).localeCompare(String(b.account_title), undefined, { sensitivity: "base" }) : sort === "late" ? (a, b) => N(b.overdue_amt) - N(a.overdue_amt) || an(a) - an(b) : (a, b) => an(a) - an(b));
-  VIEW = rows; const g = new Map(), sep = c === "__sep";
-  rows.forEach(r => { const k = sep ? (r.cro || "(no CRO)") : (c === "__none" ? "No CRO" : c ? "CRO: " + c : "All customers"); (g.get(k) || g.set(k, []).get(k)).push(r); });
-  const today = new Date().toLocaleDateString("en-GB"), head = `<tr><th>Acct Num</th><th>Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th class="n">M Inst</th><th>Remarks</th><th class="n">CMD</th><th class="n">Late</th><th class="n">Overdue</th><th class="n">Plan</th><th class="n">Total Sale</th><th class="n">Total Paid</th><th class="n">T Balance</th><th>LPD</th><th class="n">L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th>${MONTHS.map(m => `<th class="n">${E(m.label)}</th>`).join("")}</tr>`;
-  const sum = (a, f) => a.reduce((t, r) => t + f(r), 0), noteTxt = note.length ? " · " + note.join(" · ") : "";
-  $("sub").textContent = `${M(rows.length)} of ${M(BASE.length)} customers${noteTxt}`;
-  $("out").innerHTML = [...g].sort((x, y) => sep ? x[0].localeCompare(y[0]) : 0).map(([name, rs]) => {
+  VIEW = rows; const g = new Map(); rows.forEach(r => { const k = sep ? (r.cro || "(no CRO)") : (allCro ? "All customers" : "Selected CROs"); (g.get(k) || g.set(k, []).get(k)).push(r); });
+  const today = new Date().toLocaleDateString("en-GB"), noteTxt = note.length ? " · " + note.join(" · ") : "";
+  $("sub").textContent = `${M(rows.length)} of ${M(BASE.length)} customers${noteTxt}`; $("fCnt").hidden = !note.length; $("fCnt").textContent = note.length;
+  const head = `<tr><th class="c1">Acct Num</th><th class="c2">Acct Title</th><th>Aprv by</th><th>CRO</th><th>Mobile Nu</th><th class="n">M Inst</th><th>Remarks</th><th class="n">CMD</th><th class="n">Late</th><th class="n">Overdue</th><th class="n">Plan</th><th class="n">Total Sale</th><th class="n">Total Paid</th><th class="n">T Balance</th><th>LPD</th><th class="n">L.Pamount</th><th>Deliv Date</th><th>End</th><th>Product</th>${MONTHS.map(m => `<th class="n">${E(m.label)}</th>`).join("")}</tr>`;
+  const sum = (a, f) => a.reduce((t, r) => t + f(r), 0), cmdOf = r => N(r.overdue_amt) + N(r.due_this_month);
+  $("out").innerHTML = ([...g].sort((x, y) => sep ? x[0].localeCompare(y[0]) : 0).map(([name, rs]) => {
     const mt = MONTHS.map(m => sum(rs, r => REC.get(String(r.account_no).trim() + "|" + m.key) || 0));
     return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}${E(noteTxt)}</div>
-      <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Balance</small> Rs ${M(sum(rs, r => N(r.balance)))} · <small>CMD</small> Rs ${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</span></div>
-      <div class="table-wrap"><table class="rep"><thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = N(r.overdue_amt) + N(r.due_this_month);
-        return `<tr><td>${E(acc)}</td><td class="w"><b>${E(r.account_title)}</b>${r.address ? `<small>${E(String(r.address).slice(0, 45))}</small>` : ""}</td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}${r.guarantor_mobile ? `<small>G: ${E(r.guarantor_mobile)}</small>` : ""}</td>
+      <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Total sale</small> Rs ${M(sum(rs, r => N(r.total_sale)))}</span><span><small>Total balance</small> Rs ${M(sum(rs, r => N(r.balance)))}</span><span><small>Total CMD</small> Rs ${M(sum(rs, cmdOf))}</span></div>
+      <table class="rep"><thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = cmdOf(r);
+        return `<tr><td class="c1">${E(acc)}</td><td class="c2"><b>${E(r.account_title)}</b></td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}</td>
           <td class="n">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm"></td><td class="n ${cmd > 0 ? "bad" : ""}">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
-          <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td class="w">${E(r.products)}</td>
+          <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td>${E(r.products)}</td>
           ${MONTHS.map(m => `<td class="mc">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
-        <tr class="tot"><td colspan="5">Total · ${M(rs.length)} customers</td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt) + N(r.due_this_month)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td colspan="4"></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></div></section>`; }).join("") || '<div class="empty">No customers match these filters.</div>';
+        <tr class="tot"><td class="c1"></td><td class="c2">Total · ${M(rs.length)}</td><td></td><td></td><td></td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, cmdOf))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td></td><td></td><td></td><td></td><td></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></section>`; }).join("")
+    + (rows.length ? '<p class="legend">Month columns: amount received that month · — nothing received although an installment was due · * less than the installment due · advance and processing fee not counted · CMD = overdue + this month</p>' : "")) || '<div class="empty">No customers match these filters.</div>';
 }
 ["fN", "fCur"].forEach(i => $(i).onchange = load);
-["fCro", "fDue", "fSort", "fDateBy", "fFrom", "fTo", "fBalOp"].forEach(i => $(i).onchange = render);
+["fDue", "fSep", "fSort", "fDateBy", "fFrom", "fTo", "fBalOp"].forEach(i => $(i).onchange = render);
 ["fQ", "fStart", "fBalVal"].forEach(i => $(i).oninput = ERP.ui.debounce(render, 250));
-$("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fCro").value = ""; $("fSort").value = "acc"; render(); };
+$("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fSep").checked = false; $("fSort").value = "acc"; SEL = new Set(CROS); croList(); render(); };
 $("bPrint").onclick = () => window.print();
 $("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Acct Num": acc, "Acct Title": r.account_title, "Aprv by": r.approved_by, CRO: r.cro, "Mobile Nu": r.mobile_number, "M Inst": r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), Late: r.overdue_months, Overdue: r.overdue_amt, Plan: r.plan, "Total Sale": r.total_sale, "Total Paid": r.total_paid, "T Balance": r.balance, LPD: r.lpd, "L.Pamount": r.lpa, "Deliv Date": r.sale_date, End: r.end_month, Product: r.products };
   MONTHS.forEach(m => o[m.label] = REC.get(acc + "|" + m.key) || 0); return o; }));
