@@ -91,3 +91,6 @@ input.bad,select.bad{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38
 @media(min-width:640px){.fgrid{grid-template-columns:1fr 1fr}.fgrid .wide{grid-column:1/-1}}
 .kv{display:grid;gap:10px 14px;grid-template-columns:1fr 1fr;margin:0}.kv dt{font-size:12px;color:var(--muted);font-weight:600}.kv dd{margin:0;font-weight:600;word-break:break-word}
 .av{flex:0 0 44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px}.av.lg{width:52px;height:52px;flex-basis:52px;font-size:18px}
+
+/* an element with the hidden attribute must always be hidden, whatever display its class sets */
+[hidden]{display:none!important}
