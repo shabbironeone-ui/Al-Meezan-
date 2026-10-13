@@ -31,8 +31,12 @@ ERP.db = (function () {
 
     async settings() {
       const rows = await fetchAll("app_settings", { build: q => q.eq("is_active", true), order: "sort_order" });
-      const by = c => rows.filter(r => r.category === c);
-      return { rows, by, names: c => by(c).map(r => r.display_name) };
+      const by = c => rows.filter(r => String(r.category || "").trim().toUpperCase() === String(c || "").trim().toUpperCase());
+      const names = c => [...new Set(by(c).map(r => String(r.display_name || "").trim()).filter(Boolean))];
+      const cash = names("PAY_MODE");
+      const bank = names("BANK");
+      const all = [...new Set([...cash, ...bank])];
+      return { rows, by, names, paymentModes: { cash, bank, all } };
     },
 
     customers: {
@@ -85,6 +89,21 @@ ERP.db = (function () {
         if (supplier) q = q.eq("supplier", supplier); if (po) q = q.eq("po_num", po);
         return must(await q.limit(1500));
       },
+      async returnedQuantities(ids) {
+        const totals = new Map();
+        for (let i = 0; i < ids.length; i += 150) {
+          const batch = ids.slice(i, i + 150).map(String);
+          if (!batch.length) continue;
+          const rows = must(await sb.from("purchase_detail").select("return_of_id,qty").in("return_of_id", batch));
+          rows.forEach(row => totals.set(String(row.return_of_id), (totals.get(String(row.return_of_id)) || 0) - (Number(row.qty) || 0)));
+        }
+        return totals;
+      },
+      async createReturn(purchaseId, qty, date, reason) {
+        return must(await sb.rpc("create_purchase_return", {
+          p_purchase_id: purchaseId, p_qty: qty, p_return_date: date, p_reason: reason
+        }));
+      },
       /* head: {purchase_date, supplier, warehouse, po_num?}  replace=true edits an existing PO (lines and stock-in replaced together) */
       async save(head, items, replace = false) { return must(await sb.rpc("save_purchase", { p_head: head, p_items: items, p_replace: replace })); },
       async remove(po) { return must(await sb.rpc("delete_purchase", { p_po: po })); }
@@ -96,6 +115,21 @@ ERP.db = (function () {
         let q = sb.from("sales").select("*").order("date", { ascending: false }).order("id", { ascending: false });
         if (from) q = q.gte("date", from); if (to) q = q.lte("date", to);
         return must(await q.limit(500));
+      },
+      async returnedQuantities(ids) {
+        const totals = new Map();
+        for (let i = 0; i < ids.length; i += 150) {
+          const batch = ids.slice(i, i + 150).map(String);
+          if (!batch.length) continue;
+          const rows = must(await sb.from("sales").select("return_of_id,qty").in("return_of_id", batch));
+          rows.forEach(row => totals.set(String(row.return_of_id), (totals.get(String(row.return_of_id)) || 0) - (Number(row.qty) || 0)));
+        }
+        return totals;
+      },
+      async createReturn(saleId, qty, date, reason) {
+        return must(await sb.rpc("create_sales_return", {
+          p_sale_id: saleId, p_qty: qty, p_return_date: date, p_reason: reason
+        }));
       },
       async exists(accNo) {
         const { count, error } = await sb.from("sales").select("id", { count: "exact", head: true }).eq("account_no", String(accNo).trim());
@@ -112,6 +146,23 @@ ERP.db = (function () {
       TABLE: { receipts: "receipts", general_receipts: "general_receipts", expenses: "expenses", payments: "payments", contra: "contra" },
       HEADCOL: { receipts: "account_head", general_receipts: "account_head", expenses: "expense_head", payments: "payment_head", contra: "head" },
       entries: ({ from, to }) => fetchAll("v_daybook", { order: "created_at", build: q => q.gte("date", from).lte("date", to).order("date", { ascending: true }) }),
+      async partyEntries(headNames = []) {
+        const categories = ["Account Receivable", "Account Payable"];
+        const sources = ["general_receipts", "payments"];
+        const queries = sources.flatMap(src => [
+          ...categories.map(category =>
+          fetchAll("v_daybook", {
+            order: "date",
+            build: q => q.eq("src", src).ilike("head", `${category}:%`).order("date", { ascending: true })
+          })),
+          ...(headNames.length ? [fetchAll("v_daybook", {
+            order: "date",
+            build: q => q.eq("src", src).in("head", headNames).order("date", { ascending: true })
+          })] : [])
+        ]);
+        const rows = (await Promise.all(queries)).flat();
+        return [...new Map(rows.map(row => [`${row.src}:${row.rid}`, row])).values()];
+      },
       async opening(from) { return must(await sb.rpc("daybook_opening", { p_from: from })); },
       async create(v) { return must(await sb.rpc("create_voucher", { p: v })); },
       async deleteTransfer(voucherNo) { must(await sb.rpc("delete_transfer", { p_voucher: voucherNo })); },
