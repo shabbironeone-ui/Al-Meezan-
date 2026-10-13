@@ -168,12 +168,27 @@ ERP.db = (function () {
       async deleteTransfer(voucherNo) { must(await sb.rpc("delete_transfer", { p_voucher: voucherNo })); },
       async update(src, id, f) {
         const t = this.TABLE[src]; if (!t) throw new Error("This entry cannot be edited here");
-        const row = { date: f.date, pay_mode: f.account, account_title: f.party, amount: f.amount, remarks: f.remarks }; row[this.HEADCOL[src]] = f.head;
+        const row = { date: f.date, pay_mode: f.account, account_title: f.party, amount: f.amount, remarks: f.remarks };
+        if (f.to_account !== undefined) row.to_account = f.to_account;
+        row[this.HEADCOL[src]] = f.head;
         const r = must(await sb.from(t).update(row).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r;
       },
       async remove(src, id) {
         const t = this.TABLE[src]; if (!t) throw new Error("This entry cannot be deleted here");
         const r = must(await sb.from(t).delete().eq("id", id).select("id")); if (!r.length) throw new Error("Not deleted: you do not have permission");
+      }
+    },
+
+    reconciliationImports: {
+      async list(fileKey) {
+        return must(await sb.from("reconciliation_import_rows")
+          .select("file_key,row_key,source_kind,source_table,source_id")
+          .eq("file_key", fileKey));
+      },
+      async save(row) {
+        return must(await sb.from("reconciliation_import_rows")
+          .upsert(row, { onConflict: "file_key,row_key" })
+          .select("file_key,row_key"));
       }
     },
 
@@ -193,8 +208,19 @@ ERP.db = (function () {
     bank: {
       listAll: () => fetchAll("bank_statement", { order: "id" }),
       async add(rows) { return must(await sb.from("bank_statement").insert(rows).select()); },
+      async update(id, fields) {
+        const r = must(await sb.from("bank_statement").update(fields).eq("id", id).select("id"));
+        if (!r.length) throw new Error("Not updated: bank statement entry not found or you do not have permission");
+        return r[0];
+      },
       async remove(ids) { const r = must(await sb.from("bank_statement").delete().in("id", ids).select("id")); if (r.length !== ids.length) throw new Error("Not deleted: you do not have permission"); },
-      async setMatch(id, src, rid) { const r = must(await sb.from("bank_statement").update({ match_src: src, match_rid: rid }).eq("id", id).select("id")); if (!r.length) throw new Error("Not saved: you do not have permission"); }
+      async setMatch(id, src, rid) { const r = must(await sb.from("bank_statement").update({ match_src: src, match_rid: rid }).eq("id", id).select("id")); if (!r.length) throw new Error("Not saved: you do not have permission"); },
+      async clearMatches(src, rid) {
+        return must(await sb.from("bank_statement")
+          .update({ match_src: null, match_rid: null })
+          .eq("match_src", src)
+          .eq("match_rid", rid));
+      }
     },
 
     stock: {
