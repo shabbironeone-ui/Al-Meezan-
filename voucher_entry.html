@@ -622,13 +622,6 @@
             <i class="fa fa-mobile-alt" id="mobileToggleIcon"></i>
         </button>
 
-        <div class="change-url-link" onclick="showUrlConfig()" style="cursor:pointer; color:#2563eb; font-size:12px; margin-bottom:5px;">&#9881; Change Deployment URL</div>
-        <div id="configBox" class="config-box">
-            <b>Setup:</b> Apps Script Deployment URL enter karein.
-            <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
-            <button onclick="saveScriptUrl()">Save URL</button>
-        </div>
-
         <div class="header-row">
             <h3 class="header-title">Unified Voucher Entry</h3>
             <div class="date-box">
@@ -815,15 +808,19 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
     <script>
-        let SCRIPT_URL = localStorage.getItem('erp_script_url') || "";
         let globalBackendRecords = [];
         let globalUniversalLedgerRecords = [];
         let appliedOpeningBalance = null;
         let currentSortColumn = 0;
         let currentSortAsc = false;
         let activeRowForModal = null;
-        let currentBaseVoucherMap = {}; 
+        let settingsRows = [];
 
         function toggleMobileView() {
             document.body.classList.toggle('mobile-mode');
@@ -884,16 +881,6 @@
             if (icon) icon.className = "fa fa-microphone";
         }
 
-        function saveScriptUrl() {
-          const val = document.getElementById('scriptUrlInput').value.trim();
-          if (!val) { alert("URL enter karein"); return; }
-          SCRIPT_URL = val;
-          localStorage.setItem('erp_script_url', val);
-          document.getElementById('configBox').classList.remove('show');
-          loadSettingsData();
-          fetchBackendRecords();
-        }
-
         const dateInput = document.getElementById('date');
         const voucherForm = document.getElementById('voucherForm');
         const submitBtn = document.getElementById('submitBtn');
@@ -904,7 +891,12 @@
         const openingBalAmount = document.getElementById('openingBalAmount');
         const applyOpeningBtn = document.getElementById('applyOpeningBtn');
 
-        let settingsData = { vendors: [], expenses: [], payables: [], investments: [], payModes: [], ledgerAccounts: [] };
+        let settingsData = { vendors: [], expenses: [], incomes: [], payables: [], receivableSubheads: [], payableSubheads: [], contraFlows: [], investments: [], payModes: [], ledgerAccounts: [] };
+
+        function getContraFlowCode(setting) {
+            const key = String(setting.lookup_code || setting.display_name || '').replace(/[^a-z0-9]/gi, '').toUpperCase();
+            return { CASHTOBANK: 'CashToBank', BANKTOCASH: 'BankToCash', BANKTOBANK: 'BankToBank' }[key] || '';
+        }
 
         dateInput.valueAsDate = new Date();
         openingBalDate.valueAsDate = new Date();
@@ -1074,56 +1066,39 @@
             });
         }
 
-        function fetchSheetVoucherNo(vnInput, sheetKey) {
-            if (!SCRIPT_URL) return;
-            let key = sheetKey || "Payments";
-            fetch(SCRIPT_URL + "?action=getNextVoucherNo&sheetMapKey=" + encodeURIComponent(key))
-                .then(res => res.json())
-                .then(res => {
-                    let vNum = (typeof res === 'object') ? (res.voucherNo || res.data || '') : res;
-                    currentBaseVoucherMap[key] = vNum;
-                    recalculateVouchers();
-                })
-                .catch(err => {
-                    console.error("Voucher No fetch error:", err);
+        function setContraAccountOptions(rowDiv, flow) {
+            const modeSelect = rowDiv.querySelector('.v-payMode');
+            const accountSelect = rowDiv.querySelector('.v-accName');
+            const configured = settingsData.contraFlows.find(item => item.flow === flow);
+            const allowed = configured && configured.accounts.length ? configured.accounts : settingsData.payModes;
+            const cash = settingsData.payModes.filter(mode => /^(?:daybook(?:\s*\(\s*cash\s*\))?|cash)$/i.test(mode.trim()));
+            const banks = settingsData.payModes.filter(mode => !cash.includes(mode));
+            const source = flow === 'CashToBank' ? cash : banks;
+            const target = (flow === 'BankToCash' ? cash : banks).filter(mode => allowed.includes(mode));
+            const fill = (select, values) => {
+                const current = select.value;
+                select.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '-- Select Account --';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                select.appendChild(placeholder);
+                values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
                 });
-        }
-
-        function recalculateVouchers() {
-            let counters = {};
-            for (let key in currentBaseVoucherMap) {
-                let v = currentBaseVoucherMap[key];
-                counters[key] = isNaN(v) ? v : Number(v);
+                if ([...select.options].some(option => option.value === current)) select.value = current;
+            };
+            fill(modeSelect, source);
+            fill(accountSelect, target);
+            if (modeSelect.value && accountSelect.value === modeSelect.value) {
+                accountSelect.value = [...accountSelect.options].map(option => option.value).find(value => value && value !== modeSelect.value) || '';
             }
-
-            const rows = document.querySelectorAll('#voucherRowsContainer .voucher-entry-row');
-            rows.forEach(row => {
-                const mtSel = row.querySelector('.v-mainType');
-                const stSel = row.querySelector('.v-subType');
-                const vnInput = row.querySelector('.v-voucherNo');
-                if (!mtSel || !stSel || !vnInput) return;
-
-                const mtVal = mtSel.value;
-                const stVal = stSel.value;
-                if (!mtVal || !stVal) return;
-
-                let targetSheet = "Payments";
-                if (mtVal === 'Payments' && stVal === 'Expenses') {
-                    targetSheet = "Expenses";
-                } else if (mtVal === 'Receipts') {
-                    targetSheet = "General_Receipts";
-                } else if (mtVal === 'Contra') {
-                    targetSheet = "Contra";
-                }
-
-                if (counters[targetSheet] !== undefined) {
-                    let currentVal = counters[targetSheet];
-                    vnInput.value = currentVal;
-                    if (!isNaN(currentVal)) {
-                        counters[targetSheet] = Number(currentVal) + 1;
-                    }
-                }
-            });
+            refreshCombo(modeSelect);
+            refreshCombo(accountSelect);
         }
 
         function createVoucherRowElement() {
@@ -1149,7 +1124,7 @@
                     </select>
                 </div>
                 <div class="form-group col" style="max-width: 110px;">
-                    <input type="text" class="v-voucherNo" placeholder="Auto">
+                    <input type="text" class="v-voucherNo" placeholder="Assigned by Supabase" readonly>
                 </div>
                 <div class="form-group col">
                     <div class="acc-name-wrapper">
@@ -1180,7 +1155,6 @@
             const stSel = rowDiv.querySelector('.v-subType');
             const anSel = rowDiv.querySelector('.v-accName');
             const pmSel = rowDiv.querySelector('.v-payMode');
-            const vnInput = rowDiv.querySelector('.v-voucherNo');
             const amtInput = rowDiv.querySelector('.v-amount');
             const rmkInput = rowDiv.querySelector('.v-remarks');
             const micBtn = rowDiv.querySelector('.v-micBtn');
@@ -1193,8 +1167,6 @@
             makeSelectSearchable(stSel, 'Search Sub-Category...');
             makeSelectSearchable(pmSel, 'Search Pay Mode...');
             makeSelectSearchable(anSel, 'Search Account/Head...');
-
-            fetchSheetVoucherNo(vnInput, "Payments");
 
             mtSel.addEventListener('change', function() {
                 stSel.innerHTML = '<option value="" selected disabled>-- Select Sub-Category --</option>';
@@ -1219,11 +1191,21 @@
                         <option value="InvestmentIncome">Other Inst Income / Return (In)</option>
                     `;
                 } else if (this.value === 'Contra') {
-                    stSel.innerHTML += `
-                        <option value="CashToBank">Cash to Bank Deposit</option>
-                        <option value="BankToCash">Bank to Cash Withdrawal</option>
-                        <option value="BankToBank">Bank to Bank Transfer</option>
-                    `;
+                    const configuredFlows = new Set(settingsData.contraFlows.map(item => item.flow));
+                    const flowOptions = [
+                        ...settingsData.contraFlows.map(item => ({ value: item.flow, label: item.label })),
+                        ...[
+                            { value: 'CashToBank', label: 'Cash to Bank Deposit' },
+                            { value: 'BankToCash', label: 'Bank to Cash Withdrawal' },
+                            { value: 'BankToBank', label: 'Bank to Bank Transfer' }
+                        ].filter(item => !configuredFlows.has(item.value))
+                    ];
+                    flowOptions.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.label;
+                        stSel.appendChild(option);
+                    });
                 }
                 refreshCombo(stSel);
             });
@@ -1232,29 +1214,30 @@
                 anSel.disabled = false;
                 anSel.innerHTML = '<option value="" selected disabled>-- Select Name / Head --</option>';
 
-                let targetSheetKey = "Payments";
                 let listToUse = [];
 
                 if (this.value === 'Expenses') {
-                    targetSheetKey = "Expenses";
                     listToUse = settingsData.expenses;
                 } else if (['VendorPayment', 'APPayment', 'PartyReturn', 'APRecovery'].includes(this.value)) {
-                    targetSheetKey = "Payments";
-                    listToUse = [
+                    const legacyPaymentNames = [
                         ...(settingsData.vendors || []), 
                         ...(settingsData.payables || []), 
                         ...(settingsData.investments || []), 
                         ...(settingsData.expenses || []),
                         ...(settingsData.ledgerAccounts || [])
                     ];
+                    if (this.value === 'APPayment' || this.value === 'APRecovery') {
+                        listToUse = settingsData.payables.length ? settingsData.payables : legacyPaymentNames;
+                    } else if (this.value === 'PartyReturn' && settingsData.receivableSubheads.length) {
+                        listToUse = settingsData.receivableSubheads;
+                    } else {
+                        listToUse = legacyPaymentNames;
+                    }
                 } else if (this.value === 'InvestmentPayment' || this.value === 'InvestmentIncome') {
-                    targetSheetKey = "Payments";
                     listToUse = settingsData.investments;
                 } else if (this.value === 'GeneralReceipts') {
-                    targetSheetKey = "General_Receipts";
-                    listToUse = [...settingsData.expenses, ...settingsData.investments];
+                    listToUse = [...settingsData.expenses, ...settingsData.incomes, ...settingsData.investments];
                 } else if (['CashToBank', 'BankToCash', 'BankToBank'].includes(this.value)) {
-                    targetSheetKey = "Contra";
                     listToUse = settingsData.payModes;
                 }
 
@@ -1275,9 +1258,10 @@
                     opt.textContent = item;
                     anSel.appendChild(opt);
                 });
+                if (['CashToBank', 'BankToCash', 'BankToBank'].includes(this.value)) {
+                    setContraAccountOptions(rowDiv, this.value);
+                }
                 refreshCombo(anSel);
-
-                fetchSheetVoucherNo(vnInput, targetSheetKey);
             });
 
             anSel.addEventListener('change', function() {
@@ -1330,7 +1314,7 @@
                 if (container.children.length > 1) {
                     rowDiv.remove();
                     updateVoucherBatchTotals();
-                    recalculateVouchers();
+
                 } else {
                     alert("Kam az kam ek entry row zaroori hai.");
                 }
@@ -1339,37 +1323,18 @@
             return rowDiv;
         }
 
-        function openPartyLedgerModal(partyName) {
+        async function openPartyLedgerModal(partyName) {
             document.getElementById('modalPartyTitle').textContent = "Ledger History for: " + partyName;
             document.getElementById('partyLedgerModal').style.display = 'flex';
             
             const modalTbody = document.getElementById('modalLedgerTableBody');
             modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">Loading ledger records...</td></tr>`;
 
-            if (typeof globalBackendRecords !== 'undefined' && Array.isArray(globalBackendRecords) && globalBackendRecords.length > 0) {
+            try {
+                if (!globalBackendRecords.length) await fetchBackendRecords();
                 processAndRenderUniversalModalRecords(partyName, globalBackendRecords, modalTbody);
-            } else {
-                if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-                    fetch(SCRIPT_URL + "?action=getVendorLedgerRecords")
-                        .then(res => res.json())
-                        .then(res => {
-                            let records = [];
-                            if (res && res.success && Array.isArray(res.data)) {
-                                records = res.data;
-                            } else if (Array.isArray(res)) {
-                                records = res;
-                            } else if (res && Array.isArray(res.data)) {
-                                records = res.data;
-                            }
-                            globalBackendRecords = records;
-                            processAndRenderUniversalModalRecords(partyName, records, modalTbody);
-                        })
-                        .catch(err => {
-                            modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#dc2626;">Network error loading records.</td></tr>`;
-                        });
-                } else {
-                    modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#b45309;">No records available. Please click 'Refresh' on the main page first.</td></tr>`;
-                }
+            } catch (err) {
+                modalTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#dc2626;">Could not load ledger history: ${String(err.message || err)}</td></tr>`;
             }
         }
 
@@ -1411,7 +1376,7 @@
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="text-align:center;"><button type="button" class="btn-select-ledger-row" onclick="selectLedgerEntry('${vNo}', '${selAmount}', '${String(remarksText).replace(/'/g, "\\'")}')">Select</button></td>
+                    <td style="text-align:center;"><button type="button" class="btn-select-ledger-row" onclick="selectLedgerEntry('${selAmount}', '${String(remarksText).replace(/'/g, "\\'")}')">Select</button></td>
                     <td>${row.date || '-'}</td>
                     <td><b>${vNo || '-'}</b></td>
                     <td>${row.particulars || row.destination_acct || '-'}</td>
@@ -1428,12 +1393,10 @@
             activeRowForModal = null;
         }
 
-        function selectLedgerEntry(voucherNo, amount, remarks) {
+        function selectLedgerEntry(amount, remarks) {
             if (activeRowForModal) {
-                let vnInput = activeRowForModal.querySelector('.v-voucherNo');
                 let amtInput = activeRowForModal.querySelector('.v-amount');
                 let rmkInput = activeRowForModal.querySelector('.v-remarks');
-                if (vnInput) vnInput.value = voucherNo;
                 if (amtInput) amtInput.value = amount;
                 if (rmkInput) rmkInput.value = remarks;
                 updateVoucherBatchTotals();
@@ -1456,7 +1419,6 @@
             const row = createVoucherRowElement();
             container.appendChild(row);
             updateVoucherBatchTotals();
-            recalculateVouchers();
             return row;
         }
 
@@ -1489,19 +1451,58 @@
             applyLedgerFilter(true);
         }
 
-        function loadSettingsData() {
-            if(!SCRIPT_URL) return;
-            fetch(SCRIPT_URL + "?action=getStructuredSettingsData")
-                .then(res => res.json())
-                .then(res => {
-                    const data = res && res.data ? res.data : res;
-                    if (data) {
-                        settingsData = data;
-                        refreshAllRowPayModes();
-                        populateLedgerFilterDropdown();
-                    }
-                })
-                .catch(err => console.error("Settings load error: ", err));
+        async function loadSettingsData() {
+            try {
+                const { rows } = await ERP.db.settings();
+                settingsRows = rows;
+                const names = category => [...new Set(rows
+                    .filter(row => String(row.category || '').trim().toUpperCase() === category)
+                    .map(row => String(row.display_name || '').trim())
+                    .filter(Boolean))];
+                const leafNames = (headCategory, subheadCategory) => {
+                    const heads = rows.filter(row => String(row.category || '').trim().toUpperCase() === headCategory);
+                    return [...new Set(heads.flatMap(head => {
+                        const children = rows.filter(row => String(row.category || '').trim().toUpperCase() === subheadCategory &&
+                            String(row.parent_setting_id) === String(head.id));
+                        return (children.length ? children : [head]).map(row => String(row.display_name || '').trim()).filter(Boolean);
+                    }))];
+                };
+                const accounts = [...new Set([...names('PAY_MODE'), ...names('BANK')])];
+                const contraFlows = rows
+                    .filter(row => String(row.category || '').trim().toUpperCase() === 'CONTRA_HEAD')
+                    .map(head => {
+                        const flow = getContraFlowCode(head);
+                        if (!flow) return null;
+                        const childAccounts = rows.filter(row =>
+                            String(row.category || '').trim().toUpperCase() === 'CONTRA_SUBHEAD' &&
+                            String(row.parent_setting_id) === String(head.id) &&
+                            accounts.includes(String(row.display_name || '').trim()))
+                            .map(row => String(row.display_name).trim());
+                        return { flow, label: String(head.display_name || '').trim(), accounts: [...new Set(childAccounts)] };
+                    })
+                    .filter(Boolean);
+                settingsData = {
+                    ...settingsData,
+                    payModes: accounts,
+                    ledgerAccounts: accounts,
+                    vendors: leafNames('VENDOR', 'VENDOR_SUBHEAD'),
+                    expenses: leafNames('EXPENSE_HEAD', 'EXPENSE_SUBHEAD'),
+                    incomes: leafNames('INCOME_HEAD', 'INCOME_SUBHEAD'),
+                    payables: leafNames('ACCOUNT_PAYABLE_HEAD', 'ACCOUNT_PAYABLE_SUBHEAD'),
+                    receivableSubheads: leafNames('ACCOUNT_RECEIVABLE_HEAD', 'ACCOUNT_RECEIVABLE_SUBHEAD'),
+                    payableSubheads: leafNames('ACCOUNT_PAYABLE_HEAD', 'ACCOUNT_PAYABLE_SUBHEAD'),
+                    contraFlows,
+                    investments: [...new Set([
+                        ...leafNames('INVESTMENT_INCOME', 'INVESTMENT_INCOME_SUBHEAD'),
+                        ...leafNames('PAYABLE_HEAD', 'PAYABLE_SUBHEAD')
+                    ])]
+                };
+                refreshAllRowPayModes();
+                populateLedgerFilterDropdown();
+            } catch (err) {
+                console.error("Settings load error:", err);
+                alert("Could not load dropdown values from Settings: " + (err.message || err));
+            }
         }
 
         function populateLedgerFilterDropdown() {
@@ -1571,10 +1572,11 @@
             tbody.prepend(tr);
         }
 
-        function markPendingRowSaved(tempId) {
+        function markPendingRowSaved(tempId, voucherNo) {
             const tr = document.getElementById('pending_' + tempId);
             if (!tr) return;
             tr.classList.add('pending-row-saved');
+            if (voucherNo) tr.children[1].textContent = voucherNo;
             tr.lastElementChild.innerHTML = '<i class="fa fa-check" style="color:#16a34a;"></i>';
             setTimeout(function() {
                 tr.remove();
@@ -1601,17 +1603,29 @@
         }
 
         function fetchBackendRecords() {
-            if(!SCRIPT_URL) return;
             showSpinner(true);
-            fetch(SCRIPT_URL + "?action=getVendorLedgerRecords")
-                .then(res => res.json())
-                .then(res => {
-                    globalBackendRecords = res && res.data ? res.data : (Array.isArray(res) ? res : []);
+            return ERP.db.fetchAll('v_daybook', { order: 'date', ascending: true })
+                .then(rows => {
+                    globalBackendRecords = rows.map(item => ({
+                        date: item.date,
+                        voucherNo: item.voucher_no,
+                        destination_acct: item.account || '',
+                        account_name: item.party || '',
+                        account_title: item.party || '',
+                        acc_no: item.party_no || '',
+                        particulars: item.head || item.remarks || '',
+                        cash_debit: item.money_in,
+                        cash_credit: item.money_out,
+                        debit: item.money_in,
+                        credit: item.money_out,
+                        remarks: item.remarks || ''
+                    }));
+                    globalUniversalLedgerRecords = globalBackendRecords;
                     applyLedgerFilter(false);
                 })
                 .catch(err => {
                     showSpinner(false);
-                    console.error("Fetch Error:", err);
+                    alert("Could not load voucher history from Supabase: " + err.message);
                 });
         }
 
@@ -2074,7 +2088,9 @@
                 const pm = r.querySelector('.v-payMode').value;
                 const an = r.querySelector('.v-accName').value;
                 const amtVal = r.querySelector('.v-amount').value;
-                if (!mt || !st || !pm || !an || !amtVal || parseFloat(amtVal) <= 0) {
+                const contraFlow = ['CashToBank', 'BankToCash', 'BankToBank'].includes(st);
+                if (!mt || !st || !pm || !an || !amtVal || parseFloat(amtVal) <= 0 ||
+                    (contraFlow && pm === an)) {
                     alert("Har row main Transaction Flow, Sub-Category, Pay Mode, Account Name aur valid Amount zaroori hai.");
                     r.querySelector('.v-mainType').scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return;
@@ -2082,24 +2098,24 @@
             }
 
             const dateVal = document.getElementById('date').value;
+            if (!dateVal) {
+                alert("Date select karein.");
+                dateInput.focus();
+                return;
+            }
 
             const entries = rows.map(function(r, idx) {
                 const mtSelEl = r.querySelector('.v-mainType');
                 const mtVal = mtSelEl.value;
                 const stVal = r.querySelector('.v-subType').value;
-
-                let targetSheet = "Payments";
-                if (mtVal === 'Payments' && stVal === 'Expenses') {
-                    targetSheet = "Expenses";
-                } else if (mtVal === 'Receipts') {
-                    targetSheet = "General_Receipts";
-                } else if (mtVal === 'Contra') {
-                    targetSheet = "Contra";
-                }
+                const kind = mtVal === 'Contra' ? 'transfer'
+                    : mtVal === 'Receipts' ? 'income'
+                    : stVal === 'Expenses' ? 'expense'
+                    : 'payment';
 
                 return {
                     tempId: Date.now() + '_' + idx,
-                    transType: targetSheet,
+                    kind,
                     subType: stVal,
                     date: dateVal,
                     voucherNo: r.querySelector('.v-voucherNo').value,
@@ -2107,63 +2123,63 @@
                     accName: r.querySelector('.v-accName').value,
                     amount: r.querySelector('.v-amount').value,
                     remarks: r.querySelector('.v-remarks').value,
+                    sourceRow: r,
                     flowLabel: mtSelEl.options[mtSelEl.selectedIndex] ? mtSelEl.options[mtSelEl.selectedIndex].textContent : mtVal
                 };
             });
 
             entries.forEach(function(en) { renderPendingRow(en); });
-
-            document.getElementById('voucherRowsContainer').innerHTML = '';
-            const newRow = addVoucherRow();
-            focusRowFirstField(newRow);
-
-            let index = 0;
-            function sendNext() {
-                if (index >= entries.length) {
-                    scheduleHistoryRefresh();
-                    return;
-                }
-                let en = entries[index++];
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'saveVoucherData', data: en })
-                })
-                .then(res => res.json())
-                .then(response => {
-                    if (response && response.success) {
-                        markPendingRowSaved(en.tempId);
-                    } else {
-                        markPendingRowFailed(en.tempId, response && response.message);
+            const submit = document.getElementById('submitBtn');
+            submit.disabled = true;
+            (async () => {
+                try {
+                    for (const en of entries) {
+                        const payload = en.kind === 'transfer'
+                            ? {
+                                kind: 'transfer', date: en.date, amount: Number(en.amount),
+                                pay_mode: en.payMode, to_account: en.accName,
+                                head: (settingsRows.find(row => String(row.category || '').toUpperCase() === 'CONTRA_HEAD' &&
+                                    getContraFlowCode(row) === en.subType) || {}).display_name || en.flowLabel,
+                                remarks: en.remarks
+                            }
+                            : {
+                                kind: en.kind, date: en.date, amount: Number(en.amount),
+                                pay_mode: en.payMode, name: en.accName, remarks: en.remarks
+                            };
+                        try {
+                            const saved = await ERP.db.accounts.create(payload);
+                            const result = Array.isArray(saved) ? saved[0] : saved;
+                            en.voucherNo = result && result.voucher_no ? result.voucher_no : '';
+                            markPendingRowSaved(en.tempId, en.voucherNo);
+                            en.sourceRow.remove();
+                        } catch (err) {
+                            markPendingRowFailed(en.tempId, err.message);
+                        }
                     }
-                    sendNext();
-                })
-                .catch(err => {
-                    markPendingRowFailed(en.tempId, err.message);
-                    sendNext();
-                });
-            }
-            sendNext();
+                    if (!document.querySelector('#voucherRowsContainer .voucher-entry-row')) {
+                        const newRow = addVoucherRow();
+                        focusRowFirstField(newRow);
+                    }
+                    updateVoucherBatchTotals();
+                    scheduleHistoryRefresh();
+                } finally {
+                    submit.disabled = false;
+                }
+            })();
         });
-
-        function showUrlConfig() {
-          var inp = document.getElementById('scriptUrlInput');
-          if (inp) inp.value = SCRIPT_URL;
-          var box = document.getElementById('configBox');
-          if (box) box.classList.add('show');
-        }
         
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
           const container = document.getElementById('voucherRowsContainer');
           if (container && container.children.length === 0) {
               addVoucherRow();
           }
-          var savedUrl = localStorage.getItem('erp_script_url');
-          if (!savedUrl) {
-            var box = document.getElementById('configBox');
-            if (box) box.classList.add('show');
-          } else {
-            loadSettingsData();
-            fetchBackendRecords();
+          try {
+            await ERP.auth.guard();
+            submitBtn.disabled = !ERP.auth.can('write');
+            await loadSettingsData();
+            await fetchBackendRecords();
+          } catch (err) {
+            alert("Could not load Voucher Entry: " + err.message);
           }
         });
     </script>

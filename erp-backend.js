@@ -29,47 +29,27 @@ const erpApi = {
   // ==========================================
   async getSettings() {
     const sb = getSB();
-    try {
-      const { data, error } = await sb.from('app_settings').select('*').eq('is_active', true).order('sort_order');
-      if (error || !data || data.length === 0) {
-        return {
-          success: true,
-          cros: ['JAFAR SB', 'Raza Shah', 'Hassan', 'Muhammad Ali'],
-          approvedBy: ['M Shabbir', 'M Shahid'],
-          cash: ['Daybook (Cash)', 'Cash in Hand'],
-          bank: ['Allied Bank (1870014)', 'Meezan Bank (99281)', 'Online Transfer'],
-          expenseHeads: ['Shop Rent', 'Electricity Bill', 'Staff Salary', 'Tea & Refreshment', 'Stationery', 'Misc Expense'],
-          vendors: []
-        };
-      }
+    if (!sb) throw new Error("Supabase is not available");
+    const { data, error } = await sb.from('app_settings').select('*').eq('is_active', true).order('sort_order');
+    if (error) throw error;
+    const rows = data || [];
+    const by = category => rows.filter(d => String(d.category || '').trim().toUpperCase() === category);
+    const names = category => [...new Set(by(category).map(d => String(d.display_name || '').trim()).filter(Boolean))];
+    const cash = names('PAY_MODE');
+    const bank = names('BANK');
+    const accounts = [...new Set([...cash, ...bank])];
 
-      const cros = data.filter(d => d.category === 'CRO').map(d => d.display_name);
-      const approvedBy = data.filter(d => d.category === 'APPROVED_BY').map(d => d.display_name);
-      const cash = data.filter(d => d.category === 'PAY_MODE').map(d => d.display_name);
-      const bank = data.filter(d => d.category === 'BANK').map(d => d.display_name);
-      const expenseHeads = data.filter(d => d.category === 'EXPENSE_HEAD').map(d => d.display_name);
-      const vendors = data.filter(d => d.category === 'VENDOR').map(d => ({ name: d.display_name, contact: d.contact_person, mobile: d.mobile_no }));
-
-      return {
-        success: true,
-        cros: cros.length ? cros : ['JAFAR SB', 'Raza Shah', 'Hassan'],
-        approvedBy: approvedBy.length ? approvedBy : ['M Shabbir', 'M Shahid'],
-        cash: cash.length ? cash : ['Daybook (Cash)'],
-        bank: bank.length ? bank : ['Allied Bank (1870014)'],
-        expenseHeads: expenseHeads.length ? expenseHeads : ['General Expense'],
-        vendors: vendors
-      };
-    } catch(e) {
-      return {
-        success: true,
-        cros: ['JAFAR SB', 'Raza Shah', 'Hassan'],
-        approvedBy: ['M Shabbir', 'M Shahid'],
-        cash: ['Daybook (Cash)'],
-        bank: ['Allied Bank (1870014)'],
-        expenseHeads: ['General Expense'],
-        vendors: []
-      };
-    }
+    return {
+      success: true,
+      cros: names('CRO'),
+      approvedBy: names('APPROVED_BY'),
+      payModes: accounts,
+      cash,
+      bank,
+      expenseHeads: names('EXPENSE_HEAD'),
+      incomeHeads: names('INCOME_HEAD'),
+      vendors: by('VENDOR').map(d => ({ name: d.display_name, contact: d.contact_person, mobile: d.mobile_no }))
+    };
   },
 
   // ==========================================

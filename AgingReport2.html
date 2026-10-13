@@ -59,7 +59,7 @@
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
 const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
-let ROWS = [], REC = [], tab = "due", bucket = "", shown = 60, cur = null, VIEW = [];
+let ROWS = [], REC = [], CRO_NAMES = [], tab = "due", bucket = "", shown = 60, cur = null, VIEW = [];
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const mon = d => d ? new Date(d + "T12:00").toLocaleString("en", { month: "short", year: "numeric" }) : "";
 const late = r => N(r.overdue_amt), toCollect = r => N(r.overdue_amt) + N(r.due_this_month);
@@ -67,17 +67,18 @@ const late = r => N(r.overdue_amt), toCollect = r => N(r.overdue_amt) + N(r.due_
 async function load() {
   $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(3);
   try {
-    const [ag, cb] = await Promise.all([ERP.db.aging(), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    const [ag, cb, settings] = await Promise.all([ERP.db.aging(), ERP.db.customers.balances(), ERP.db.settings()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
     ROWS = ag.map(a => ({ ...a, ...(m.get(String(a.account_no).trim()) || {}), account_no: a.account_no }));
-    const cros = [...new Set(ROWS.map(r => r.cro).filter(Boolean))].sort(); const v = $("fCro").value;
-    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+    CRO_NAMES = settings.names("CRO");
+    const v = CRO_NAMES.includes($("fCro").value) ? $("fCro").value : "";
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + CRO_NAMES.map(c => `<option value="${E(c)}">${E(c)}</option>`).join(""); $("fCro").value = v; render();
   } catch (e) { $("body").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/08_installments.sql if this mentions v_customer_aging.</small></div>`; }
 }
 async function loadDay() {
   $("body").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div></div>';
-  try { const [rc, cb] = await Promise.all([ERP.db.receipts.list({ from: $("dFrom").value, to: $("dTo").value }), ERP.db.customers.balances()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
-    REC = rc.map(r => ({ ...r, cro: (m.get(String(r.account_no).trim()) || {}).cro || "(none)" })); const cros = [...new Set(REC.map(r => r.cro))].sort(); const v = $("fCro").value;
-    $("fCro").innerHTML = '<option value="">All CROs</option>' + cros.map(c => `<option>${E(c)}</option>`).join(""); $("fCro").value = v; render();
+  try { const [rc, cb, settings] = await Promise.all([ERP.db.receipts.list({ from: $("dFrom").value, to: $("dTo").value }), ERP.db.customers.balances(), ERP.db.settings()]); const m = new Map(cb.map(c => [String(c.account_no).trim(), c]));
+    REC = rc.map(r => ({ ...r, cro: (m.get(String(r.account_no).trim()) || {}).cro || "(none)" })); CRO_NAMES = settings.names("CRO"); const v = CRO_NAMES.includes($("fCro").value) ? $("fCro").value : "";
+    $("fCro").innerHTML = '<option value="">All CROs</option>' + CRO_NAMES.map(c => `<option value="${E(c)}">${E(c)}</option>`).join(""); $("fCro").value = v; render();
   } catch (e) { $("body").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
 }
 const match = r => { const q = $("q").value.trim().toLowerCase(), c = $("fCro").value; return (!c || r.cro === c) && (!q || [r.account_no, r.account_title, r.mobile_number, r.voucher_no].join(" ").toLowerCase().includes(q)); };

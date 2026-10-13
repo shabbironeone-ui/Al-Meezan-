@@ -60,13 +60,15 @@ document.addEventListener("click", e => { if (!e.target.closest(".sbox")) $("sug
 
 function buildLedger(acc, sales, rcs) {   // same money rule as the database: balance = sale total - all receipts (old advance only where not already a receipt)
   const lines = [];
-  if (sales.length) {
-    const d = sales.map(r => r.date).sort()[0], ts = sales.map(r => r.created_at || "").sort()[0];
-    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: sales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: sales.reduce((t, r) => t + N(r.total_amt), 0), credit: 0, ts });
-    const oldAdv = sales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
+  const originalSales = sales.filter(r => !r.return_of_id), returns = sales.filter(r => r.return_of_id);
+  if (originalSales.length) {
+    const d = originalSales.map(r => r.date).sort()[0], ts = originalSales.map(r => r.created_at || "").sort()[0];
+    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: originalSales.reduce((t, r) => t + N(r.total_amt), 0), credit: 0, ts });
+    const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
     if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts });
   }
-  rcs.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "" }));
+  returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -N(r.total_amt), ts: r.created_at || "" }));
+  rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "" }));
   return lines.sort((x, y) => String(x.date).localeCompare(String(y.date)) || x.ord - y.ord || String(x.ts).localeCompare(String(y.ts)));
 }
 async function pick(acc) {

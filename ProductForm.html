@@ -45,8 +45,9 @@
     <div class="fld mob"><label>Storage / ROM (GB)</label><input id="fRom" inputmode="numeric" list="dRom" autocomplete="off"></div>
     <div class="fld"><label>Cost price (Rs)</label><input id="fCost" type="number" inputmode="decimal" min="0"><small class="err"></small></div>
     <div class="fld"><label>MRP / sale price (Rs)</label><input id="fMrp" type="number" inputmode="decimal" min="0"><small class="err"></small></div>
+    <div class="fld"><label>Minimum stock / reorder level</label><input id="fMinStock" type="number" inputmode="decimal" min="0" step="0.01"><small class="err"></small></div>
     <div class="fld wide"><label>Remarks</label><input id="fRem" autocomplete="off"></div></div></div>
-    <p style="font-size:12px;color:var(--muted);margin:0">Cost and MRP are optional. They pre-fill automatically when you add this product to a purchase.</p></form>
+    <p style="font-size:12px;color:var(--muted);margin:0">When on-hand stock reaches this level, the Business Reports page flags it for reorder. Leave at 0 to disable the alert for this product.</p></form>
   <div class="sh-foot"><button class="btn danger" id="btnDel" hidden style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="btnSave">Save product</button></div>
   <datalist id="dCat"></datalist><datalist id="dBrand"></datalist><datalist id="dModel"></datalist><datalist id="dColor"></datalist><datalist id="dRam"></datalist><datalist id="dRom"></datalist>
 </dialog>
@@ -91,7 +92,7 @@ function render() {
       <div class="n"><b>${E(title(p))}</b><small>${E(up(p.color))}${p.color ? " · " : ""}${E(p.product_id)}</small></div>
       <div class="m"><span>${E(up(p.company_name))}</span><br><small>${E(up(p.product_category))}</small></div>
       <div class="p"><span class="num hide-m" style="text-align:right">${Number(p.cost_price) ? "Rs " + M(p.cost_price) : "—"}</span><span class="num" style="text-align:right">${Number(p.mrp) ? "MRP " + M(p.mrp) : ""}</span></div>
-      <div class="stk badge ${s > 0 ? "ok" : s < 0 ? "bad" : ""}">${M(s)}</div></article>`; }).join("") || '<div class="empty">No products match your search.</div>';
+      <div class="stk badge ${s < 0 ? "bad" : Number(p.min_stock) > 0 && s <= Number(p.min_stock) ? "warn" : s > 0 ? "ok" : ""}" title="${Number(p.min_stock) > 0 ? "Reorder level " + M(p.min_stock) : "No reorder level set"}">${M(s)}${Number(p.min_stock) > 0 ? `<small style="display:block;font-size:10px">Min ${M(p.min_stock)}</small>` : ""}</div></article>`; }).join("") || '<div class="empty">No products match your search.</div>';
   $("more").hidden = rows.length <= shown; $("more").textContent = `Show more (${M(rows.length - shown)} remaining)`;
 }
 
@@ -103,7 +104,7 @@ function open(p) {
   editing = p ? String(p.product_id) : null;
   $("dTitle").textContent = p ? "Edit product" : "New product"; $("dSub").textContent = p ? "ID " + p.product_id + " · stock " + M(stock(p)) : "A product ID is created automatically";
   $("fCategory").value = p ? up(p.product_category) : ""; $("fBrand").value = p ? up(p.company_name) : ""; $("fModel").value = p ? up(p.model) : ""; $("fColor").value = p ? up(p.color) : "";
-  $("fRam").value = p ? num(p.ram) : ""; $("fRom").value = p ? num(p.memory) : ""; $("fCost").value = p && Number(p.cost_price) ? p.cost_price : ""; $("fMrp").value = p && Number(p.mrp) ? p.mrp : ""; $("fRem").value = p ? up(p.remarks) : "";
+  $("fRam").value = p ? num(p.ram) : ""; $("fRom").value = p ? num(p.memory) : ""; $("fCost").value = p && Number(p.cost_price) ? p.cost_price : ""; $("fMrp").value = p && Number(p.mrp) ? p.mrp : ""; $("fMinStock").value = p ? Number(p.min_stock) || 0 : 0; $("fRem").value = p ? up(p.remarks) : "";
   document.querySelectorAll("#frm .bad").forEach(x => x.classList.remove("bad")); document.querySelectorAll("#frm .err").forEach(x => x.textContent = "");
   $("btnDel").hidden = !(p && ERP.auth.can("delete")); syncMob(); $("dlg").showModal(); $("frm").scrollTop = 0;
 }
@@ -114,10 +115,12 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   const err = (id, m) => { const el = $(id); el.classList.add("bad"); el.closest(".fld").querySelector(".err").textContent = m; };
   const p = { product_id: editing || ERP.db.products.newId(), product_category: up($("fCategory").value), company_name: up($("fBrand").value), model: up($("fModel").value), color: up($("fColor").value),
     ram: isMob() ? gb($("fRam").value).toUpperCase() : "", memory: isMob() ? gb($("fRom").value).toUpperCase() : "", remarks: up($("fRem").value),
-    cost_price: $("fCost").value === "" ? 0 : Number($("fCost").value), mrp: $("fMrp").value === "" ? 0 : Number($("fMrp").value) };
+    cost_price: $("fCost").value === "" ? 0 : Number($("fCost").value), mrp: $("fMrp").value === "" ? 0 : Number($("fMrp").value),
+    min_stock: $("fMinStock").value === "" ? 0 : Number($("fMinStock").value) };
   let ok = true;
   if (!p.product_category) { err("fCategory", "Required"); ok = false; } if (!p.company_name) { err("fBrand", "Required"); ok = false; } if (!p.model) { err("fModel", "Required"); ok = false; }
   if (p.cost_price < 0 || isNaN(p.cost_price)) { err("fCost", "Invalid amount"); ok = false; } if (p.mrp < 0 || isNaN(p.mrp)) { err("fMrp", "Invalid amount"); ok = false; }
+  if (p.min_stock < 0 || !Number.isFinite(p.min_stock)) { err("fMinStock", "Enter zero or a positive quantity"); ok = false; }
   if (!ok) return;
   const key = x => [up(x.company_name), up(x.model), up(x.color), num(x.ram), num(x.memory)].join("|");
   const dup = ALL.find(x => key(x) === key(p) && String(x.product_id) !== p.product_id);

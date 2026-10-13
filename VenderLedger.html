@@ -55,16 +55,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
-const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, key = s => String(s || "").trim().toUpperCase(), PM = ERP_CONFIG.PAY_MODES;
-let V = new Map(), UNM = new Map(), cur = null, SETT = [];
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, key = s => String(s || "").trim().toUpperCase();
+let V = new Map(), UNM = new Map(), cur = null, SETT = [], PM = { cash: [], bank: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const stat = (l, v, c) => `<div class="stat ${c || ""}"><small>${l}</small><b>${v}</b></div>`;
 
 async function load() {
   $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(3);
   try {
-    const [pur, pay, set] = await Promise.all([ERP.db.fetchAll("purchase_detail", { order: "id" }), ERP.db.fetchAll("payments", { order: "id" }), ERP.db.settings().catch(() => ({ rows: [] }))]);
-    SETT = set.rows; build(pur, pay); render();
+    const [pur, pay, set] = await Promise.all([ERP.db.fetchAll("purchase_detail", { order: "id" }), ERP.db.fetchAll("payments", { order: "id" }), ERP.db.settings()]);
+    SETT = set.rows; PM = set.paymentModes; build(pur, pay); render();
   } catch (e) { $("list").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small></div>`; }
 }
 function build(pur, pay) {
@@ -72,7 +72,17 @@ function build(pur, pay) {
   const ensure = name => { const k = key(name) || "(NO SUPPLIER)"; if (!V.has(k)) V.set(k, { k, name: String(name || "").trim() || "(no supplier)", lines: [] }); return V.get(k); };
   SETT.filter(r => String(r.category).trim().toUpperCase() === "VENDOR").forEach(r => ensure(r.display_name));
   const g = new Map(); pur.forEach(r => { const k = key(r.supplier) + "|" + String(r.po_num || "").trim(); (g.get(k) || g.set(k, []).get(k)).push(r); });
-  g.forEach(rows => ensure(rows[0].supplier).lines.push({ date: rows.map(r => r.purchase_date).sort()[0], ref: String(rows[0].po_num || ""), kind: "Purchase", part: rows.map(r => `${String(r.model || "").trim()} ×${N(r.qty)}`).join(", "), debit: 0, credit: rows.reduce((s, r) => s + N(r.line_total), 0) }));
+  g.forEach(rows => {
+    const isReturn = rows.some(row => row.return_ref);
+    ensure(rows[0].supplier).lines.push({
+      date: rows.map(r => r.purchase_date).sort()[0],
+      ref: String(rows[0].po_num || ""),
+      kind: isReturn ? "Purchase Return" : "Purchase",
+      part: rows.map(r => `${String(r.model || "").trim()} ×${Math.abs(N(r.qty))}`).join(", "),
+      debit: 0,
+      credit: rows.reduce((s, r) => s + N(r.line_total), 0)
+    });
+  });
   pay.forEach(p => { const k1 = key(p.payment_head), k2 = key(p.account_title), k = V.has(k1) ? k1 : V.has(k2) ? k2 : null;
     if (k) V.get(k).lines.push({ date: p.date, ref: p.voucher_no, kind: "Payment", part: [p.pay_mode, p.remarks].filter(Boolean).join(" · "), debit: N(p.amount), credit: 0 });
     else { const n = String(p.payment_head || p.account_title || "(blank)").trim(); UNM.set(n, (UNM.get(n) || 0) + N(p.amount)); } });
@@ -111,8 +121,12 @@ function drawV() {
     + (rows.length ? `<tr class="open"><td colspan="4">Total</td><td class="num">${M(dr)}</td><td class="num">${M(cr)}</td><td class="num">${M(close)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries in this period.</td></tr>');
 }
 $("vFrom").onchange = $("vTo").onchange = drawV;
-$("vPay").onclick = () => { $("payForm").classList.add("on"); $("pSave").hidden = false; $("vPay").hidden = true; $("pDate").value = ERP.ui.today(); $("pAmt").value = ""; $("pRem").value = "";
-  $("pMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); $("pMode").value = PM.cash[0]; $("pAmt").focus(); $("payForm").scrollIntoView({ block: "center" }); };
+$("vPay").onclick = () => {
+  const modes = PM.all || [...new Set([...PM.cash, ...PM.bank])];
+  if (!modes.length) return ERP.ui.toast("Add active PAY_MODE or BANK values in Settings first", "err");
+  $("payForm").classList.add("on"); $("pSave").hidden = false; $("vPay").hidden = true; $("pDate").value = ERP.ui.today(); $("pAmt").value = ""; $("pRem").value = "";
+  $("pMode").innerHTML = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join(""); $("pMode").value = PM.cash[0] || modes[0]; $("pAmt").focus(); $("payForm").scrollIntoView({ block: "center" });
+};
 $("pSave").onclick = () => ERP.ui.busy($("pSave"), async () => {
   const amt = +$("pAmt").value; if (!(amt > 0)) return ERP.ui.toast("Enter the amount", "err"); if (!$("pDate").value) return ERP.ui.toast("Select the date", "err");
   try { const r = await ERP.db.accounts.create({ kind: "payment", date: $("pDate").value, amount: amt, pay_mode: $("pMode").value, name: cur.name, remarks: $("pRem").value.trim() });

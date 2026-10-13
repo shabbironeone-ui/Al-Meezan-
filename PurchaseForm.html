@@ -71,12 +71,19 @@
     <div class="wide"><label>Remarks</label><input id="qRem" autocomplete="off"></div></div><small class="err" id="qErr"></small></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="qSave">Save product</button></div>
   <datalist id="dCat"></datalist><datalist id="dBrand"></datalist></dialog>
+<dialog id="purchaseReturn" class="sheet"><div class="sh-head"><div><h2>Return item to supplier</h2><p id="purchaseReturnInfo"></p></div><button class="x" data-return-close aria-label="Close">✕</button></div>
+  <form id="purchaseReturnForm" class="sh-body"><div class="fgrid">
+    <div><label for="purchaseReturnDate">Return date</label><input id="purchaseReturnDate" type="date" required></div>
+    <div><label for="purchaseReturnQty">Quantity to return</label><input id="purchaseReturnQty" type="number" inputmode="decimal" min="0.01" step="0.01" required></div>
+    <div class="wide"><label for="purchaseReturnReason">Reason (optional)</label><input id="purchaseReturnReason" maxlength="250"></div>
+  </div><small class="err" id="purchaseReturnErr"></small><p style="font-size:12px;color:var(--muted)">Returned goods will be removed from stock and reduce the supplier balance. Any cash refund from the supplier is recorded separately in Accounts.</p>
+  <div class="sh-foot"><button class="btn ghost" type="button" data-return-close>Cancel</button><button class="btn" type="submit">Save purchase return</button></div></form></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase();
-let PRODUCTS = [], editingPO = null, activeLine = null, HIST = [];
+let PRODUCTS = [], editingPO = null, activeLine = null, HIST = [], RETURNED_PURCHASES = new Map(), activePurchaseLine = null;
 const spec = v => String(v || "").replace(/gb|mb/gi, "").trim();
 function label(p) { let m = up(p.model); const r = spec(p.ram), s = spec(p.memory);
   if ((r || s) && !m.includes(r || "~") && !m.includes(s || "~")) m += " " + (r && s ? r + "/" + s : r || s); return m; }
@@ -179,23 +186,64 @@ $("cancelEdit").onclick = resetForm;
 /* ---------- history ---------- */
 async function loadHist() {
   $("hList").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div></div>';
-  try { HIST = await ERP.db.purchases.recent({ from: $("hFrom").value, to: $("hTo").value, supplier: $("hVendor").value }); renderHist(); }
+  try {
+    HIST = await ERP.db.purchases.recent({ from: $("hFrom").value, to: $("hTo").value, supplier: $("hVendor").value });
+    RETURNED_PURCHASES = await ERP.db.purchases.returnedQuantities(HIST.filter(row => !row.return_of_id).map(row => row.id));
+    renderHist();
+  }
   catch (e) { $("hList").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
 }
 function renderHist() {
   const q = $("hQ").value.trim().toLowerCase(), g = new Map();
   HIST.filter(r => !q || [r.po_num, r.model, r.serial_no, r.supplier, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.po_num || "—"; (g.get(k) || g.set(k, []).get(k)).push(r); });
   let grand = 0;
-  $("hList").innerHTML = [...g].map(([po, rs]) => { const tot = rs.reduce((s, r) => s + (+r.line_total || 0), 0), qty = rs.reduce((s, r) => s + (+r.qty || 0), 0); grand += tot;
-    return `<article class="po" data-po="${E(po)}"><div class="po-h"><div><b>${E(po)}</b><br><small>${E(rs[0].purchase_date)} · ${E(rs[0].supplier)}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400;color:var(--muted)">${rs.length} items · ${M(qty)} pcs</small></div></div>
-      <div class="po-b" hidden><div class="table-wrap"><table style="min-width:520px"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Cost</th><th class="num">Total</th><th>Serial</th></tr></thead><tbody>${rs.map(r => `<tr><td>${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.cost_price)}</td><td class="num">${M(r.line_total)}</td><td>${E(r.serial_no)}</td></tr>`).join("")}</tbody></table></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">${ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}</div></div></article>`; }).join("")
+  $("hList").innerHTML = [...g].map(([po, rs]) => {
+    const tot = rs.reduce((s, r) => s + (+r.line_total || 0), 0), qty = rs.reduce((s, r) => s + (+r.qty || 0), 0);
+    const isReturn = rs.some(r => r.return_ref), hasReturns = isReturn || rs.some(r => (RETURNED_PURCHASES.get(String(r.id)) || 0) > 0);
+    grand += tot;
+    const itemRows = rs.map(r => {
+      const returned = RETURNED_PURCHASES.get(String(r.id)) || 0, remaining = Math.max((Number(r.qty) || 0) - returned, 0);
+      const action = !r.return_of_id && remaining > 0 && ERP.auth.can("write")
+        ? `<button type="button" class="btn sm ghost" data-do="return-item" data-id="${E(r.id)}">Return · ${M(remaining)} left</button>` : "";
+      return `<tr class="${r.return_of_id ? "return-row" : ""}"><td>${r.return_of_id ? `<span class="badge warn">Return ${E(r.return_ref || "")}</span>` : E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.cost_price)}</td><td class="num">${M(r.line_total)}</td><td>${E(r.serial_no)}</td><td>${action}</td></tr>`;
+    }).join("");
+    return `<article class="po" data-po="${E(po)}"><div class="po-h"><div><b>${isReturn ? "Purchase Return " : "Purchase "}${E(po)}</b><br><small>${E(rs[0].purchase_date)} · ${E(rs[0].supplier)}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400;color:var(--muted)">${rs.length} items · ${M(qty)} pcs</small></div></div>
+      <div class="po-b" hidden><div class="table-wrap"><table style="min-width:620px"><thead><tr><th>Product / return</th><th class="num">Qty</th><th class="num">Cost</th><th class="num">Total</th><th>Serial</th><th>Action</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">${!hasReturns && ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${!hasReturns && ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}${hasReturns ? '<small style="color:var(--muted)">Edit/delete disabled after a return</small>' : ""}</div></div></article>`;
+  }).join("")
     || '<div class="empty">No purchases in this period.</div>';
   $("hSum").textContent = `${g.size} purchase${g.size === 1 ? "" : "s"} · Rs ${M(grand)}${HIST.length >= 1500 ? " (showing latest 1500 lines, narrow the dates)" : ""}`;
 }
+function openPurchaseReturn(id) {
+  const row = HIST.find(item => String(item.id) === String(id));
+  if (!row || row.return_of_id) return ERP.ui.toast("Original purchase item not found", "err");
+  const remaining = Math.max((Number(row.qty) || 0) - (RETURNED_PURCHASES.get(String(row.id)) || 0), 0);
+  if (!remaining) return ERP.ui.toast("This item has already been fully returned", "err");
+  activePurchaseLine = row;
+  $("purchaseReturnInfo").textContent = `${row.supplier} · ${row.model} · Purchased ${M(row.qty)} · Returnable ${M(remaining)}`;
+  $("purchaseReturnDate").value = ERP.ui.today(); $("purchaseReturnQty").value = remaining; $("purchaseReturnQty").max = String(remaining);
+  $("purchaseReturnReason").value = ""; $("purchaseReturnErr").textContent = "";
+  $("purchaseReturn").showModal();
+}
+$("purchaseReturn").addEventListener("click", e => { if (e.target.closest("[data-return-close]")) $("purchaseReturn").close(); });
+$("purchaseReturnForm").onsubmit = e => {
+  e.preventDefault();
+  if (!activePurchaseLine) return;
+  ERP.ui.busy(e.submitter || $("purchaseReturnForm").querySelector('button[type="submit"]'), async () => {
+    const qty = Number($("purchaseReturnQty").value), max = Number($("purchaseReturnQty").max), date = $("purchaseReturnDate").value;
+    if (!date) return $("purchaseReturnErr").textContent = "Select the return date.";
+    if (!(qty > 0) || qty > max) return $("purchaseReturnErr").textContent = `Enter a quantity up to ${M(max)}.`;
+    try {
+      const result = await ERP.db.purchases.createReturn(activePurchaseLine.id, qty, date, $("purchaseReturnReason").value.trim());
+      ERP.ui.toast(`Purchase return ${result.return_ref} saved · Rs ${M(result.amount)}`);
+      $("purchaseReturn").close(); activePurchaseLine = null; loadHist();
+    } catch (error) { $("purchaseReturnErr").textContent = error.message; }
+  });
+};
 $("hList").onclick = async e => {
   const art = e.target.closest(".po"); if (!art) return; const po = art.dataset.po, act = e.target.closest("[data-do]");
   if (!act) { const b = art.querySelector(".po-b"); b.hidden = !b.hidden; return; }
+  if (act.dataset.do === "return-item") return openPurchaseReturn(act.dataset.id);
   if (act.dataset.do === "edit") {
     const rows = HIST.filter(r => r.po_num === po); editingPO = po; $("tNew").click(); $("lines").innerHTML = "";
     $("pDate").value = rows[0].purchase_date; $("pVendor").value = rows[0].supplier; rows.forEach(r => addLine(r)); totals();

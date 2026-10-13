@@ -44,6 +44,7 @@
     <select id="fCro" aria-label="CRO"></select>
     <select id="fSort" aria-label="Sort"><option value="new">Newest first</option><option value="name">Name A-Z</option><option value="bal">Highest balance</option></select>
     <button class="chip" id="chipDue" aria-pressed="false">Balance due</button>
+    <button class="btn ghost mini" id="bulkCROBtn" type="button">Bulk CRO move</button>
   </section>
 
   <div class="head"><span>Customer</span><span>Account</span><span>Mobile</span><span>CRO</span><span style="text-align:right">Balance</span><span></span></div>
@@ -60,6 +61,40 @@
     <button class="btn danger" id="btnDel" hidden style="margin-right:auto">Delete</button>
     <button class="btn ghost" data-close>Cancel</button>
     <button class="btn" id="btnSave">Save customer</button>
+  </div>
+</dialog>
+
+<dialog id="bulkCRODialog" class="sheet">
+  <div class="sh-head">
+    <div><h2>Bulk CRO reassign</h2><p>Move one CRO group or selected customers to another CRO</p></div>
+    <button class="x" type="button" data-close aria-label="Close">✕</button>
+  </div>
+  <div class="sh-body">
+    <div class="fsec">
+      <div class="fgrid">
+        <div class="fld">
+          <label>Source CRO</label>
+          <select id="bulkSourceCRO"></select>
+        </div>
+        <div class="fld">
+          <label>Target CRO</label>
+          <select id="bulkTargetCRO"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <strong id="bulkListTitle">Customers</strong>
+        <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="bulkSelectAll"> Select all</label>
+      </div>
+      <div id="bulkCROList" class="table-wrap" style="max-height:420px;overflow:auto"></div>
+    </div>
+  </div>
+  <div class="sh-foot">
+    <button class="btn ghost" type="button" data-close>Cancel</button>
+    <button class="btn" type="button" id="bulkMoveSelectedBtn">Move selected</button>
+    <button class="btn danger" type="button" id="bulkMoveAllBtn">Move all from source</button>
   </div>
 </dialog>
 
@@ -100,9 +135,13 @@ async function load() {
     let b = []; try { b = await ERP.db.customers.balances(); } catch (er) { ERP.ui.toast("Balances unavailable (run sql/08): " + er.message, "err"); }
     ALL = c; BAL = new Map(b.map(x => [String(x.account_no).trim(), x]));
     const names = cat => s.rows.filter(r => String(r.category || "").trim().toUpperCase() === cat).map(r => String(r.display_name || r.lookup_code || "").trim()).filter(Boolean);
-    window.CRO = names("CRO"); window.APP = names("APPROVED_BY");
-    const all = [...new Set([...CRO, ...ALL.map(x => x.cro).filter(Boolean)])].sort();
-    $("fCro").innerHTML = '<option value="">All CROs</option>' + all.map(x => `<option>${E(x)}</option>`).join("");
+    window.CRO = [...new Set(names("CRO"))].sort();
+    window.APP = [...new Set(names("APPROVED_BY"))].sort();
+    const selected = $("fCro").value || "";
+    const options = ['<option value="">All CROs</option>',
+      ...window.CRO.map(x => `<option value="${E(x)}" ${selected === x ? "selected" : ""}>${E(x)}</option>`)];
+    $("fCro").innerHTML = options.join("");
+    if (selected && !window.CRO.includes(selected)) $("fCro").value = "";
     render(); checkAccess();
   } catch (e) { $("list").innerHTML = `<div class="empty">Could not load customers.<br><small>${E(e.message)}</small></div>`; }
 }
@@ -147,23 +186,120 @@ $("list").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contain
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
 const kv = (l, v) => `<div><dt>${l}</dt><dd>${E(v) || "—"}</dd></div>`;
+async function assignCustomerCRO(accNo, newCRO) {
+  const clean = String(newCRO || "").trim();
+  if (!clean) return ERP.ui.toast("Choose a CRO first", "err");
+  try {
+    await ERP.db.customers.update(accNo, { cro: clean });
+    ERP.ui.toast(`Customer moved to ${clean}`, "ok");
+    await load();
+    const refreshed = find(accNo);
+    if (refreshed) openProfile(refreshed);
+  } catch (e) { ERP.ui.toast(e.message || "Could not reassign CRO", "err"); }
+}
+
 function openProfile(c) {
   const b = BAL.get(key(c)) || {}, bl = bal(c), ini = String(c.account_title || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
   const g = n => c["guarantor_" + n + "_name"] ? `<div class="gcard"><b>Guarantor ${n}</b><dl class="kv" style="margin-top:8px">${kv("Name", c["guarantor_" + n + "_name"])}${kv("Mobile", c["guarantor_" + n + "_mobile"])}${kv("Department", c["guarantor_" + n + "_dept"])}${kv("Designation", c["guarantor_" + n + "_designation"])}</dl></div>` : "";
+  const croOptions = [...new Set((window.CRO || []).filter(Boolean))].sort();
   $("profile").innerHTML = `<div class="sh-head"><div class="av lg" style="background:hsl(${(Number(digits(c.account_no)) * 47) % 360} 45% 38%)">${E(ini)}</div>
       <div><h2>${E(c.account_title)}</h2><p>CAF ${E(key(c))}${c[SO] ? " · " + E(c[SO]) : ""}</p></div><button class="x" data-close aria-label="Close">✕</button></div>
     <div class="sh-body"><div class="balbox ${bl > 0 ? "due" : ""}"><small>Outstanding balance</small><b>${bl > 0 ? "Rs " + M(bl) : "Clear"}</b>
       <span>Sale ${M(b.total_sale)} · Received ${M(b.received)}</span></div>
-      <div class="fsec"><dl class="kv">${kv("Mobile", c.mobile_number)}${kv("CNIC", c.cnic_no)}${kv("Address", c.address)}${kv("CRO", c.cro)}${kv("Approved by", c.approved_by)}${kv("Department", c.department)}${kv("Designation", c.designation)}${kv("Salary", c.salary ? "Rs " + M(c.salary) : "")}</dl></div>${g(1)}${g(2)}</div>
+      <div class="fsec"><dl class="kv">${kv("Mobile", c.mobile_number)}${kv("CNIC", c.cnic_no)}${kv("Address", c.address)}${kv("CRO", c.cro || "Unassigned")}${kv("Approved by", c.approved_by)}${kv("Department", c.department)}${kv("Designation", c.designation)}${kv("Salary", c.salary ? "Rs " + M(c.salary) : "")}</dl></div>
+      <div class="gcard"><h3 style="margin:0 0 8px">CRO assignment</h3><div class="fgrid" style="grid-template-columns:1fr auto"><select id="pTransferCRO"><option value="">Select active CRO...</option>${croOptions.map(x => `<option value="${E(x)}" ${String(c.cro || "").trim() === x ? "selected" : ""}>${E(x)}</option>`).join("")}</select><button class="btn sm" id="pTransferBtn" ${!(window.CRO && window.CRO.length) ? "disabled" : ""}>Save</button></div></div>${g(1)}${g(2)}</div>
     <div class="sh-foot"><a class="btn ghost" style="display:inline-grid;place-items:center;text-decoration:none" href="LedgerView.html?accNo=${encodeURIComponent(key(c))}">Ledger</a>
       <button class="btn ghost" id="pWa" ${digits(c.mobile_number) ? "" : "disabled"}>WhatsApp</button>
       ${ERP.auth.can("edit") ? '<button class="btn" id="pEdit">Edit</button>' : ""}</div>`;
   $("pWa").onclick = () => window.open(waUrl(c), "_blank", "noopener");
+  $("pTransferBtn").onclick = () => assignCustomerCRO(key(c), $("pTransferCRO").value);
   if ($("pEdit")) $("pEdit").onclick = () => { $("profile").close(); openForm(c); };
   $("profile").showModal();
 }
 
-function fillSel(el, list, cur) { el.innerHTML = '<option value="">Select...</option>' + [...new Set([...list, ...(cur ? [cur] : [])])].map(x => `<option>${E(x)}</option>`).join(""); el.value = cur || ""; }
+function populateBulkCROOptions() {
+  const source = [...new Set((window.CRO || []).filter(Boolean))].sort();
+  const target = [...new Set((window.CRO || []).filter(Boolean))].sort();
+  $("bulkSourceCRO").innerHTML = '<option value="">Select source CRO</option>' + source.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
+  $("bulkTargetCRO").innerHTML = '<option value="">Select target CRO</option>' + target.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
+}
+
+function renderBulkCustomers() {
+  const source = $("bulkSourceCRO").value;
+  const sourceRows = source ? ALL.filter(c => String(c.cro || "").trim() === source) : [];
+  $("bulkListTitle").textContent = source ? `Customers in ${source} (${sourceRows.length})` : "Customers";
+  if (!source || !sourceRows.length) {
+    $("bulkCROList").innerHTML = '<div class="empty">Select a source CRO to load its customers.</div>';
+    $("bulkSelectAll").checked = false;
+    return;
+  }
+
+  $("bulkCROList").innerHTML = sourceRows.map(c => `
+    <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff">
+      <span style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <input type="checkbox" class="bulk-customer-check" data-acc="${E(key(c))}" checked>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(c.account_title)} (${E(key(c))})</span>
+      </span>
+      <small style="color:var(--muted)">${E(c.mobile_number || "")}</small>
+    </label>
+  `).join("");
+  $("bulkSelectAll").checked = true;
+}
+
+async function bulkReassignCustomers(accNos, targetCRO) {
+  const cleanTarget = String(targetCRO || "").trim();
+  if (!cleanTarget) return ERP.ui.toast("Please choose the target CRO", "err");
+  if (!accNos.length) return ERP.ui.toast("No customers selected", "err");
+
+  try {
+    await ERP.ui.busy($("bulkMoveSelectedBtn"), async () => {
+      for (const accNo of accNos) {
+        await ERP.db.customers.update(accNo, { cro: cleanTarget });
+      }
+    });
+    ERP.ui.toast(`${accNos.length} customer(s) moved to ${cleanTarget}`, "ok");
+    $("bulkCRODialog").close();
+    await load();
+  } catch (e) {
+    ERP.ui.toast(e.message || "Could not reassign customers", "err");
+  }
+}
+
+$("bulkCROBtn").onclick = () => {
+  populateBulkCROOptions();
+  $("bulkSourceCRO").value = "";
+  $("bulkTargetCRO").value = "";
+  $("bulkSelectAll").checked = false;
+  $("bulkCROList").innerHTML = '<div class="empty">Select a source CRO to load its customers.</div>';
+  $("bulkCRODialog").showModal();
+};
+
+$("bulkSourceCRO").onchange = renderBulkCustomers;
+$("bulkSelectAll").onchange = () => {
+  document.querySelectorAll(".bulk-customer-check").forEach(box => { box.checked = $("bulkSelectAll").checked; });
+};
+
+$("bulkMoveSelectedBtn").onclick = () => {
+  const selected = [...document.querySelectorAll(".bulk-customer-check:checked")].map(x => x.dataset.acc);
+  const target = $("bulkTargetCRO").value;
+  bulkReassignCustomers(selected, target);
+};
+
+$("bulkMoveAllBtn").onclick = () => {
+  const source = $("bulkSourceCRO").value;
+  const target = $("bulkTargetCRO").value;
+  if (!source) return ERP.ui.toast("Choose the source CRO first", "err");
+  const allAcc = ALL.filter(c => String(c.cro || "").trim() === source).map(c => key(c));
+  if (!allAcc.length) return ERP.ui.toast("No customers found in this source CRO", "err");
+  if (!confirm(`Move all ${allAcc.length} customers from ${source} to ${target || "selected target"}?`)) return;
+  bulkReassignCustomers(allAcc, target);
+};
+
+function fillSel(el, list, cur) {
+  const safeList = [...new Set(list.filter(Boolean))];
+  el.innerHTML = '<option value="">Select...</option>' + safeList.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
+  el.value = safeList.includes((cur || "").trim()) ? (cur || "").trim() : "";
+}
 async function checkAccess() {
   const n = $("notice"); if (ALL.length) { n.hidden = true; return; }
   const s = await ERP.auth.session(); n.hidden = false;
@@ -191,6 +327,10 @@ function collect() {
   const d = {};
   document.querySelectorAll("#frm [data-k]").forEach(el => { let v = el.value.trim(); const k = el.dataset.k;
     if (el.dataset.mask === "mob") v = digits(v); if (k === "salary") v = v === "" ? null : Number(v); d[k] = v; });
+  if (editing && !d.cro) {
+    const current = find(editing);
+    if (current && current.cro && !(window.CRO || []).includes(String(current.cro).trim())) d.cro = current.cro;
+  }
   return d;
 }
 function validate(d) {

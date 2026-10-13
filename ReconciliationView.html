@@ -48,8 +48,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
-const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, PM = ERP_CONFIG.PAY_MODES, acctOf = e => e.account || "(none)";
-let acct = PM.bank[0], EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null;
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, acctOf = e => e.account || "(none)";
+let PM = { cash: [], bank: [] }, acct = "", EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null;
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
 const sg = e => N(e.money_in) - N(e.money_out), kk = e => e.src + ":" + e.rid;
@@ -58,7 +58,9 @@ async function load() {
   const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
   $("books").innerHTML = $("bank").innerHTML = '<div class="skeleton"></div>';
   try {
-    const [en, op, bk] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from), ERP.db.bank.listAll()]);
+    const [en, op, bk, settings] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from), ERP.db.bank.listAll(), ERP.db.settings()]);
+    PM = settings.paymentModes;
+    if (!acct) acct = PM.bank[0] || PM.cash[0] || "";
     EN = en; OPEN = new Map(op.map(r => [r.account || "(none)", N(r.opening)])); BANK = bk; MATCH = new Set(bk.filter(b => b.match_src).map(b => b.match_src + ":" + b.match_rid)); render();
   } catch (e) { $("books").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/12_bank.sql if this mentions bank_statement.</small></div>`; $("bank").innerHTML = ""; }
 }
@@ -66,7 +68,7 @@ const booksOf = a => EN.filter(e => acctOf(e) === a && (sg(e) !== 0 || e.needs_r
 const bankOf = a => BANK.filter(b => b.account === a && b.date >= $("from").value && b.date <= $("to").value);
 
 function render() {
-  const modes = [...new Set([...PM.bank, ...PM.cash, ...EN.map(acctOf), ...BANK.map(b => b.account)])];
+  const modes = [...new Set([...(PM.all || [...PM.bank, ...PM.cash]), ...EN.map(acctOf), ...BANK.map(b => b.account)])];
   $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = bs.filter(e => !MATCH.has(kk(e)) && sg(e) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
     return `<button class="ac" data-a="${E(a)}" aria-pressed="${a === acct}"><small>${E(a)}</small><b>Rs ${M(close)}</b><br>${bn.length || bs.length ? (um + ub ? `<span class="bd">${um + ub} unmatched</span>` : '<span class="bd ok">✓ matched</span>') : ""}</button>`; }).join("");
   const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), um = bs.filter(e => !MATCH.has(kk(e)) && sg(e) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0);

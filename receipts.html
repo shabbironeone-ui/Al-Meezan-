@@ -76,9 +76,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
-const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, PM = ERP_CONFIG.PAY_MODES, TAGS = ERP_CONFIG.QUICK_RECEIPT_TAGS;
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, TAGS = ERP_CONFIG.QUICK_RECEIPT_TAGS;
 const SPECIAL = ERP_CONFIG.SPECIAL_RECEIPT_NOS, isTag = v => SPECIAL.some(t => t.toLowerCase() === String(v).trim().toLowerCase());
-let CUST = new Map(), DUES = new Map(), REC = [], shown = 100, editing = null, lastRct = null;
+let PM = { cash: [], bank: [] }, CUST = new Map(), DUES = new Map(), REC = [], shown = 100, editing = null, lastRct = null;
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
 /* ---------- entry rows ---------- */
@@ -123,7 +123,7 @@ $("tags").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) retur
 const dl = document.createElement("datalist"); dl.id = "dTags"; dl.innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); document.body.appendChild(dl);
 
 function fillModes(sel, type, withAll) {
-  const list = type ? PM[type.toLowerCase()] : [...PM.cash, ...PM.bank];
+  const list = PM.all || [...PM.cash, ...PM.bank];
   sel.innerHTML = (withAll ? '<option value="">All</option>' : "") + list.map(x => `<option>${E(x)}</option>`).join("");
 }
 $("rType").onchange = () => fillModes($("rMode"), $("rType").value);
@@ -152,7 +152,7 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
 async function loadList() {
   $("lBody").innerHTML = '<tr><td colspan="8"><div class="skeleton"></div></td></tr>';
   try { REC = await ERP.db.receipts.list({ from: $("fFrom").value, to: $("fTo").value }); shown = 100;
-    const heads = [...new Set(REC.map(r => r.account_head).filter(Boolean))].sort(), modes = [...new Set([...PM.cash, ...PM.bank, ...REC.map(r => r.pay_mode).filter(Boolean)])];
+    const heads = [...new Set(REC.map(r => r.account_head).filter(Boolean))].sort(), modes = PM.all || [...PM.cash, ...PM.bank];
     const hv = $("fHead").value, mv = $("fMode").value;
     $("fHead").innerHTML = '<option value="">All</option>' + heads.map(h => `<option>${E(h)}</option>`).join(""); $("fHead").value = hv;
     $("fMode").innerHTML = '<option value="">All</option>' + modes.map(h => `<option>${E(h)}</option>`).join(""); $("fMode").value = mv;
@@ -179,7 +179,7 @@ $("more").onclick = () => { shown += 100; renderList(); };
 $("btnPrint").onclick = () => { shown = 1e9; renderList(); window.print(); };
 
 function openEdit(r) {
-  editing = r; $("dSub").textContent = "Receipt " + r.voucher_no; fillModes($("eMode"), null); if (r.pay_mode && ![...$("eMode").options].some(o => o.value === r.pay_mode)) $("eMode").add(new Option(r.pay_mode, r.pay_mode));
+  editing = r; $("dSub").textContent = "Receipt " + r.voucher_no; fillModes($("eMode"), null); if (r.pay_mode && ![...$("eMode").options].some(o => o.value === r.pay_mode)) $("eMode").add(new Option(r.pay_mode + " (legacy)", r.pay_mode));
   $("eDate").value = r.date; $("eRct").value = r.voucher_no || ""; $("eAcc").value = r.account_no || ""; $("eTitle").value = r.account_title || ""; $("eHead").value = r.account_head || "";
   $("eMode").value = r.pay_mode || ""; $("eAmt").value = r.amount; $("eRem").value = r.remarks || ""; $("eAccErr").textContent = ""; $("eDel").hidden = !ERP.auth.can("delete"); $("dlg").showModal();
 }
@@ -199,6 +199,8 @@ $("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("
 async function loadCust() { try { CUST = new Map((await ERP.db.customers.balances()).map(c => [String(c.account_no).trim(), c])); try { DUES = new Map((await ERP.db.saleDues()).map(d => [String(d.account_no).trim(), d])); } catch (e) { DUES = new Map(); } document.querySelectorAll("#rows .rrow").forEach(lookup); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); } }
 (async () => {
   await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
+  try { PM = (await ERP.db.settings()).paymentModes; }
+  catch (e) { ERP.ui.toast("Could not load payment modes from Settings: " + e.message, "err"); }
   fillModes($("rMode"), "Cash"); fillModes($("eMode"), null); resetEntry();
   const d = new Date(); $("fFrom").value = new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().slice(0, 10);
   loadCust(); loadList();

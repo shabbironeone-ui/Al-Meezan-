@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Reports</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .toolbar{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
+  .toolbar .wide{grid-column:1/-1}
+  @media(min-width:760px){.toolbar{grid-template-columns:170px 160px 160px 1fr auto}.toolbar .wide{grid-column:auto}}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .tabs{display:flex;gap:4px;padding:4px;background:#e8edf3;border-radius:12px;overflow:auto;margin:12px 0}
+  .tabs button{border:0;background:none;border-radius:9px;padding:8px 14px;min-height:40px;font:inherit;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer}
+  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .kpis{display:grid;gap:9px;grid-template-columns:1fr 1fr}
+  @media(min-width:760px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:1120px){.kpis{grid-template-columns:repeat(5,1fr)}}
+  .kpi{margin:0;border-left:4px solid var(--brand);min-width:0}
+  .kpi small{display:block;color:var(--muted);font-weight:600}
+  .kpi b{display:block;font-size:clamp(17px,3vw,23px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .kpi.good{border-color:#059669}.kpi.warn{border-color:#d97706}.kpi.bad{border-color:var(--danger)}
+  .note{font-size:12px;color:var(--muted);line-height:1.5}
+  .warning{border:1px solid #fcd34d;background:#fffbeb;color:#854d0e;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5;margin:10px 0}
+  .table-wrap{overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .report-grid{display:grid;gap:12px;grid-template-columns:1fr}
+  @media(min-width:960px){.report-grid.two{grid-template-columns:1fr 1fr}}
+  .report-card h2{font-size:16px;margin:0 0 10px}
+  .report-card h3{font-size:14px;margin:0 0 8px}
+  .links{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+  @media(min-width:760px){.links{grid-template-columns:repeat(3,1fr)}}
+  .report-link{display:block;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--ink)}
+  .report-link:hover{border-color:var(--brand)}
+  .report-link b{display:block}.report-link small{color:var(--muted)}
+  .bars{display:grid;gap:9px}
+  .bar-row{display:grid;grid-template-columns:minmax(92px,130px) 1fr auto;align-items:center;gap:8px;font-size:12px}
+  .bar-track{height:12px;background:#e8edf3;border-radius:99px;overflow:hidden}
+  .bar-fill{height:100%;background:var(--brand);border-radius:99px;min-width:2px}
+  [hidden]{display:none!important}
+  @media print{
+    .toolbar,.tabs,.actions,.links,.appbar .bar-actions{display:none!important}
+    .report-panel[hidden]{display:block!important}
+    .report-panel{break-before:page}
+    .page{max-width:none;padding:0}
+    .card{box-shadow:none;break-inside:avoid}
+    table{font-size:10px}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar"><div><h1>Business Reports</h1><p id="subtitle">Decision-ready sales, profitability and stock indicators</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="btnPrint">Print</button><button class="btn ghost" id="btnExport">Export CSV</button><button class="btn" id="btnRefresh">Refresh</button></div>
+  </header>
+  <section class="card toolbar">
+    <div><label for="preset">Period</label><select id="preset"><option value="month">This month</option><option value="last_month">Last month</option><option value="ytd">Year to date</option><option value="30days">Last 30 days</option><option value="custom">Custom</option></select></div>
+    <div><label for="from">From</label><input type="date" id="from"></div>
+    <div><label for="to">To</label><input type="date" id="to"></div>
+    <div class="note wide" id="periodNote">Transactions use the selected dates. Customer outstanding and inventory are current snapshots, not historical balances.</div>
+    <div class="actions"><button class="btn ghost" id="btnApply">Apply</button></div>
+  </section>
+  <div class="tabs" role="tablist" aria-label="Business reports">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="pnl" aria-selected="false">Profit &amp; Loss</button>
+    <button role="tab" data-tab="sales" aria-selected="false">Sales performance</button>
+    <button role="tab" data-tab="inventory" aria-selected="false">Inventory</button>
+  </div>
+  <div id="loadError" class="warning" role="alert" hidden></div>
+  <section class="report-panel" id="panel-overview">
+    <div class="kpis" id="overviewKpis"></div>
+    <div class="report-grid two" style="margin-top:12px">
+      <article class="card report-card"><h2>Monthly trend</h2><div id="monthlyChart" class="bars"></div></article>
+      <article class="card report-card"><h2>Watch list</h2><div id="watchList"></div></article>
+    </div>
+    <article class="card report-card" style="margin-top:12px"><h2>More business reports</h2><div class="links">
+      <a class="report-link" href="AgingReport2.html"><b>Customer recovery &amp; aging</b><small>Outstanding balances and overdue installments</small></a>
+      <a class="report-link" href="VenderLedger.html"><b>Supplier balances</b><small>Purchases, payments and amounts payable</small></a>
+      <a class="report-link" href="Accounts.html"><b>Cash &amp; bank day book</b><small>Receipts, payments, expenses and transfers</small></a>
+      <a class="report-link" href="ReconciliationView.html"><b>Bank reconciliation</b><small>Match statement entries to books</small></a>
+      <a class="report-link" href="cro_report.html"><b>CRO performance</b><small>Customer portfolio and recovery report</small></a>
+      <a class="report-link" href="StockLedger.html"><b>Stock movement ledger</b><small>Detailed stock audit trail</small></a>
+    </div></article>
+  </section>
+  <section class="report-panel" id="panel-pnl" hidden>
+    <div class="warning"><b>Management estimate, not a statutory P&amp;L:</b> Cost of goods sold uses costs posted to the stock ledger. Only configured income heads and recorded expense heads are included. Customer collections, supplier payments, loans and investor capital are not treated as revenue or expenses.</div>
+    <div class="kpis" id="pnlKpis"></div>
+    <div id="pnlCoverage" class="warning" hidden></div>
+    <article class="card report-card" style="margin-top:12px"><h2>Profit &amp; Loss · selected period</h2><div class="table-wrap"><table><thead><tr><th>Line item</th><th class="num">Amount (Rs)</th></tr></thead><tbody id="pnlBody"></tbody></table></div>
+      <p class="note">Sales return rows reduce sales and related processing fees. Purchase returns reduce stock purchases and supplier balances; purchases are inventory movements, not an immediate P&amp;L expense. P&amp;L expenses come from Expense vouchers and payments assigned to configured expense heads.</p>
+    </article>
+    <article class="card report-card" style="margin-top:12px"><h2>Operating expense heads</h2><div class="table-wrap"><table><thead><tr><th>Head</th><th class="num">Entries</th><th class="num">Amount (Rs)</th></tr></thead><tbody id="expenseBody"></tbody></table></div></article>
+  </section>
+  <section class="report-panel" id="panel-sales" hidden>
+    <div class="kpis" id="salesKpis"></div>
+    <div class="report-grid two" style="margin-top:12px">
+      <article class="card report-card"><h2>Top product categories</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th class="num">Units</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="categoryBody"></tbody></table></div></article>
+      <article class="card report-card"><h2>Top products</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Units</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="productBody"></tbody></table></div></article>
+    </div>
+    <article class="card report-card" style="margin-top:12px"><h2>Sales by month</h2><div class="table-wrap"><table><thead><tr><th>Month</th><th class="num">Units net of returns</th><th class="num">Sales (Rs)</th><th class="num">Returns (Rs)</th><th class="num">Processing fees (Rs)</th></tr></thead><tbody id="salesMonthBody"></tbody></table></div></article>
+  </section>
+  <section class="report-panel" id="panel-inventory" hidden>
+    <div class="warning"><b>Inventory value is an estimate:</b> on-hand quantity is multiplied by the latest recorded purchase unit cost for each product. This is not a FIFO/weighted-average valuation and may omit opening stock without a cost entry. Set a per-product reorder level in Products to activate its alert; 0 disables that product's alert. The catalog has no active/inactive flag, so zero-stock counts include all product records.</div>
+    <div class="kpis" id="inventoryKpis"></div>
+    <div class="report-grid two" style="margin-top:12px">
+      <article class="card report-card"><h2>Inventory by category</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th class="num">SKUs</th><th class="num">Units</th><th class="num">Estimated value (Rs)</th></tr></thead><tbody id="stockCategoryBody"></tbody></table></div></article>
+      <article class="card report-card"><h2>Reorder alerts</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">On hand</th><th class="num">Reorder at</th><th class="num">Suggested order</th></tr></thead><tbody id="reorderBody"></tbody></table></div><p class="note">Only products with a minimum stock above 0 are included.</p></article>
+    </div>
+    <article class="card report-card" style="margin-top:12px"><h2>On-hand products with no sale in 90 days</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">On hand</th><th>Last sold</th></tr></thead><tbody id="idleBody"></tbody></table></div></article>
+    <article class="card report-card" style="margin-top:12px"><h2>Largest on-hand items</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th>Product ID</th><th class="num">On hand</th><th class="num">Latest unit cost</th><th class="num">Estimated value (Rs)</th></tr></thead><tbody id="inventoryBody"></tbody></table></div></article>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = value => Number(value) || 0;
+const today = ERP.ui.today;
+let DATA = null, activeTab = "overview";
+const rupees = value => "Rs " + M(value);
+const startOfMonth = date => new Date(date.getFullYear(), date.getMonth(), 1);
+const localDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+function setRange(preset) {
+  const now = new Date(), end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let start = startOfMonth(now);
+  if (preset === "last_month") { start = new Date(now.getFullYear(), now.getMonth() - 1, 1); end.setDate(0); }
+  else if (preset === "ytd") start = new Date(now.getFullYear(), 0, 1);
+  else if (preset === "30days") { start = new Date(end); start.setDate(start.getDate() - 29); }
+  $("from").value = localDate(start); $("to").value = preset === "last_month" ? localDate(end) : today();
+}
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll("[data-tab]").forEach(button => button.setAttribute("aria-selected", String(button.dataset.tab === tab)));
+  document.querySelectorAll(".report-panel").forEach(panel => panel.hidden = panel.id !== "panel-" + tab);
+}
+document.querySelector(".tabs").addEventListener("click", event => {
+  const button = event.target.closest("[data-tab]"); if (button) switchTab(button.dataset.tab);
+});
+$("preset").onchange = () => { if ($("preset").value !== "custom") setRange($("preset").value); };
+["from", "to"].forEach(id => $(id).onchange = () => { $("preset").value = "custom"; });
+const dataRows = (table, select, field, from, to, stableKey) => ERP.db.fetchAll(table, {
+  select, order: field, ascending: true,
+build: query => query.gte(field, from).lte(field, to).order(stableKey, { ascending: true })
+});
+const relationName = (row, byId) => {
+  const parent = byId.get(String(row.parent_setting_id));
+  return (parent ? parent.display_name + " › " : "") + String(row.display_name || "");
+};
+const tableRows = (rows, empty, render) => rows.length ? rows.map(render).join("") :
+  `<tr><td colspan="6" class="note">${E(empty)}</td></tr>`;
+const statCard = (label, value, tone) => `<article class="card kpi ${tone || ""}"><small>${E(label)}</small><b>${E(rupees(value))}</b></article>`;
+const metricCard = (label, value, tone) => `<article class="card kpi ${tone || ""}"><small>${E(label)}</small><b>${value == null ? "N/A" : E(rupees(value))}</b></article>`;
+const byMonth = (date, map) => { const key = String(date || "").slice(0, 7); return map.get(key) || { sales: 0, returns: 0, units: 0, fees: 0, expenses: 0, cogs: 0 }; };
+function groupBy(rows, keyFn, valueFn) {
+  const groups = new Map();
+  rows.forEach(row => {
+    const key = keyFn(row), group = groups.get(key) || valueFn(row);
+    groups.set(key, valueFn(row, group));
+  });
+  return [...groups.values()];
+}
+function total(rows, field) { return rows.reduce((sum, row) => sum + N(row[field]), 0); }
+async function load() {
+  const from = $("from").value, to = $("to").value;
+  if (!from || !to || from > to) return ERP.ui.toast("Check the report dates.", "err");
+  $("loadError").hidden = true;
+  $("loadError").textContent = "";
+  $("btnRefresh").disabled = $("btnApply").disabled = true;
+  try {
+    const [
+      sales, stockPeriod, stockHistory, daybook, settings,
+      stockBalance, products, customerBalances
+    ] = await Promise.all([
+      dataRows("sales", "id,date,account_no,account_title,product_id,company_name,product_category,model,qty,sales_amt,processing_fee,total_amt,return_of_id,return_ref", "date", from, to, "id"),
+      dataRows("stock_ledger", "date,product_id,company_name,product_category,model,qty_in,qty_out,total_cost,unit_cost,reference_type,reference_id,created_date", "date", from, to, "transaction_id"),
+      ERP.db.stock.ledger(),
+      ERP.db.accounts.entries({ from, to }),
+      ERP.db.settings(),
+      ERP.db.stock.balance(),
+      ERP.db.products.list(),
+      ERP.db.customers.balances()
+    ]);
+    DATA = { sales, stockPeriod, stockHistory, daybook, settings: settings.rows, stockBalance, products, customerBalances, from, to };
+    render();
+    $("subtitle").textContent = `Posted activity ${from} to ${to} · inventory snapshot refreshed ${today()}`;
+  } catch (error) {
+    $("loadError").textContent = "Could not load reports: " + error.message;
+    $("loadError").hidden = false;
+  } finally {
+    $("btnRefresh").disabled = $("btnApply").disabled = false;
+  }
+}
+function render() {
+  if (!DATA) return;
+  const { sales, stockPeriod, stockHistory, daybook, settings, stockBalance, products, customerBalances } = DATA;
+  const byId = new Map(settings.map(row => [String(row.id), row]));
+  const namesByCategory = category => new Set(settings.filter(row => row.is_active && row.category === category)
+    .flatMap(row => [String(row.display_name || ""), relationName(row, byId)]).map(name => name.trim().toLowerCase()));
+  const incomeNames = new Set([...namesByCategory("INCOME_HEAD"), ...namesByCategory("INCOME_SUBHEAD")]);
+  const expenseNames = new Set([...namesByCategory("EXPENSE_HEAD"), ...namesByCategory("EXPENSE_SUBHEAD")]);
+  const incomeRows = daybook.filter(row => row.src === "general_receipts" && incomeNames.has(String(row.head || "").trim().toLowerCase()));
+  const expenseRows = daybook.filter(row => row.src === "expenses" ||
+    row.src === "payments" && expenseNames.has(String(row.head || "").trim().toLowerCase()));
+  const unclassifiedInflows = daybook.filter(row => row.src === "general_receipts" && !incomeNames.has(String(row.head || "").trim().toLowerCase()));
+  const unclassifiedPayments = daybook.filter(row => row.src === "payments" && !expenseNames.has(String(row.head || "").trim().toLowerCase()));
+  const netSales = total(sales, "sales_amt"), fees = total(sales, "processing_fee");
+  const grossSales = sales.filter(row => !row.return_of_id).reduce((sum, row) => sum + N(row.sales_amt), 0);
+  const returnSales = -sales.filter(row => row.return_of_id).reduce((sum, row) => sum + N(row.sales_amt), 0);
+  const cogsOut = stockPeriod.filter(row => row.reference_type === "SALE").reduce((sum, row) => sum + Math.abs(N(row.total_cost)), 0);
+  const cogsReturned = stockPeriod.filter(row => row.reference_type === "SALE_RETURN").reduce((sum, row) => sum + Math.abs(N(row.total_cost)), 0);
+  const cogs = cogsOut - cogsReturned, expenses = total(expenseRows, "money_out"), otherIncome = total(incomeRows, "money_in");
+  const totalCashIn = total(daybook, "money_in"), totalCashOut = total(daybook, "money_out");
+  const customerOutstanding = customerBalances.reduce((sum, row) => sum + Math.max(N(row.balance), 0), 0);
+  const saleUnits = sales.filter(row => !row.return_of_id).reduce((sum, row) => sum + N(row.qty), 0);
+  const saleMovements = stockPeriod.filter(row => row.reference_type === "SALE");
+  const postedSaleUnits = saleMovements.reduce((sum, row) => sum + N(row.qty_out), 0);
+  const costedSaleUnits = saleMovements.filter(row => Math.abs(N(row.total_cost)) > 0).reduce((sum, row) => sum + N(row.qty_out), 0);
+  const uncostedReturnUnits = stockPeriod.filter(row => row.reference_type === "SALE_RETURN" && Math.abs(N(row.total_cost)) === 0)
+    .reduce((sum, row) => sum + N(row.qty_in), 0);
+  const coverageGap = Math.max(0, saleUnits - costedSaleUnits) + uncostedReturnUnits;
+  const grossProfit = coverageGap > 0 ? null : netSales + fees + otherIncome - cogs;
+  const operatingProfit = grossProfit == null ? null : grossProfit - expenses;
+
+  renderPnl({ grossSales, returnSales, netSales, fees, otherIncome, cogsOut, cogsReturned, cogs, grossProfit, expenses, operatingProfit, incomeRows, expenseRows, unclassifiedInflows, unclassifiedPayments, coverageGap, saleUnits, postedSaleUnits });
+  renderSales(sales);
+  const inventory = renderInventory(products, stockBalance, stockHistory);
+  renderOverview({ netSales, operatingProfit, customerOutstanding, totalCashIn, totalCashOut, inventory, sales, daybook, expenses, cogs });
+}
+function renderPnl(p) {
+  const costsComplete = p.coverageGap <= 0;
+  $("pnlKpis").innerHTML = statCard("Net sales + fees + classified income", p.netSales + p.fees + p.otherIncome, "info") +
+    metricCard("Gross profit · recorded stock cost", costsComplete ? p.grossProfit : null, costsComplete ? p.grossProfit >= 0 ? "good" : "bad" : "warn") +
+    statCard("Recorded operating expenses", p.expenses, "warn") +
+    metricCard("Estimated operating profit", costsComplete ? p.operatingProfit : null, costsComplete ? p.operatingProfit >= 0 ? "good" : "bad" : "warn");
+  const lines = [
+    ["Gross merchandise sales", p.grossSales], ["Less: sales returns", -p.returnSales], ["Net merchandise sales", p.netSales, true],
+    ["Processing fees (net of returns)", p.fees], ["Configured other income", p.otherIncome],
+    ["Recorded stock cost (may be incomplete)", -p.cogsOut], ["Cost returned with sales returns", p.cogsReturned],
+    ["Gross profit / contribution", costsComplete ? M(p.grossProfit) : "N/A · missing stock costs", true], ["Operating expenses", -p.expenses],
+    ["Estimated operating profit", costsComplete ? M(p.operatingProfit) : "N/A · missing stock costs", true]
+  ];
+  $("pnlBody").innerHTML = lines.map(([label, value, bold]) => `<tr${bold ? ' style="font-weight:700"' : ""}><td>${E(label)}</td><td class="num">${typeof value === "number" ? M(value) : E(value)}</td></tr>`).join("");
+  const expenseGroups = groupBy(p.expenseRows, row => String(row.head || "Unspecified expense"), (row, current) => {
+    const group = current || { head: String(row.head || "Unspecified expense"), count: 0, amount: 0 };
+    group.count++; group.amount += N(row.money_out); return group;
+  }).sort((a, b) => b.amount - a.amount);
+  $("expenseBody").innerHTML = tableRows(expenseGroups, "No recorded expenses for this period.", row =>
+    `<tr><td>${E(row.head)}</td><td class="num">${M(row.count)}</td><td class="num">${M(row.amount)}</td></tr>`);
+  const warnings = [];
+  if (p.coverageGap > 0) warnings.push(`${M(p.coverageGap)} sold/returned unit(s) lack a non-zero recorded stock cost (${M(p.postedSaleUnits)} stock-out units for ${M(p.saleUnits)} sold units). Gross and operating profit are unavailable rather than shown as zero-cost profit; reconcile purchase costs and stock movements.`);
+  if (p.unclassifiedInflows.length) warnings.push(`${M(p.unclassifiedInflows.length)} general receipt(s) (${rupees(total(p.unclassifiedInflows, "money_in"))}) are excluded from profit because their heads are not configured as Income heads.`);
+  if (p.unclassifiedPayments.length) warnings.push(`${M(p.unclassifiedPayments.length)} payment(s) (${rupees(total(p.unclassifiedPayments, "money_out"))}) are excluded from expenses because they are not configured expense heads; these may be vendor settlements, receivable/payable or capital transactions.`);
+  $("pnlCoverage").innerHTML = warnings.map(E).join("<br>"); $("pnlCoverage").hidden = !warnings.length;
+}
+function renderSales(sales) {
+  const productGroups = groupBy(sales, row => [row.product_id, row.model, row.company_name].join("|"), (row, current) => {
+    const g = current || { id: row.product_id, model: row.model, company: row.company_name, units: 0, sales: 0 };
+    g.units += N(row.qty); g.sales += N(row.sales_amt); return g;
+  }).sort((a, b) => b.sales - a.sales);
+  const categoryGroups = groupBy(sales, row => row.product_category || "Uncategorized", (row, current) => {
+    const g = current || { category: row.product_category || "Uncategorized", units: 0, sales: 0 };
+    g.units += N(row.qty); g.sales += N(row.sales_amt); return g;
+  }).sort((a, b) => b.sales - a.sales);
+  const returned = sales.filter(row => row.return_of_id), units = total(sales, "qty");
+  $("salesKpis").innerHTML = statCard("Gross merchandise sales", sales.filter(row => !row.return_of_id).reduce((sum, row) => sum + N(row.sales_amt), 0), "info") +
+    statCard("Sales returns", -returned.reduce((sum, row) => sum + N(row.sales_amt), 0), "warn") +
+    statCard("Net merchandise sales", total(sales, "sales_amt"), "good") +
+    `<article class="card kpi"><small>Net units sold</small><b>${E(M(units))}</b></article>` +
+    statCard("Processing fees", total(sales, "processing_fee"));
+  $("categoryBody").innerHTML = tableRows(categoryGroups.slice(0, 12), "No category sales in this period.", row =>
+    `<tr><td>${E(row.category)}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.sales)}</td></tr>`);
+  $("productBody").innerHTML = tableRows(productGroups.slice(0, 12), "No product sales in this period.", row =>
+    `<tr><td>${E([row.model, row.company].filter(Boolean).join(" · "))}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.sales)}</td></tr>`);
+  const months = new Map();
+  sales.forEach(row => {
+    const month = String(row.date).slice(0, 7), g = months.get(month) || { month, units: 0, sales: 0, returns: 0, fees: 0 };
+    g.units += N(row.qty); g.sales += N(row.sales_amt);
+    if (row.return_of_id) g.returns += -N(row.sales_amt);
+    g.fees += N(row.processing_fee); months.set(month, g);
+  });
+  const monthRows = [...months.values()].sort((a, b) => a.month.localeCompare(b.month));
+  $("salesMonthBody").innerHTML = tableRows(monthRows, "No sales in this period.", row =>
+    `<tr><td>${E(row.month)}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.sales)}</td><td class="num">${M(row.returns)}</td><td class="num">${M(row.fees)}</td></tr>`);
+}
+function renderInventory(products, stockBalance, stockHistory) {
+  const latestCost = new Map(), lastSold = new Map(), productDetails = new Map();
+  const stockByProduct = new Map();
+  stockBalance.forEach(row => stockByProduct.set(String(row.product_id), (stockByProduct.get(String(row.product_id)) || 0) + N(row.in_stock)));
+  stockHistory.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_date || "").localeCompare(String(b.created_date || ""))).forEach(row => {
+    productDetails.set(String(row.product_id), row);
+    if (row.reference_type === "PURCHASE" && row.unit_cost != null) latestCost.set(String(row.product_id), N(row.unit_cost) > 0 ? N(row.unit_cost) : null);
+    if (row.reference_type === "SALE" && String(row.date) > (lastSold.get(String(row.product_id)) || "")) lastSold.set(String(row.product_id), String(row.date));
+  });
+  const rows = products.map(product => {
+    const id = String(product.product_id), detail = productDetails.get(id) || {};
+    const qty = stockByProduct.get(id) || 0, cost = latestCost.get(id), reorder = N(product.min_stock);
+    return { id, company: product.company_name || detail.company_name || "", category: product.product_category || detail.product_category || "Uncategorized",
+      model: product.model || detail.model || "", qty, cost, reorder, value: cost == null ? null : qty * cost, lastSold: lastSold.get(id) || "" };
+  });
+  const activeRows = rows.filter(row => row.qty > 0), valued = activeRows.filter(row => row.value != null);
+  const valueTotal = valued.reduce((sum, row) => sum + row.value, 0), unknownCost = activeRows.length - valued.length;
+  const lowStock = rows.filter(row => row.reorder > 0 && row.qty <= row.reorder).sort((a, b) => (a.qty - a.reorder) - (b.qty - b.reorder));
+  const categories = groupBy(activeRows, row => row.category, (row, current) => {
+    const g = current || { category: row.category, skus: 0, units: 0, value: 0 };
+    g.skus++; g.units += row.qty; g.value += row.value || 0; return g;
+  }).sort((a, b) => b.value - a.value);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+  const idle = activeRows.filter(row => !row.lastSold || new Date(row.lastSold + "T12:00:00") < cutoff)
+    .sort((a, b) => b.qty - a.qty).slice(0, 12);
+  $("inventoryKpis").innerHTML = statCard("Estimated on-hand value", valueTotal, "info") +
+    `<article class="card kpi"><small>Units on hand</small><b>${E(M(activeRows.reduce((sum, row) => sum + row.qty, 0)))}</b></article>` +
+    `<article class="card kpi"><small>In-stock SKUs</small><b>${E(M(activeRows.length))}</b></article>` +
+    `<article class="card kpi warn"><small>Cost not recorded</small><b>${E(M(unknownCost))} SKU</b></article>` +
+    `<article class="card kpi bad"><small>Zero-stock product records</small><b>${E(M(rows.filter(row => row.qty === 0).length))} SKU</b></article>` +
+    `<article class="card kpi warn"><small>At / below reorder level</small><b>${E(M(lowStock.length))} SKU</b></article>`;
+  $("stockCategoryBody").innerHTML = tableRows(categories, "No stock on hand.", row =>
+    `<tr><td>${E(row.category)}</td><td class="num">${M(row.skus)}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.value)}</td></tr>`);
+  $("reorderBody").innerHTML = tableRows(lowStock, "No reorder alerts. Set a minimum stock above 0 in Products for items you want to monitor.", row =>
+    `<tr><td>${E([row.company, row.model].filter(Boolean).join(" · "))}</td><td class="num">${M(row.qty)}</td><td class="num">${M(row.reorder)}</td><td class="num">${M(Math.max(row.reorder - row.qty, 0))}</td></tr>`);
+  $("idleBody").innerHTML = tableRows(idle, "No on-hand products without a sale in the last 90 days.", row =>
+    `<tr><td>${E([row.company, row.model].filter(Boolean).join(" · "))}</td><td class="num">${M(row.qty)}</td><td>${E(row.lastSold || "No sale recorded")}</td></tr>`);
+  const topRows = activeRows.slice().sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 50);
+  $("inventoryBody").innerHTML = tableRows(topRows, "No stock on hand.", row =>
+    `<tr><td>${E([row.company, row.model].filter(Boolean).join(" · "))}</td><td>${E(row.id)}</td><td class="num">${M(row.qty)}</td><td class="num">${row.cost == null ? "—" : M(row.cost)}</td><td class="num">${row.value == null ? "—" : M(row.value)}</td></tr>`);
+  return { value: valueTotal, units: activeRows.reduce((sum, row) => sum + row.qty, 0), skus: activeRows.length, unknownCost, lowStock: lowStock.length };
+}
+function renderOverview(metrics) {
+  $("overviewKpis").innerHTML = statCard("Net merchandise sales", metrics.netSales, "info") +
+    metricCard("Estimated operating profit", metrics.operatingProfit, metrics.operatingProfit == null ? "warn" : metrics.operatingProfit >= 0 ? "good" : "bad") +
+    statCard("Customer balance outstanding", metrics.customerOutstanding, "warn") +
+    statCard("Cash & bank inflow", metrics.totalCashIn) +
+    statCard("Current inventory value · estimate", metrics.inventory.value);
+  const monthTotals = new Map();
+  metrics.sales.forEach(row => {
+    const key = String(row.date).slice(0, 7), month = byMonth(row.date, monthTotals);
+    month.sales += N(row.sales_amt); month.returns += row.return_of_id ? -N(row.sales_amt) : 0; monthTotals.set(key, month);
+  });
+  metrics.daybook.forEach(row => {
+    const key = String(row.date).slice(0, 7), month = byMonth(row.date, monthTotals);
+    month.expenses += N(row.money_out); monthTotals.set(key, month);
+  });
+  const chart = [...monthTotals.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const max = Math.max(1, ...chart.map(([, row]) => Math.max(row.sales, row.expenses)));
+  $("monthlyChart").innerHTML = chart.length ? chart.map(([month, row]) =>
+    `<div class="bar-row"><b>${E(month)} · Sales</b><div class="bar-track" title="Net merchandise sales"><div class="bar-fill" style="width:${Math.max(1, row.sales / max * 100)}%"></div></div><span>${E(rupees(row.sales))}</span></div>
+     <div class="bar-row"><b>${E(month)} · Cash out</b><div class="bar-track" title="All posted money out"><div class="bar-fill" style="width:${Math.max(1, row.expenses / max * 100)}%;background:#d97706"></div></div><span>${E(rupees(row.expenses))}</span></div>`).join("") :
+    '<p class="note">No posted sales for this period.</p>';
+  const watch = [];
+  if (metrics.inventory.lowStock) watch.push(`${M(metrics.inventory.lowStock)} product(s) are at or below their reorder level. Review the Inventory tab.`);
+  if (metrics.operatingProfit == null) watch.push("Profit is unavailable because one or more sold units have no recorded stock cost. Check purchase cost and stock movement records.");
+  if (metrics.inventory.unknownCost) watch.push(`${M(metrics.inventory.unknownCost)} in-stock products have no recorded purchase cost; inventory value excludes them.`);
+  const nonMoving = metrics.inventory.skus ? "Use the Inventory tab to review on-hand items with no sale in the last 90 days." : "No current inventory found.";
+  watch.push(nonMoving);
+  watch.push(`Cash/bank movement for this period: ${rupees(metrics.totalCashIn - metrics.totalCashOut)} net. This is movement, not a closing balance.`);
+  $("watchList").innerHTML = `<ul style="margin:0;padding-left:20px;line-height:1.7">${watch.map(item => `<li>${E(item)}</li>`).join("")}</ul>`;
+}
+$("btnApply").onclick = load; $("btnRefresh").onclick = load; $("btnPrint").onclick = () => window.print();
+$("btnExport").onclick = () => {
+  if (!DATA) return;
+  const tab = activeTab, { sales, stockHistory, stockBalance, products, daybook, settings } = DATA;
+  let filename = "business_report_" + tab + "_" + DATA.from + "_" + DATA.to + ".csv", rows = [];
+  if (tab === "sales") rows = sales.map(row => ({ date: row.date, account: row.account_no, customer: row.account_title, product: row.model, category: row.product_category, quantity: row.qty, net_sales: row.sales_amt, processing_fee: row.processing_fee, is_return: !!row.return_of_id, return_ref: row.return_ref }));
+  else if (tab === "inventory") {
+    const cost = new Map(), onHand = new Map();
+    stockHistory.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_date || "").localeCompare(String(b.created_date || "")))
+      .forEach(row => { if (row.reference_type === "PURCHASE" && row.unit_cost != null) cost.set(String(row.product_id), N(row.unit_cost) > 0 ? N(row.unit_cost) : null); });
+    stockBalance.forEach(row => onHand.set(String(row.product_id), (onHand.get(String(row.product_id)) || 0) + N(row.in_stock)));
+    rows = products.map(product => {
+      const id = String(product.product_id), unitCost = cost.get(id), hasCost = unitCost != null, qty = onHand.get(id) || 0, reorder = N(product.min_stock);
+      return { product_id: id, company: product.company_name, category: product.product_category, model: product.model, on_hand: qty, reorder_level: reorder,
+        suggested_order: reorder > 0 && qty <= reorder ? reorder - qty : 0,
+        latest_unit_cost: hasCost ? unitCost : "", estimated_value: hasCost ? qty * unitCost : "" };
+    });
+  } else if (tab === "overview") rows = daybook.map(row => ({ date: row.date, type: row.kind, head: row.head, account: row.account, party: row.party, money_in: row.money_in, money_out: row.money_out, source: row.src }));
+  else {
+    const category = name => {
+      const byId = new Map(settings.map(item => [String(item.id), item]));
+      return settings.filter(row => ["INCOME_HEAD", "INCOME_SUBHEAD", "EXPENSE_HEAD", "EXPENSE_SUBHEAD"].includes(row.category) && row.is_active)
+        .flatMap(row => [String(row.display_name || ""), relationName(row, byId)]).map(value => value.trim().toLowerCase());
+    };
+    const configured = category();
+    const income = daybook.filter(row => row.src === "general_receipts" && configured.includes(String(row.head || "").trim().toLowerCase())).reduce((sum, row) => sum + N(row.money_in), 0);
+    const expense = daybook.filter(row => row.src === "expenses" || row.src === "payments" && configured.includes(String(row.head || "").trim().toLowerCase())).reduce((sum, row) => sum + N(row.money_out), 0);
+    const revenue = total(sales, "sales_amt"), fees = total(sales, "processing_fee");
+    const out = DATA.stockPeriod.filter(row => row.reference_type === "SALE").reduce((sum, row) => sum + Math.abs(N(row.total_cost)), 0);
+    const returned = DATA.stockPeriod.filter(row => row.reference_type === "SALE_RETURN").reduce((sum, row) => sum + Math.abs(N(row.total_cost)), 0);
+    const saleMoves = DATA.stockPeriod.filter(row => row.reference_type === "SALE");
+    const costed = saleMoves.filter(row => Math.abs(N(row.total_cost)) > 0).reduce((sum, row) => sum + N(row.qty_out), 0);
+    const sold = sales.filter(row => !row.return_of_id).reduce((sum, row) => sum + N(row.qty), 0);
+    const uncostedReturn = DATA.stockPeriod.filter(row => row.reference_type === "SALE_RETURN" && Math.abs(N(row.total_cost)) === 0)
+      .reduce((sum, row) => sum + N(row.qty_in), 0);
+    const profitAvailable = sold <= costed && uncostedReturn <= 0;
+    rows = [["Net merchandise sales", revenue], ["Processing fees", fees], ["Configured other income", income],
+      ["Cost of goods sold", -(out - returned)], ["Operating expenses", -expense],
+      ["Estimated gross profit", profitAvailable ? revenue + fees + income - (out - returned) : ""],
+      ["Estimated operating profit", profitAvailable ? revenue + fees + income - (out - returned) - expense : ""]]
+      .map(([line_item, amount]) => ({ line_item, amount, status: profitAvailable ? "Cost coverage complete" : "Unavailable: missing stock costs" }));
+  }
+  ERP.ui.downloadCSV(filename, rows);
+};
+(async () => {
+  await ERP.auth.guard();
+  setRange("month");
+  await load();
+})();
+</script>
+</body>
+</html>

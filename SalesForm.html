@@ -92,14 +92,21 @@
     <div class="fsec" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:160px"><label for="scFm">First installment month</label><input type="month" id="scFm"></div><button class="btn sm soft" id="scFmSet">Set</button><button class="btn sm ghost" id="scFmAuto">Automatic</button></div>
     <div class="table-wrap"><table style="min-width:340px"><thead><tr><th style="width:52px">Due</th><th>Month</th><th class="num">Installment</th><th>Status</th></tr></thead><tbody id="scBody"></tbody></table></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Close</button><button class="btn" id="scSave">Save schedule</button></div></dialog>
+<dialog id="saleReturn" class="sheet"><div class="sh-head"><div><h2>Return sold item</h2><p id="saleReturnInfo"></p></div><button class="x" data-return-close aria-label="Close">✕</button></div>
+  <form id="saleReturnForm" class="sh-body"><div class="fgrid">
+    <div><label for="saleReturnDate">Return date</label><input id="saleReturnDate" type="date" required></div>
+    <div><label for="saleReturnQty">Quantity to return</label><input id="saleReturnQty" type="number" inputmode="decimal" min="0.01" step="0.01" required></div>
+    <div class="wide"><label for="saleReturnReason">Reason (optional)</label><input id="saleReturnReason" maxlength="250"></div>
+  </div><small class="err" id="saleReturnErr"></small><p style="font-size:12px;color:var(--muted)">Returned goods will be added back to stock and the sale/customer balance reduced. Any cash refund is recorded separately in Accounts.</p>
+  <div class="sh-foot"><button class="btn ghost" type="button" data-return-close>Cancel</button><button class="btn" type="submit">Save sales return</button></div></form></dialog>
 <div id="printArea"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase(), N = v => Number(v) || 0;
-const PM = ERP_CONFIG.PAY_MODES;
-let CUST = new Map(), STOCK = [], HIST = [], mode = "inst", editing = null, active = null, curCust = null;
+let PM = { cash: [], bank: [] };
+let CUST = new Map(), STOCK = [], HIST = [], RETURNED_SALES = new Map(), activeSaleLine = null, mode = "inst", editing = null, active = null, curCust = null;
 const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
@@ -227,27 +234,72 @@ $("cancelEdit").onclick = resetForm;
 /* ---------- history ---------- */
 async function loadHist() {
   $("hList").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div></div>';
-  try { HIST = await ERP.db.sales.recent({ from: $("hFrom").value, to: $("hTo").value }); renderHist(); } catch (e) { $("hList").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+  try {
+    HIST = await ERP.db.sales.recent({ from: $("hFrom").value, to: $("hTo").value });
+    RETURNED_SALES = await ERP.db.sales.returnedQuantities(HIST.filter(row => !row.return_of_id).map(row => row.id));
+    renderHist();
+  } catch (e) { $("hList").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
 }
 function groups() { const q = $("hQ").value.trim().toLowerCase(), g = new Map();
   HIST.filter(r => !q || [r.account_no, r.account_title, r.model, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.account_no; (g.get(k) || g.set(k, []).get(k)).push(r); }); return g; }
 function renderHist() {
   const g = groups(); let grand = 0;
-  $("hList").innerHTML = [...g].map(([acc, rs]) => { const tot = rs.reduce((s, r) => s + N(r.total_amt), 0), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0), cash = /^INV-/i.test(acc); grand += tot;
+  $("hList").innerHTML = [...g].map(([acc, rs]) => {
+    const tot = rs.reduce((s, r) => s + N(r.total_amt), 0), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0), cash = /^INV-/i.test(acc);
+    const hasReturns = rs.some(r => r.return_ref) || rs.some(r => (RETURNED_SALES.get(String(r.id)) || 0) > 0);
+    grand += tot;
+    const itemRows = rs.map(r => {
+      const isReturn = !!r.return_of_id;
+      const returned = RETURNED_SALES.get(String(r.id)) || 0;
+      const remaining = Math.max(N(r.qty) - returned, 0);
+      const returnAction = !isReturn && remaining > 0 && ERP.auth.can("write")
+        ? `<button type="button" class="btn sm ghost" data-do="return-item" data-id="${E(r.id)}">Return · ${M(remaining)} left</button>` : "";
+      return `<tr class="${isReturn ? "return-row" : ""}"><td>${isReturn ? `<span class="badge warn">Return ${E(r.return_ref)}</span>` : `${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small>`}</td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(r.total_amt)}</td><td>${returnAction}</td></tr>`;
+    }).join("");
     return `<article class="po" data-a="${E(acc)}"><div class="po-h"><div><b>${E(rs[0].account_title)}</b> <span class="badge ${cash ? "" : "ok"}">${cash ? "Cash" : "CAF"} ${E(acc)}</span><br><small>${E(rs[0].date)} · ${rs.length} item${rs.length > 1 ? "s" : ""}${!cash && ins ? " · Inst Rs " + M(ins) + "/mo" : ""}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400">Advance ${M(adv)}</small></div></div>
-      <div class="po-b" hidden><div class="table-wrap"><table style="min-width:560px"><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Plan</th><th class="num">Advance</th><th class="num">Inst/mo</th><th class="num">Total</th></tr></thead><tbody>${rs.map(r => `<tr><td>${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(r.total_amt)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="sch" data-acc="${E(acc)}"></div><div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}${!cash && ERP.auth.can("edit") ? '<button class="btn sm ghost" data-do="sched">Schedule</button>' : ""}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}</div></div></article>`; }).join("") || '<div class="empty">No sales in this period.</div>';
+      <div class="po-b" hidden><div class="table-wrap"><table style="min-width:680px"><thead><tr><th>Product / return</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Plan</th><th class="num">Advance</th><th class="num">Inst/mo</th><th class="num">Total</th><th>Action</th></tr></thead><tbody>${itemRows}</tbody></table></div>
+      <div class="sch" data-acc="${E(acc)}"></div><div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}${!cash && ERP.auth.can("edit") ? '<button class="btn sm ghost" data-do="sched">Schedule</button>' : ""}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") && !hasReturns ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") && !hasReturns ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}${hasReturns ? '<small style="color:var(--muted)">Edit/delete disabled after a return</small>' : ""}</div></div></article>`;
+  }).join("") || '<div class="empty">No sales in this period.</div>';
   $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
 }
+function openSalesReturn(id) {
+  const row = HIST.find(item => String(item.id) === String(id));
+  if (!row || row.return_of_id) return ERP.ui.toast("Original sale item not found", "err");
+  const remaining = Math.max(N(row.qty) - (RETURNED_SALES.get(String(row.id)) || 0), 0);
+  if (!remaining) return ERP.ui.toast("This item has already been fully returned", "err");
+  activeSaleLine = row;
+  $("saleReturnInfo").textContent = `${row.account_title} · ${row.model} · Sold ${M(row.qty)} · Returnable ${M(remaining)}`;
+  $("saleReturnDate").value = ERP.ui.today(); $("saleReturnQty").value = remaining; $("saleReturnQty").max = String(remaining);
+  $("saleReturnReason").value = ""; $("saleReturnErr").textContent = "";
+  $("saleReturn").showModal();
+}
+$("saleReturn").addEventListener("click", e => { if (e.target.closest("[data-return-close]")) $("saleReturn").close(); });
+$("saleReturnForm").onsubmit = e => {
+  e.preventDefault();
+  if (!activeSaleLine) return;
+  ERP.ui.busy(e.submitter || $("saleReturnForm").querySelector('button[type="submit"]'), async () => {
+    const qty = N($("saleReturnQty").value), max = N($("saleReturnQty").max), date = $("saleReturnDate").value;
+    if (!date) return $("saleReturnErr").textContent = "Select the return date.";
+    if (!(qty > 0) || qty > max) return $("saleReturnErr").textContent = `Enter a quantity up to ${M(max)}.`;
+    try {
+      const result = await ERP.db.sales.createReturn(activeSaleLine.id, qty, date, $("saleReturnReason").value.trim());
+      ERP.ui.toast(`Sales return ${result.return_ref} saved · Rs ${M(result.amount)}`);
+      $("saleReturn").close(); activeSaleLine = null; loadHist();
+    } catch (error) { $("saleReturnErr").textContent = error.message; }
+  });
+};
 $("hList").onclick = async e => {
   const art = e.target.closest(".po"); if (!art) return; const acc = art.dataset.a, act = e.target.closest("[data-do]");
   if (!act) { if (e.target.closest("a")) return; const b = art.querySelector(".po-b"); b.hidden = !b.hidden; if (!b.hidden) loadSch(b.querySelector(".sch")); return; }
+  if (act.dataset.do === "return-item") return openSalesReturn(act.dataset.id);
   if (act.dataset.do === "print") return slip(acc);
   if (act.dataset.do === "sched") return openSchedule(acc, art.querySelector(".po-h b").textContent);
   if (act.dataset.do === "edit") {
     try { const rows = await ERP.db.sales.list({ accNo: acc }); if (!rows.length) return; const cash = /^INV-/i.test(acc);
       $("tNew").click(); editing = acc; setMode(cash ? "cash" : "inst"); $("seg").style.opacity = .5; $("lines").innerHTML = ""; $("sDate").value = rows[0].date; $("sAcc").value = acc; $("sAcc").readOnly = true; $("sName").value = rows[0].account_title || ""; origEdit = { date: rows[0].date, next: rows[0].next_inst_month };
-      rows.forEach(r => addLine(r)); $("colMode").value = rows[0].pay_mode || PM.cash[0];
+      rows.forEach(r => addLine(r));
+      if (rows[0].pay_mode && ![...$("colMode").options].some(o => o.value === rows[0].pay_mode)) $("colMode").add(new Option(rows[0].pay_mode + " (legacy)", rows[0].pay_mode));
+      $("colMode").value = rows[0].pay_mode || PM.cash[0] || PM.bank[0] || "";
       if (!cash) { curCust = CUST.get(acc.trim()) || { account_title: rows[0].account_title, approved_by: rows[0].approved_by, balance: 0 }; $("cinfo").className = "cinfo on"; $("cinfo").innerHTML = `<b>${E(rows[0].account_title)}</b> (editing saved sale)`; }
       $("gInv").hidden = true; $("editBar").hidden = false; $("editTxt").textContent = `Editing ${acc}. Saving replaces the whole sale and its stock entry.`; totals(); window.scrollTo(0, 0); } catch (er) { ERP.ui.toast(er.message, "err"); }
   } else if (confirm(`Delete sale ${acc}? Its stock-out entries are removed too.`)) { try { await ERP.db.sales.remove(acc); ERP.ui.toast("Sale deleted"); loadHist(); } catch (er) { ERP.ui.toast(er.message, "err"); } }
@@ -265,7 +317,10 @@ async function loadSch(el) {
 /* ---------- receipt window (opens after Save) ---------- */
 let RC = null; const DUEKEY = { adv: "dueAdv", fee: "dueFee", first: "dueFirst" };
 function openReceipt(r) {
-  RC = r; $("rcT").textContent = "Receipt · CAF " + r.acc; $("rcS").textContent = r.name; $("rcDate").value = r.date; $("rcMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); $("rcMode").value = PM.cash[0];
+  RC = r; $("rcT").textContent = "Receipt · CAF " + r.acc; $("rcS").textContent = r.name; $("rcDate").value = r.date;
+  const modes = PM.all || [...new Set([...PM.cash, ...PM.bank])];
+  $("rcMode").innerHTML = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
+  $("rcMode").value = PM.cash[0] || PM.bank[0] || "";
   $("rcRows").innerHTML = [["Advance", "adv"], ["Processing fee", "fee"], ["1st installment", "first"]].map(([l, k]) => `<tr><td>${l}</td><td class="num">${M(r[DUEKEY[k]])}</td><td><input class="rc-in" data-k="${k}" type="number" inputmode="decimal" min="0" value="${r[k] || ""}" style="min-width:110px"></td><td class="short" data-s="${k}" style="font-size:12px;white-space:nowrap"></td></tr>`).join("");
   rcCalc(); $("rcpt").showModal();
 }
@@ -329,7 +384,12 @@ $("tNew").onclick = () => { $("tNew").setAttribute("aria-selected", true); $("tL
 $("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("tNew").setAttribute("aria-selected", false); $("pNew").hidden = true; $("pList").hidden = false; };
 (async () => {
   await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
-  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); $("colMode").innerHTML = [...PM.cash, ...PM.bank].map(x => `<option>${E(x)}</option>`).join(""); resetForm(); ERP.voice.wire(document);
+  try { PM = (await ERP.db.settings()).paymentModes; }
+  catch (e) { ERP.ui.toast("Could not load payment modes from Settings: " + e.message, "err"); }
+  const modes = PM.all || [...new Set([...PM.cash, ...PM.bank])];
+  const modeOptions = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
+  $("colMode").innerHTML = modeOptions;
+  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); resetForm(); ERP.voice.wire(document);
   try { const [c, s] = await Promise.all([ERP.db.customers.balances(), ERP.db.stock.balance()]); CUST = new Map(c.map(x => [String(x.account_no).trim(), x])); STOCK = s.sort((a, b) => N(b.in_stock) - N(a.in_stock)); }
   catch (e) { ERP.ui.toast("Could not load customers/stock: " + e.message, "err"); }
   loadHist();

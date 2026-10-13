@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | Al Meezan ERP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .toolbar{margin-top:12px}
+    .table-wrap td:nth-child(1), .table-wrap th:nth-child(1){width:150px}
+    .table-wrap td:nth-child(2), .table-wrap th:nth-child(2){width:220px}
+    .table-wrap td:nth-child(7), .table-wrap th:nth-child(7){width:100px}
+    .muted{color:var(--muted)}
+    .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .mini{min-height:34px;padding:4px 10px;font-size:13px}
+    .inline{display:flex;align-items:center;gap:8px}
+    .inline input[type="checkbox"]{width:18px;height:18px}
+    .empty-box{padding:28px;text-align:center;color:var(--muted)}
+    .account-structures{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:14px 0}
+    .structure{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+    .structure-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+    .structure-head h2{font-size:16px;margin:0}
+    .structure-head small{display:block;color:var(--muted);margin-top:3px}
+    .flow-groups{display:grid;gap:12px}
+    .flow-group{border:1px solid var(--line);border-radius:10px;padding:10px}
+    .flow-group-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+    .flow-group-head h3{font-size:14px;margin:0}
+    .flow-group-head small{color:var(--muted)}
+    .structure-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .structure-list{display:grid;gap:8px}
+    .account-head{border:1px solid var(--line);border-radius:10px;padding:10px}
+    .account-head-title{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .account-head-title strong{font-size:14px}
+    .subheads{margin:8px 0 0 12px;padding-left:12px;border-left:2px solid var(--line);display:grid;gap:5px}
+    .subhead-row{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
+    .subhead-row small{color:var(--muted)}
+    .parent-field[hidden]{display:none}
+    .migration-note{margin:12px 0 0;color:var(--muted);font-size:13px}
+    .migration-note code{background:#f1f5f9;padding:2px 5px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="appbar">
+      <div>
+        <h1>Settings</h1>
+        <p>Manage dropdowns and application values stored in Supabase</p>
+      </div>
+      <div class="bar-actions">
+        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <button class="btn" id="newBtn">＋ New setting</button>
+      </div>
+    </header>
+
+    <section class="stats" id="stats">
+      <div class="stat"><small>Total rows</small><b id="statTotal">0</b></div>
+      <div class="stat"><small>Active</small><b id="statActive">0</b></div>
+      <div class="stat"><small>Categories</small><b id="statCategories">0</b></div>
+    </section>
+
+    <p class="migration-note">Run (or rerun to upgrade) <code>sql/account_settings_hierarchy.sql</code> in Supabase SQL Editor before creating subheads.</p>
+    <section class="account-structures" aria-label="Transaction head settings">
+      <article class="structure">
+        <div class="structure-head"><div><h2>Amount In</h2><small>Income, investor amounts and receivables. Add subheads below any head.</small></div></div>
+        <div class="flow-groups" id="amountInStructure"></div>
+      </article>
+      <article class="structure">
+        <div class="structure-head"><div><h2>Amount Out</h2><small>Expenses, investor amounts and vendor-related heads.</small></div></div>
+        <div class="flow-groups" id="amountOutStructure"></div>
+      </article>
+      <article class="structure">
+        <div class="structure-head"><div><h2>Contra</h2><small>Transfer heads group directions; subheads should match active cash/bank accounts.</small></div>
+        </div>
+        <div class="flow-groups" id="contraStructure"></div>
+      </article>
+    </section>
+
+    <section class="card toolbar">
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search display name, code, person or mobile" autocomplete="off">
+      </div>
+      <select id="categoryFilter" aria-label="Filter by category">
+        <option value="ALL">All categories</option>
+      </select>
+      <button class="chip" id="showActiveOnly" aria-pressed="false">Active only</button>
+      <button class="btn ghost mini" id="clearFiltersBtn">Clear</button>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Display name</th>
+              <th>Parent head</th>
+              <th>Lookup code</th>
+              <th>Contact</th>
+              <th>Mobile</th>
+              <th>Order</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settingDialog" class="sheet">
+    <div class="sh-head">
+      <div>
+        <h2 id="dialogTitle">New setting</h2>
+        <p>Store a value used by the ERP modules</p>
+      </div>
+      <button class="x" type="button" data-close aria-label="Close">✕</button>
+    </div>
+
+    <form id="settingForm" class="sh-body" novalidate>
+      <fieldset class="fsec">
+        <legend>Setting details</legend>
+        <div class="fgrid">
+          <div class="fld">
+            <label for="categoryInput">Category</label>
+            <select id="categoryInput" required>
+              <option value="CRO">CRO</option>
+              <option value="APPROVED_BY">APPROVED_BY</option>
+              <option value="PAY_MODE">PAY_MODE</option>
+              <option value="BANK">BANK</option>
+              <option value="EXPENSE_HEAD">EXPENSE_HEAD</option>
+              <option value="INCOME_HEAD">INCOME_HEAD</option>
+              <option value="INVESTMENT_INCOME">INVESTMENT_INCOME</option>
+              <option value="PAYABLE_HEAD">Investor · Head</option>
+              <option value="ACCOUNT_RECEIVABLE_HEAD">Account Receivable · Head</option>
+              <option value="ACCOUNT_RECEIVABLE_SUBHEAD">Account Receivable · Subhead</option>
+              <option value="ACCOUNT_PAYABLE_HEAD">Account Payable · Head</option>
+              <option value="ACCOUNT_PAYABLE_SUBHEAD">Account Payable · Subhead</option>
+              <option value="INCOME_SUBHEAD">Income · Subhead</option>
+              <option value="INVESTMENT_INCOME_SUBHEAD">Investment · Subhead</option>
+              <option value="EXPENSE_SUBHEAD">Expense · Subhead</option>
+              <option value="PAYABLE_SUBHEAD">Investor · Subhead</option>
+              <option value="VENDOR_SUBHEAD">Vendor · Subhead</option>
+              <option value="CONTRA_HEAD">Contra · Head</option>
+              <option value="CONTRA_SUBHEAD">Contra · Subhead</option>
+              <option value="VENDOR">VENDOR</option>
+              <option value="GENERAL">GENERAL</option>
+              <option value="OTHER">OTHER</option>
+            </select>
+          </div>
+
+          <div class="fld">
+            <label for="displayNameInput">Display name</label>
+            <input id="displayNameInput" type="text" placeholder="e.g. JAFAR SB" required>
+          </div>
+
+          <div class="fld parent-field" id="parentField" hidden>
+            <label for="parentSettingInput">Parent head</label>
+            <select id="parentSettingInput"></select>
+          </div>
+
+          <div class="fld">
+            <label for="lookupCodeInput">Lookup code</label>
+            <input id="lookupCodeInput" type="text" placeholder="Optional short code">
+          </div>
+
+          <div class="fld">
+            <label for="sortOrderInput">Sort order</label>
+            <input id="sortOrderInput" type="number" min="0" step="1" value="100">
+          </div>
+
+          <div class="fld wide">
+            <label for="contactPersonInput">Contact person</label>
+            <input id="contactPersonInput" type="text" placeholder="Optional">
+          </div>
+
+          <div class="fld">
+            <label for="mobileNoInput">Mobile number</label>
+            <input id="mobileNoInput" type="text" placeholder="Optional">
+          </div>
+
+          <div class="fld wide">
+            <label for="remarksInput">Remarks</label>
+            <textarea id="remarksInput" rows="3" placeholder="Optional notes"></textarea>
+          </div>
+
+          <div class="fld wide inline">
+            <input id="isActiveInput" type="checkbox" checked>
+            <label for="isActiveInput" style="margin:0;cursor:pointer">Active</label>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+
+    <div class="sh-foot">
+      <button class="btn danger" type="button" id="deleteBtn" hidden style="margin-right:auto">Delete</button>
+      <button class="btn ghost" type="button" data-close>Cancel</button>
+      <button class="btn" type="button" id="saveBtn">Save</button>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+    const CATEGORY_OPTIONS = ["CRO", "APPROVED_BY", "PAY_MODE", "BANK", "EXPENSE_HEAD", "EXPENSE_SUBHEAD", "INCOME_HEAD", "INCOME_SUBHEAD",
+      "INVESTMENT_INCOME", "INVESTMENT_INCOME_SUBHEAD", "PAYABLE_HEAD", "PAYABLE_SUBHEAD", "VENDOR_SUBHEAD", "ACCOUNT_RECEIVABLE_HEAD", "ACCOUNT_RECEIVABLE_SUBHEAD",
+      "ACCOUNT_PAYABLE_HEAD", "ACCOUNT_PAYABLE_SUBHEAD", "CONTRA_HEAD", "CONTRA_SUBHEAD", "VENDOR", "GENERAL", "OTHER"];
+    const PARENT_CATEGORY = {
+      ACCOUNT_RECEIVABLE_SUBHEAD: "ACCOUNT_RECEIVABLE_HEAD",
+      ACCOUNT_PAYABLE_SUBHEAD: "ACCOUNT_PAYABLE_HEAD",
+      INCOME_SUBHEAD: "INCOME_HEAD",
+      INVESTMENT_INCOME_SUBHEAD: "INVESTMENT_INCOME",
+      EXPENSE_SUBHEAD: "EXPENSE_HEAD",
+      PAYABLE_SUBHEAD: "PAYABLE_HEAD",
+      VENDOR_SUBHEAD: "VENDOR",
+      CONTRA_SUBHEAD: "CONTRA_HEAD"
+    };
+    const categoryDisplayName = category => ({
+      PAYABLE_HEAD: "Investor · Head",
+      PAYABLE_SUBHEAD: "Investor · Subhead"
+    }[category] || category);
+    const STRUCTURE_GROUPS = [
+      { parent: "INCOME_HEAD", child: "INCOME_SUBHEAD", label: "Income heads", flow: "in" },
+      { parent: "INVESTMENT_INCOME", child: "INVESTMENT_INCOME_SUBHEAD", label: "Investment heads", flow: "in" },
+      { parent: "ACCOUNT_RECEIVABLE_HEAD", child: "ACCOUNT_RECEIVABLE_SUBHEAD", label: "Account Receivable", flow: "in" },
+      { parent: "EXPENSE_HEAD", child: "EXPENSE_SUBHEAD", label: "Expense heads", flow: "out" },
+      { parent: "PAYABLE_HEAD", child: "PAYABLE_SUBHEAD", label: "Investor heads", flow: "both" },
+      { parent: "VENDOR", child: "VENDOR_SUBHEAD", label: "Vendor heads", flow: "out" },
+      { parent: "ACCOUNT_PAYABLE_HEAD", child: "ACCOUNT_PAYABLE_SUBHEAD", label: "Account Payable", flow: "out" },
+      { parent: "CONTRA_HEAD", child: "CONTRA_SUBHEAD", label: "Contra heads", flow: "contra" }
+    ];
+    const state = {
+      rows: [],
+      filterCategory: "ALL",
+      showActiveOnly: false,
+      search: "",
+      editingId: null
+    };
+
+    const sb = ERP.db ? ERP.db.sb : window.supabase.createClient(ERP_CONFIG.SUPABASE_URL, ERP_CONFIG.SUPABASE_KEY);
+
+    function fillCategoryFilter() {
+      const categories = [...new Set([...CATEGORY_OPTIONS, ...state.rows.map(row => String(row.category || "").trim()).filter(Boolean)])].sort();
+      const current = state.filterCategory;
+      const options = ['<option value="ALL">All categories</option>']
+        .concat(categories.map(cat => `<option value="${esc(cat)}" ${cat === current ? "selected" : ""}>${esc(categoryDisplayName(cat))}</option>`));
+      $("categoryFilter").innerHTML = options.join("");
+      $("categoryFilter").value = categories.includes(current) || current === "ALL" ? current : "ALL";
+      state.filterCategory = $("categoryFilter").value;
+    }
+
+    function getFilteredRows() {
+      const search = state.search.toLowerCase();
+      return state.rows.filter(row => {
+        const category = String(row.category || "").trim();
+        const name = String(row.display_name || "").trim();
+        const code = String(row.lookup_code || "").trim();
+        const person = String(row.contact_person || "").trim();
+        const mobile = String(row.mobile_no || "").trim();
+
+        const matchesCategory = state.filterCategory === "ALL" || category === state.filterCategory;
+        const matchesSearch = !search || [name, code, person, mobile, category, categoryDisplayName(category)].join(" ").toLowerCase().includes(search);
+        const matchesActive = !state.showActiveOnly || row.is_active === true;
+        return matchesCategory && matchesSearch && matchesActive;
+      });
+    }
+
+    function renderStats() {
+      $("statTotal").textContent = String(state.rows.length);
+      $("statActive").textContent = String(state.rows.filter(r => r.is_active !== false).length);
+      $("statCategories").textContent = String(new Set(state.rows.map(r => String(r.category || "").trim()).filter(Boolean)).size);
+    }
+
+    function renderTable() {
+      const rows = getFilteredRows();
+      if (!rows.length) {
+        $("tableBody").innerHTML = '<tr><td colspan="9"><div class="empty-box">No settings matched your filters.</div></td></tr>';
+        return;
+      }
+
+      $("tableBody").innerHTML = rows.map(row => `
+        <tr>
+          <td>${esc(categoryDisplayName(row.category) || "-")}</td>
+          <td>${esc(row.display_name || "-")}</td>
+          <td>${esc(row.parent_setting_id == null ? "-" : (state.rows.find(parent => String(parent.id) === String(row.parent_setting_id))?.display_name || "-"))}</td>
+          <td>${esc(row.lookup_code || "-")}</td>
+          <td>${esc(row.contact_person || "-")}</td>
+          <td>${esc(row.mobile_no || "-")}</td>
+          <td>${esc(String(row.sort_order ?? ""))}</td>
+          <td><span class="badge ${row.is_active === false ? "bad" : "ok"}">${row.is_active === false ? "Inactive" : "Active"}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="btn ghost mini" type="button" data-action="edit" data-id="${row.id}">Edit</button>
+              <button class="btn ghost mini" type="button" data-action="toggle" data-id="${row.id}">${row.is_active === false ? "Enable" : "Disable"}</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadSettings() {
+      try {
+        const { data, error } = await sb.from("app_settings").select("*").order("category", { ascending: true }).order("sort_order", { ascending: true }).order("display_name", { ascending: true });
+        if (error) throw error;
+        state.rows = data || [];
+        renderStats();
+        fillCategoryFilter();
+        renderTable();
+        renderAccountStructures();
+      } catch (err) {
+        ERP.ui.toast(err.message || "Failed to load app settings", "err");
+        $("tableBody").innerHTML = '<tr><td colspan="9"><div class="empty-box">Error loading settings. Please check Supabase connection.</div></td></tr>';
+      }
+    }
+
+    function renderAccountStructures() {
+      const targets = { in: "amountInStructure", out: "amountOutStructure", contra: "contraStructure" };
+      Object.entries(targets).forEach(([flow, target]) => {
+        const groups = STRUCTURE_GROUPS.filter(group => group.flow === flow || group.flow === "both");
+        $(target).innerHTML = groups.map(group => {
+          const heads = state.rows.filter(row => row.category === group.parent).sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
+          const headRows = heads.map(head => {
+            const children = state.rows.filter(row => row.category === group.child && String(row.parent_setting_id) === String(head.id))
+              .sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
+            return `<div class="account-head">
+              <div class="account-head-title"><strong>${esc(head.display_name)}</strong><span class="badge ${head.is_active === false ? "bad" : "ok"}">${head.is_active === false ? "Inactive" : "Active"}</span></div>
+              <div class="row-actions" style="margin-top:7px">
+                <button class="btn ghost mini" type="button" data-action="edit" data-id="${head.id}">Edit head</button>
+                <button class="btn ghost mini" type="button" data-action="toggle" data-id="${head.id}">${head.is_active === false ? "Enable" : "Disable"}</button>
+                <button class="btn ghost mini" type="button" data-add-subhead="${group.child}" data-parent-id="${head.id}">＋ Subhead</button>
+              </div>
+              <div class="subheads">${children.map(child => `<div class="subhead-row"><span>${esc(child.display_name)}${child.is_active === false ? " · Inactive" : ""}</span><button class="btn ghost mini" type="button" data-action="edit" data-id="${child.id}">Edit</button></div>`).join("") || '<small class="muted">No subheads yet.</small>'}</div>
+            </div>`;
+          }).join("") || '<div class="empty-box">No heads configured yet.</div>';
+          const contraFlows = [
+            { flow: "CashToBank", name: "Cash to Bank", key: "CASHTOBANK" },
+            { flow: "BankToCash", name: "Bank to Cash", key: "BANKTOCASH" },
+            { flow: "BankToBank", name: "Bank to Bank", key: "BANKTOBANK" }
+          ];
+          const addHeadActions = group.flow === "contra"
+            ? `<div class="structure-actions">${contraFlows.filter(item => !heads.some(head =>
+                String(head.lookup_code || head.display_name || "").replace(/[^a-z0-9]/gi, "").toUpperCase() === item.key))
+                .map(item => `<button class="btn ghost mini" type="button" data-add-contra-head="${item.flow}">＋ ${item.name}</button>`).join("")}</div>`
+            : `<button class="btn ghost mini" type="button" data-add-head="${group.parent}">＋ Add head</button>`;
+          return `<section class="flow-group">
+            <div class="flow-group-head"><div><h3>${esc(group.label)}</h3><small>${heads.length} ${heads.length === 1 ? "head" : "heads"}</small></div>${addHeadActions}</div>
+            <div class="structure-list">${headRows}</div>
+          </section>`;
+        }).join("");
+      });
+    }
+
+    function updateParentOptions(selectedId = "") {
+      const parentCategory = PARENT_CATEGORY[$("categoryInput").value];
+      const select = $("parentSettingInput");
+      $("parentField").hidden = !parentCategory;
+      select.required = !!parentCategory;
+      if (!parentCategory) {
+        select.innerHTML = "";
+        return;
+      }
+      const parents = state.rows.filter(row => row.category === parentCategory);
+      select.innerHTML = '<option value="">Select parent head</option>' + parents.map(row => `<option value="${esc(String(row.id))}" ${row.is_active === false && String(row.id) !== String(selectedId) ? "disabled" : ""}>${esc(row.display_name)}${row.is_active === false ? " (Inactive)" : ""}</option>`).join("");
+      select.value = String(selectedId || "");
+    }
+
+    function resetForm() {
+      state.editingId = null;
+      $("dialogTitle").textContent = "New setting";
+      $("categoryInput").value = "CRO";
+      $("displayNameInput").value = "";
+      $("lookupCodeInput").value = "";
+      $("sortOrderInput").value = "100";
+      $("contactPersonInput").value = "";
+      $("mobileNoInput").value = "";
+      $("remarksInput").value = "";
+      $("isActiveInput").checked = true;
+      $("deleteBtn").hidden = true;
+      updateParentOptions();
+    }
+
+    function openForm(row, defaults = {}) {
+      if (!row) {
+        resetForm();
+        if (defaults.category) $("categoryInput").value = defaults.category;
+        if (defaults.displayName) $("displayNameInput").value = defaults.displayName;
+        if (defaults.lookupCode) $("lookupCodeInput").value = defaults.lookupCode;
+        updateParentOptions(defaults.parentId || "");
+      } else {
+        state.editingId = row.id;
+        $("dialogTitle").textContent = "Edit setting";
+        $("categoryInput").value = String(row.category || "CRO");
+        $("displayNameInput").value = String(row.display_name || "");
+        $("lookupCodeInput").value = String(row.lookup_code || "");
+        $("sortOrderInput").value = String(row.sort_order ?? 100);
+        $("contactPersonInput").value = String(row.contact_person || "");
+        $("mobileNoInput").value = String(row.mobile_no || "");
+        $("remarksInput").value = String(row.remarks || "");
+        $("isActiveInput").checked = row.is_active !== false;
+        $("deleteBtn").hidden = false;
+        updateParentOptions(row.parent_setting_id || "");
+      }
+      $("settingDialog").showModal();
+    }
+
+    function closeForm() {
+      $("settingDialog").close();
+      resetForm();
+    }
+
+    async function saveSetting() {
+      const category = $("categoryInput").value.trim().toUpperCase();
+      const displayName = $("displayNameInput").value.trim();
+      let lookupCode = $("lookupCodeInput").value.trim();
+      const sortOrder = Number($("sortOrderInput").value || 100);
+      const contactPerson = $("contactPersonInput").value.trim();
+      const mobileNo = $("mobileNoInput").value.trim();
+      const isActive = $("isActiveInput").checked;
+      const parentCategory = PARENT_CATEGORY[category];
+      const parentId = parentCategory ? $("parentSettingInput").value : "";
+
+      if (!category || !displayName) {
+        ERP.ui.toast("Category and display name are required", "err");
+        return;
+      }
+
+      if (parentCategory && !parentId) {
+        ERP.ui.toast("Select the parent head for this subhead", "err");
+        return;
+      }
+
+      const parent = parentId && state.rows.find(row => String(row.id) === String(parentId) && row.category === parentCategory);
+      if (parentCategory && !parent) {
+        ERP.ui.toast("The selected parent head is no longer available. Refresh Settings and try again.", "err");
+        return;
+      }
+      if (parentCategory && isActive && parent.is_active === false) {
+        ERP.ui.toast("Enable the parent head before enabling this subhead.", "err");
+        return;
+      }
+
+      if (!lookupCode) {
+        const slug = value => String(value).replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").toUpperCase();
+        lookupCode = parentCategory ? `${slug(parent.lookup_code || parent.display_name)}_${slug(displayName)}` : slug(displayName);
+      }
+
+      const duplicate = state.rows.find(row =>
+        String(row.category || "").trim().toUpperCase() === category &&
+        String(row.lookup_code || "").trim().toLowerCase() === lookupCode.toLowerCase() &&
+        String(row.id) !== String(state.editingId)
+      );
+
+      if (duplicate) {
+        ERP.ui.toast(`This ${category} code already exists: ${lookupCode}. Use another code or edit the existing record.`, "err");
+        return;
+      }
+
+      const existingRow = state.rows.find(row => String(row.id) === String(state.editingId));
+      if (existingRow && existingRow.category !== category &&
+          state.rows.some(row => String(row.parent_setting_id) === String(existingRow.id))) {
+        ERP.ui.toast("Move or delete this head's subheads before changing its category.", "err");
+        return;
+      }
+
+      const form = {
+        category,
+        display_name: displayName,
+        lookup_code: lookupCode,
+        sort_order: sortOrder,
+        contact_person: contactPerson,
+        mobile_no: mobileNo,
+        is_active: isActive
+      };
+
+      try {
+        const payload = { ...form };
+        if (parentCategory || existingRow?.parent_setting_id != null) {
+          payload.parent_setting_id = parentCategory ? Number(parentId) : null;
+        }
+        // The current app_settings table schema does not include a remarks column.
+        // Keep the UI field for compatibility, but never send it to the DB.
+        if ($("remarksInput").value.trim()) {
+          payload.lookup_code = payload.lookup_code || $("remarksInput").value.trim();
+        }
+
+        if (state.editingId) {
+          const { error } = await sb.from("app_settings").update(payload).eq("id", state.editingId);
+          if (error) throw error;
+          ERP.ui.toast("Setting updated", "ok");
+        } else {
+          const { error } = await sb.from("app_settings").insert([payload]);
+          if (error) throw error;
+          ERP.ui.toast("Setting created", "ok");
+        }
+        closeForm();
+        await loadSettings();
+      } catch (err) {
+        ERP.ui.toast(err.message || "Could not save setting", "err");
+      }
+    }
+
+    async function deleteSetting() {
+      if (!state.editingId) return;
+      const row = state.rows.find(item => String(item.id) === String(state.editingId));
+      if (!row) return;
+      if (state.rows.some(item => String(item.parent_setting_id) === String(row.id))) {
+        ERP.ui.toast("Delete or move this head's subheads before deleting the head.", "err");
+        return;
+      }
+
+      const ok = window.confirm(`Delete "${row.display_name}" from ${row.category}?`);
+      if (!ok) return;
+
+      try {
+        const { error } = await sb.from("app_settings").delete().eq("id", state.editingId);
+        if (error) throw error;
+        ERP.ui.toast("Setting deleted", "ok");
+        closeForm();
+        await loadSettings();
+      } catch (err) {
+        ERP.ui.toast(err.message || "Could not delete setting", "err");
+      }
+    }
+
+    async function toggleSetting(id) {
+      const row = state.rows.find(item => String(item.id) === String(id));
+      if (!row) return;
+      if (row.is_active !== false && state.rows.some(item => String(item.parent_setting_id) === String(row.id) && item.is_active !== false)) {
+        ERP.ui.toast("Disable or move this head's active subheads before disabling the head.", "err");
+        return;
+      }
+      try {
+        const { error } = await sb.from("app_settings").update({ is_active: !row.is_active }).eq("id", id);
+        if (error) throw error;
+        ERP.ui.toast(row.is_active === false ? "Setting enabled" : "Setting disabled", "ok");
+        await loadSettings();
+      } catch (err) {
+        ERP.ui.toast(err.message || "Could not update status", "err");
+      }
+    }
+
+    document.addEventListener("click", async (event) => {
+      const addContraHead = event.target.closest("[data-add-contra-head]");
+      if (addContraHead) {
+        const flow = addContraHead.dataset.addContraHead;
+        const names = { CashToBank: "Cash to Bank", BankToCash: "Bank to Cash", BankToBank: "Bank to Bank" };
+        openForm(null, { category: "CONTRA_HEAD", displayName: names[flow], lookupCode: flow.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase() });
+        return;
+      }
+      const addHead = event.target.closest("[data-add-head]");
+      if (addHead) {
+        openForm(null, { category: addHead.dataset.addHead });
+        return;
+      }
+      const addSubhead = event.target.closest("[data-add-subhead]");
+      if (addSubhead) {
+        const category = addSubhead.dataset.addSubhead;
+        const parentId = addSubhead.dataset.parentId || "";
+        if (!state.rows.some(row => row.category === PARENT_CATEGORY[category] && row.is_active !== false)) {
+          ERP.ui.toast("Create an account head first.", "err");
+          return;
+        }
+        openForm(null, { category, parentId });
+        return;
+      }
+      const actionEl = event.target.closest("[data-action]");
+      if (actionEl) {
+        const { action, id } = actionEl.dataset;
+        if (action === "edit") {
+          const row = state.rows.find(item => String(item.id) === String(id));
+          openForm(row);
+        } else if (action === "toggle") {
+          toggleSetting(id);
+        }
+      }
+
+      if (event.target.matches("[data-close]")) {
+        closeForm();
+      }
+    });
+
+    $("newBtn").addEventListener("click", () => openForm(null));
+    $("categoryInput").addEventListener("change", () => updateParentOptions());
+    $("saveBtn").addEventListener("click", saveSetting);
+    $("deleteBtn").addEventListener("click", deleteSetting);
+    $("refreshBtn").addEventListener("click", loadSettings);
+    $("clearFiltersBtn").addEventListener("click", () => {
+      $("searchInput").value = "";
+      state.search = "";
+      state.filterCategory = "ALL";
+      state.showActiveOnly = false;
+      $("showActiveOnly").setAttribute("aria-pressed", "false");
+      fillCategoryFilter();
+      renderTable();
+    });
+
+    $("searchInput").addEventListener("input", (event) => {
+      state.search = event.target.value.trim();
+      renderTable();
+    });
+
+    $("categoryFilter").addEventListener("change", (event) => {
+      state.filterCategory = event.target.value;
+      renderTable();
+    });
+
+    $("showActiveOnly").addEventListener("click", () => {
+      state.showActiveOnly = !state.showActiveOnly;
+      $("showActiveOnly").setAttribute("aria-pressed", String(state.showActiveOnly));
+      renderTable();
+    });
+
+    async function init() {
+      try {
+        await ERP.auth.guard();
+        await loadSettings();
+      } catch (err) {
+        ERP.ui.toast(err.message || "Access denied", "err");
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
