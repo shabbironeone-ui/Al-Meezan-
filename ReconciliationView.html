@@ -30,12 +30,6 @@
   .pane-title h3{margin:0;font-size:14px}
   .match-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
   .match-filters label{display:inline-flex;gap:4px;align-items:center;cursor:pointer}
-  .daybook-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:10px}
-  .daybook-tools small{color:var(--muted);flex:1 1 220px}
-  .stage-preview{max-height:240px;overflow:auto;margin:0 0 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
-  .stage-preview table{width:100%;border-collapse:collapse;font-size:12px}
-  .stage-preview th,.stage-preview td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-  .stage-preview th{position:sticky;top:0;background:#f8fafc}
 </style>
 </head>
 <body>
@@ -50,8 +44,7 @@
     <div class="pane-title"><h3>In our books (Day Book)</h3>
       <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label></span>
     </div>
-    <div class="daybook-tools no-print"><button class="btn sm ghost" id="downloadDaybookTemplate">Download template</button><button class="btn sm ghost" id="uploadDaybook">Upload Day Book CSV</button><input type="file" id="daybookFile" accept=".csv,text/csv" hidden><button class="btn sm" id="saveDaybook" hidden>Save entries to books</button><button class="btn sm ghost" id="clearDaybook" hidden>Clear upload</button><small id="daybookStatus">For income, expense, payment, or transfer. Excludes customer receipts and sale advances. Use exact active account and Settings head names; party heads need their category prefix. Preview data clears when this browser tab closes.</small></div>
-    <div id="daybookPreview" class="stage-preview" hidden></div><div id="books"></div>
+    <div id="books"></div>
   </section><section class="pane" id="pBank">
     <div class="pane-title"><h3>On the bank statement</h3>
       <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span>
@@ -71,7 +64,8 @@
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, acctOf = e => e.account || "(none)";
-const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1", DAYBOOK_STAGE_KEY = "erp_reconciliation_daybook_stage_v1";
+const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1";
+sessionStorage.removeItem("erp_reconciliation_daybook_stage_v1");
 let PM = { cash: [], bank: [] }, acct = "", EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null;
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
@@ -105,7 +99,6 @@ function render() {
   const visibleBank = bn.filter(b => showByMatch(!!b.match_src, "bankMatched", "bankUnmatched"));
   $("books").innerHTML = visibleBooks.map(e => { const m = MATCH.has(kk(e)); return `<div class="it ${m ? "m" : ""}"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m ? "ok" : sg(e) ? "warn" : ""}">${m ? "✓ Matched" : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`; }).join("") || '<div class="empty">No entries for the selected match filters.</div>';
   $("bank").innerHTML = visibleBank.sort((a, b) => a.date.localeCompare(b.date)).map(b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched" : "Not in books · tap to match"}</span></div></div>`; }).join("") || '<div class="empty">No entries for the selected match filters.</div>';
-  renderDaybookStage_();
 }
 ["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched"].forEach(id => {
   $(id).onchange = render;
@@ -350,23 +343,6 @@ function writeBankFormStage_() {
     rows
   });
 }
-function renderDaybookStage_() {
-  const stage = readStage_(DAYBOOK_STAGE_KEY);
-  const exists = stage && Array.isArray(stage.rows) && stage.rows.length > 0;
-  $("saveDaybook").hidden = !exists || !ERP.auth.can("write");
-  $("clearDaybook").hidden = !exists;
-  $("daybookPreview").hidden = !exists;
-  if (!exists) {
-    $("daybookPreview").innerHTML = "";
-    $("daybookStatus").textContent = "CSV imports create income, expense, payment, or transfer vouchers. Customer receipts and sale advances are not imported here. Uploads are temporary until saved and clear when this browser tab closes.";
-    return;
-  }
-  $("daybookStatus").textContent = `${stage.fileName || "Day Book CSV"}: ${stage.rows.length} entries staged temporarily. Review, then save to Supabase.`;
-  const shown = stage.rows.slice(0, 30);
-  $("daybookPreview").innerHTML = `<table><thead><tr><th>Date</th><th>Type</th><th>Account</th><th>Head</th><th>To account</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>${shown.map(row =>
-    `<tr><td>${E(row.date)}</td><td>${E(row.type)}</td><td>${E(row.account)}</td><td>${E(row.head)}</td><td>${E(row.to_account)}</td><td>${E(row.amount)}</td><td>${E(row.remarks)}</td></tr>`
-  ).join("")}</tbody></table>${stage.rows.length > shown.length ? `<small style="display:block;padding:6px 8px">Showing first ${shown.length} of ${stage.rows.length} rows.</small>` : ""}`;
-}
 function downloadTemplate_(name, columns) {
   const row = {};
   columns.forEach(column => { row[column] = ""; });
@@ -375,179 +351,6 @@ function downloadTemplate_(name, columns) {
 
 $("downloadBankTemplate").onclick = () =>
   downloadTemplate_("bank_statement_manual_template.csv", ["date", "direction", "amount", "description"]);
-$("downloadDaybookTemplate").onclick = () =>
-  downloadTemplate_("daybook_voucher_template.csv", ["date", "type", "account", "head", "to_account", "amount", "remarks"]);
-$("uploadDaybook").onclick = () => $("daybookFile").click();
-$("daybookFile").onchange = async () => {
-  const file = $("daybookFile").files[0]; if (!file) return;
-  try {
-    const rows = parseDaybookCsv_(await file.text());
-    if (!rows.length) throw new Error("The CSV has a header but no Day Book entries.");
-    writeStage_(DAYBOOK_STAGE_KEY, {
-      fileName: file.name,
-      fileKey: importFileKey_("daybook", file.name),
-      rows
-    });
-    renderDaybookStage_();
-  } catch (e) {
-    ERP.ui.toast(e.message, "err");
-  } finally {
-    $("daybookFile").value = "";
-  }
-};
-function parseDaybookCsv_(text) {
-  const records = parseCsvRecords_(text);
-  if (!records.length) throw new Error("The Day Book CSV is empty.");
-  const normalize = value => String(value || "").trim().toLowerCase().replace(/[^a-z]/g, "");
-  const headers = records[0].map(normalize);
-  const required = ["date", "type", "account", "head", "toaccount", "amount", "remarks"];
-  const positions = {};
-  required.forEach(name => {
-    positions[name] = headers.indexOf(name);
-    if (positions[name] < 0) throw new Error(`The Day Book template is missing the "${name}" column.`);
-  });
-  const modes = [...new Set(PM.all || [...PM.cash, ...PM.bank])];
-  const resolveMode = raw => modes.find(mode => String(mode).trim().toLowerCase() === raw.trim().toLowerCase());
-  const parseAmount = raw => {
-    const value = String(raw || "").trim().replace(/,/g, "").replace(/^(?:PKR|Rs\.?)\s*/i, "");
-    if (!/^(?:\d+\.?\d*|\.\d+)$/.test(value)) return NaN;
-    return Number(value);
-  };
-  const rows = [];
-  records.slice(1).forEach((record, index) => {
-    const line = index + 2;
-    const values = {};
-    required.forEach(name => { values[name] = String(record[positions[name]] || "").trim(); });
-    if (required.every(name => !values[name])) return;
-    const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(values.date) ? Date.parse(values.date + "T00:00:00Z") : NaN;
-    if (!Number.isFinite(parsedDate) || new Date(parsedDate).toISOString().slice(0, 10) !== values.date) {
-      throw new Error(`Day Book CSV row ${line}: date must be YYYY-MM-DD.`);
-    }
-    const type = values.type.toLowerCase();
-    if (!["income", "expense", "payment", "transfer"].includes(type)) {
-      throw new Error(`Day Book CSV row ${line}: type must be income, expense, payment, or transfer. Customer receipts and sale advances are excluded.`);
-    }
-    const account = resolveMode(values.account);
-    if (!account) throw new Error(`Day Book CSV row ${line}: account "${values.account}" is not an active payment/bank account in Settings.`);
-    const amount = parseAmount(values.amount);
-    if (!(amount > 0) || !Number.isFinite(amount)) throw new Error(`Day Book CSV row ${line}: amount must be a positive number.`);
-    if (!values.head) throw new Error(`Day Book CSV row ${line}: head is required.`);
-    let toAccount = "";
-    if (type === "transfer") {
-      toAccount = resolveMode(values.toaccount);
-      if (!toAccount || toAccount === account) throw new Error(`Day Book CSV row ${line}: transfer needs a different active "to_account".`);
-    }
-    rows.push({
-      date: values.date,
-      type,
-      account,
-      head: values.head,
-      to_account: toAccount,
-      amount,
-      remarks: values.remarks,
-      source_row: line - 1
-    });
-  });
-  return rows;
-}
-$("clearDaybook").onclick = () => {
-  if (!confirm("Clear the temporary Day Book upload? Nothing in Supabase will be changed.")) return;
-  sessionStorage.removeItem(DAYBOOK_STAGE_KEY);
-  renderDaybookStage_();
-};
-$("saveDaybook").onclick = () => ERP.ui.busy($("saveDaybook"), async () => {
-  const stage = readStage_(DAYBOOK_STAGE_KEY);
-  if (!stage || !stage.rows.length) return;
-  if (!confirm(`Save/update ${stage.rows.length} voucher entries in Supabase? Rows from this same filename and CSV position will update. Removed rows will remain in the database.`)) return;
-  if (!stage.fileKey) return ERP.ui.toast("This upload is missing its file identity. Upload the CSV again.", "err");
-  let links;
-  try {
-    links = await ERP.db.reconciliationImports.list(stage.fileKey);
-  } catch (e) {
-    return ERP.ui.toast("Import tracking is not configured. Run sql/13_reconciliation_imports.sql in Supabase first. " + e.message, "err");
-  }
-  const linkByRow = new Map(links.map(link => [String(link.row_key), link]));
-  const originalRows = stage.rows.slice();
-  let saved = 0;
-  const savedRows = [];
-  for (let index = 0; index < originalRows.length; index++) {
-    const row = originalRows[index];
-    let untrackedVoucherNo = "";
-    const payload = row.type === "transfer"
-      ? { kind: "transfer", date: row.date, amount: row.amount, pay_mode: row.account, to_account: row.to_account, head: row.head, remarks: row.remarks }
-      : { kind: row.type, date: row.date, amount: row.amount, pay_mode: row.account, name: row.head, remarks: row.remarks };
-    try {
-      const rowKey = String(row.source_row || index + 1);
-      const prior = linkByRow.get(rowKey);
-      if (prior) {
-        if (prior.source_kind !== "daybook" || prior.source_table !== sourceTableForType_(row.type)) {
-          throw new Error("This CSV row was previously linked to a different voucher type. Clear the import history or use a new filename.");
-        }
-        await ERP.db.accounts.update(prior.source_table, prior.source_id, {
-          date: row.date,
-          account: row.account,
-          amount: row.amount,
-          head: row.head,
-          remarks: row.remarks,
-          to_account: row.to_account
-        });
-        await ERP.db.bank.clearMatches(prior.source_table, prior.source_id);
-      } else {
-        const result = await ERP.db.accounts.create(payload);
-        const voucherNo = result && result.voucher_no;
-        untrackedVoucherNo = voucherNo ? String(voucherNo) : "unknown";
-        if (!voucherNo) throw new Error("Voucher was created but Supabase did not return its voucher number; do not retry until checking the Day Book.");
-        const dayRows = await ERP.db.accounts.entries({ from: row.date, to: row.date });
-        const sourceTable = sourceTableForType_(row.type);
-        const created = dayRows.find(entry =>
-          entry.src === sourceTable && String(entry.voucher_no) === String(voucherNo)
-        );
-        if (!created) throw new Error(`Voucher ${voucherNo} was created, but its record ID could not be found for re-upload updates.`);
-        if (created.rid === undefined || created.rid === null) {
-          throw new Error(`Voucher ${voucherNo} was created, but its source record ID is missing.`);
-        }
-        const link = {
-          file_key: stage.fileKey,
-          row_key: rowKey,
-          source_kind: "daybook",
-          source_table: sourceTable,
-          source_id: String(created.rid)
-        };
-        await ERP.db.reconciliationImports.save(link);
-        linkByRow.set(rowKey, link);
-        untrackedVoucherNo = "";
-      }
-      saved++;
-      savedRows.push(row);
-      stage.rows = originalRows.slice(index + 1);
-      if (stage.rows.length) writeStage_(DAYBOOK_STAGE_KEY, stage);
-      else sessionStorage.removeItem(DAYBOOK_STAGE_KEY);
-      renderDaybookStage_();
-      $("daybookStatus").textContent = `Saved ${saved} of ${originalRows.length} entries...`;
-    } catch (e) {
-      renderDaybookStage_();
-      $("daybookStatus").textContent = `${saved} entries updated/saved; remaining rows stay in temporary preview. Save stopped at CSV row ${row.source_row || index + 2}.`;
-      const recovery = untrackedVoucherNo
-        ? ` Voucher ${untrackedVoucherNo} may already have been created without an import link; check the Day Book before retrying.`
-        : "";
-      ERP.ui.toast(`${saved} entries updated/saved. CSV row ${row.source_row || index + 2} failed: ${e.message}${recovery}`, "err");
-      if (savedRows.length) { setPeriodForRows_(savedRows); load(); }
-      return;
-    }
-  }
-  ERP.ui.toast(saved + " Day Book entries saved");
-  setPeriodForRows_(savedRows);
-  renderDaybookStage_();
-  load();
-});
-function sourceTableForType_(type) {
-  return {
-    income: "general_receipts",
-    expense: "expenses",
-    payment: "payments",
-    transfer: "contra"
-  }[type] || "";
-}
 $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
   const stage = readStage_(BANK_STAGE_KEY), saveAccount = stage && stage.account || acct;
   const formRows = [...$("addRows").querySelectorAll(".rw")];
@@ -623,9 +426,8 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
 
 (async () => { await ERP.auth.guard(); const t = new Date(); $("to").value = ERP.ui.today(); $("from").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10);
   if (!ERP.auth.can("write")) {
-    $("bAdd").hidden = $("bAuto").hidden = $("uploadDaybook").hidden = $("saveDaybook").hidden = true;
+    $("bAdd").hidden = $("bAuto").hidden = true;
   }
-  renderDaybookStage_();
   load();
 })();
 </script>
