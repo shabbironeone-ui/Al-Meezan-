@@ -14,14 +14,19 @@
   @media(min-width:760px){.range{grid-template-columns:160px 160px 1fr}}
   .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
   .stat.bad b{color:var(--danger)}
-  .cols{display:grid;gap:12px;grid-template-columns:1fr}@media(min-width:1000px){.cols{grid-template-columns:1fr 1fr}}
-  .pane h3{margin:4px 0 8px;font-size:14px}
+  .rgrid{display:grid;column-gap:12px;row-gap:0;grid-template-columns:1fr}@media(min-width:1000px){.rgrid{grid-template-columns:1fr 1fr}}
+  .sortbar{display:flex;justify-content:space-between;gap:4px;background:#e8edf3;border-radius:10px;padding:4px;margin-bottom:8px}
+  .sortbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:5px 8px;border-radius:7px;white-space:nowrap}
+  .sortbar button:nth-child(3){text-align:right}.sortbar button:hover{color:var(--brand-dark)}.sortbar button.on{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .sec{font-size:13px;font-weight:700;margin:12px 0 6px;color:var(--muted)}
+  .it.ph{border-left-color:#cbd5e1;border-style:dashed;background:#f8fafc;color:var(--muted);font-size:13px;align-content:center}
+  @media(max-width:999px){#recon[data-view="books"] [data-side="bank"],#recon[data-view="bank"] [data-side="books"]{display:none}}
   .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:#fff;border:1px solid var(--line);border-left:5px solid #f59e0b;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:14px}
   .it.m{border-left-color:#10b981}.it.clk{cursor:pointer}.it.clk:hover{border-color:var(--brand)}
   .it small{color:var(--muted)}.it .am{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}.in{color:#047857}.out{color:var(--warn)}
   .it .st{grid-column:1/-1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
   .seg{display:none;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:10px}.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}.seg button[aria-pressed="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
-  @media(max-width:999px){.seg{display:flex}.pane[hidden-m]{display:none}}
+  @media(max-width:999px){.seg{display:flex}}
   .cand{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px;font:inherit;cursor:pointer}.cand:hover{border-color:var(--brand)}.cand.same{border-color:#10b981;background:#ecfdf5}
   .rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:10px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px}.rw .wide{grid-column:1/-1}
   @media(min-width:640px){.rw{grid-template-columns:150px 140px 150px 1fr auto}.rw .wide{grid-column:auto}}
@@ -40,22 +45,31 @@
   <section class="card range"><div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div><div style="align-self:end;color:var(--muted);font-size:13px">Pick the period of the bank statement you are checking.</div></section>
   <section class="stats four" id="stats"></section>
   <div class="seg" id="seg"><button data-t="books" aria-pressed="true">Our books</button><button data-t="bank" aria-pressed="false">Bank statement</button></div>
-  <div class="cols"><section class="pane" id="pBooks">
-    <div class="pane-title"><h3>In our books (Day Book)</h3>
-      <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label></span>
+  <div id="recon" data-view="books">
+    <div class="rgrid">
+      <div class="pane-title" data-side="books"><h3>In our books (Day Book)</h3>
+        <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label></span></div>
+      <div class="pane-title" data-side="bank"><h3>On the bank statement</h3>
+        <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span></div>
     </div>
-    <div id="books"></div>
-  </section><section class="pane" id="pBank">
-    <div class="pane-title"><h3>On the bank statement</h3>
-      <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span>
+    <div class="rgrid">
+      <div class="sortbar" id="sortBooks" data-side="books"></div>
+      <div class="sortbar" id="sortBank" data-side="bank"></div>
     </div>
-    <div id="bank"></div>
-  </section></div>
+    <div class="sec" id="secM" hidden></div>
+    <div class="rgrid" id="pairs"></div>
+    <div class="sec" id="secU"></div>
+    <div class="rgrid"><div id="books" data-side="books"></div><div id="bank" data-side="bank"></div></div>
+  </div>
 </main>
 
 <dialog id="addDlg" class="sheet"><div class="sh-head"><div><h2>Add bank statement entries</h2><p id="addSub"></p></div><button class="x" data-close>✕</button></div>
-  <div class="sh-body"><div class="upload-tools"><button type="button" class="btn soft" id="downloadBankTemplate">Download manual-entry template</button><button type="button" class="btn soft" id="uploadStatement">Upload bank CSV</button><button type="button" class="btn ghost" id="clearBankStage" hidden>Clear temporary entries</button><input type="file" id="statementFile" accept=".csv,text/csv" hidden><small id="uploadStatus">Choose an ABL or UBL statement CSV for <b id="uploadAccount"></b>.</small></div><div id="addRows"></div><button class="btn soft" id="addRow" style="width:100%">＋ Add row</button><p style="font-size:12px;color:var(--muted)">Deposit = money came into the account. Withdrawal = money went out. Uploaded entries are temporary until saved and clear when this browser tab closes.</p></div>
+  <div class="sh-body"><div class="upload-tools"><button type="button" class="btn soft" id="downloadBankTemplate">Download manual-entry template</button><button type="button" class="btn soft" id="uploadStatement">Upload bank CSV</button><button type="button" class="btn ghost" id="clearBankStage" hidden>Clear temporary entries</button><input type="file" id="statementFile" accept=".csv,text/csv" hidden><small id="uploadStatus">Upload a bank statement CSV; choose the account when prompted.</small></div><div id="addRows"></div><button class="btn soft" id="addRow" style="width:100%">＋ Add row</button><p style="font-size:12px;color:var(--muted)">Deposit = money came into the account. Withdrawal = money went out. Uploaded entries are temporary until saved and clear when this browser tab closes.</p></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="addSave">Save entries</button></div></dialog>
+
+<dialog id="bankAccountDlg" class="sheet"><div class="sh-head"><div><h2>Select bank account</h2><p>Which bank account does this statement belong to?</p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body"><label for="bankUploadAccount">Bank account</label><select id="bankUploadAccount" required></select></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="chooseStatementFile">Continue to file</button></div></dialog>
 
 <dialog id="mDlg" class="sheet"><div class="sh-head"><div><h2>Match this bank entry</h2><p id="mSub"></p></div><button class="x" data-close>✕</button></div>
   <div class="sh-body"><div id="mList"></div></div><div class="sh-foot"><button class="btn danger" id="mDel" hidden style="margin-right:auto">Delete entry</button><button class="btn ghost" data-close>Close</button></div></dialog>
@@ -66,14 +80,17 @@
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, acctOf = e => e.account || "(none)";
 const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1";
 sessionStorage.removeItem("erp_reconciliation_daybook_stage_v1");
-let PM = { cash: [], bank: [] }, acct = "", EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null;
+const SORT = { key: "date", dir: 1 };
+let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null, pendingImportAccount = "";
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
 const sg = e => N(e.money_in) - N(e.money_out), kk = e => e.src + ":" + e.rid;
+const bankUploadAccounts_ = () => [...new Set([...(PM.bank || []), ...(PM.all || [])])]
+  .filter(account => !/\bcash\b/i.test(account));
 
 async function load() {
   const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
-  $("books").innerHTML = $("bank").innerHTML = '<div class="skeleton"></div>';
+  $("pairs").innerHTML = ""; $("books").innerHTML = $("bank").innerHTML = '<div class="skeleton"></div>';
   try {
     const [en, op, bk, settings] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from), ERP.db.bank.listAll(), ERP.db.settings()]);
     PM = settings.paymentModes;
@@ -93,12 +110,42 @@ function render() {
     <div class="stat ${um.length ? "bad" : ""}"><small>Not on statement (books)</small><b>${um.length} · Rs ${M(sum(um, sg))}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Not in books (bank)</small><b>${ub.length} · Rs ${M(sum(ub, b => N(b.amount)))}</b></div>`;
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
   const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
-  const showByMatch = (isMatched, matchedId, unmatchedId) =>
-    isMatched ? $(matchedId).checked : $(unmatchedId).checked;
-  const visibleBooks = bs.filter(e => showByMatch(MATCH.has(kk(e)), "booksMatched", "booksUnmatched"));
-  const visibleBank = bn.filter(b => showByMatch(!!b.match_src, "bankMatched", "bankUnmatched"));
-  $("books").innerHTML = visibleBooks.map(e => { const m = MATCH.has(kk(e)); return `<div class="it ${m ? "m" : ""}"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m ? "ok" : sg(e) ? "warn" : ""}">${m ? "✓ Matched" : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`; }).join("") || '<div class="empty">No entries for the selected match filters.</div>';
-  $("bank").innerHTML = visibleBank.sort((a, b) => a.date.localeCompare(b.date)).map(b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched" : "Not in books · tap to match"}</span></div></div>`; }).join("") || '<div class="empty">No entries for the selected match filters.</div>';
+  const bookItem = (e, m) => `<div class="it ${m ? "m" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m ? "ok" : sg(e) ? "warn" : ""}">${m ? "✓ Matched" : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
+  const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
+  const ph = (side, text) => `<div class="it ph" data-side="${side}"><div>${text}</div></div>`;
+  const gap = side => `<div data-side="${side}"></div>`;
+
+  /* sort headings (shared by both sides) */
+  const sortHtml = side => [["date", "Date"], ["name", side === "books" ? "Party" : "Description"], ["amount", "Amount"]]
+    .map(([k, l]) => `<button type="button" data-k="${k}" class="${SORT.key === k ? "on" : ""}" title="Sort by ${l}">${l}${SORT.key === k ? (SORT.dir > 0 ? " ▲" : " ▼") : ""}</button>`).join("");
+  $("sortBooks").innerHTML = sortHtml("books"); $("sortBank").innerHTML = sortHtml("bank");
+  const keyOf = (side, x) => SORT.key === "amount" ? (side === "books" ? sg(x) : N(x.amount))
+    : SORT.key === "name" ? String(side === "books" ? (x.party || x.head || x.kind || "") : (x.remarks || "")).toLowerCase() : String(x.date || "");
+  const cmpItems = (sa, a, sb, b) => { const ka = keyOf(sa, a), kb = keyOf(sb, b);
+    const r = typeof ka === "number" ? ka - kb : ka.localeCompare(kb);
+    return (r || String(a.date || "").localeCompare(String(b.date || ""))) * SORT.dir; };
+
+  /* matched pairs: book entry and bank entry on the same row */
+  const bankByKey = new Map(BANK.filter(b => b.match_src).map(b => [b.match_src + ":" + b.match_rid, b]));
+  const pairs = [], usedBank = new Set();
+  bs.filter(e => MATCH.has(kk(e))).forEach(e => { const b = bankByKey.get(kk(e)); if (b) usedBank.add(String(b.id)); pairs.push({ e, b: b || null }); });
+  bn.filter(b => b.match_src && !usedBank.has(String(b.id))).forEach(b =>
+    pairs.push({ e: EN.find(x => x.src === b.match_src && String(x.rid) === String(b.match_rid)) || null, b }));
+  const showMB = $("booksMatched").checked, showMK = $("bankMatched").checked;
+  pairs.sort((p, q) => { const sp = p.e ? "books" : "bank", sq = q.e ? "books" : "bank"; return cmpItems(sp, p.e || p.b, sq, q.e || q.b); });
+  const pairsVisible = (showMB || showMK) ? pairs : [];
+  $("secM").hidden = !pairsVisible.length;
+  $("secM").textContent = `✓ Matched (${pairsVisible.length}) — book entry and bank entry side by side`;
+  $("pairs").innerHTML = pairsVisible.map(p =>
+    (showMB ? (p.e ? bookItem(p.e, true) : ph("books", "Book entry is outside this period")) : gap("books")) +
+    (showMK ? (p.b ? bankItem(p.b) : ph("bank", "Bank entry is outside this period / account")) : gap("bank"))).join("");
+
+  /* unmatched: independent columns */
+  const visibleBooks = $("booksUnmatched").checked ? bs.filter(e => !MATCH.has(kk(e))).sort((x, y) => cmpItems("books", x, "books", y)) : [];
+  const visibleBank = $("bankUnmatched").checked ? bn.filter(b => !b.match_src).sort((x, y) => cmpItems("bank", x, "bank", y)) : [];
+  $("secU").textContent = `Not matched — books ${visibleBooks.length} · bank ${visibleBank.length}`;
+  $("books").innerHTML = visibleBooks.map(e => bookItem(e, false)).join("") || '<div class="empty">No unmatched entries.</div>';
+  $("bank").innerHTML = visibleBank.map(bankItem).join("") || '<div class="empty">No unmatched entries.</div>';
 }
 ["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched"].forEach(id => {
   $(id).onchange = render;
@@ -106,8 +153,9 @@ function render() {
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; render(); } };
 $("from").onchange = $("to").onchange = load;
 $("seg").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("seg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
-  const bk = b.dataset.t === "bank"; $("pBooks").toggleAttribute("hidden-m", bk); $("pBank").toggleAttribute("hidden-m", !bk); };
-$("pBank").setAttribute("hidden-m", "");
+  $("recon").dataset.view = b.dataset.t === "bank" ? "bank" : "books"; };
+$("recon").addEventListener("click", e => { const b = e.target.closest(".sortbar button"); if (!b) return;
+  if (SORT.key === b.dataset.k) SORT.dir = -SORT.dir; else { SORT.key = b.dataset.k; SORT.dir = 1; } render(); });
 
 /* ---------- auto match: same amount, dates within 3 days, closest first ---------- */
 $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
@@ -119,7 +167,7 @@ $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
   try { await Promise.all(pairs.map(p => ERP.db.bank.setMatch(...p))); ERP.ui.toast(pairs.length + " entries matched"); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
 /* ---------- match one bank entry by hand ---------- */
-$("bank").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
+$("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
   $("mSub").textContent = `${b.date} · ${b.amount >= 0 ? "+" : "−"}${M(Math.abs(b.amount))} · ${b.remarks || ""}`; $("mDel").hidden = !ERP.auth.can("delete");
   if (b.match_src) { const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid));
     $("mList").innerHTML = `<p>Matched with: <b>${x ? E(x.party || x.head || x.kind) + " · " + E(x.date) + " · " + E(x.voucher_no) : E(b.match_src) + " #" + E(b.match_rid)}</b></p>${edit ? '<button class="btn danger" id="unm">Remove the match</button>' : ""}`;
@@ -144,14 +192,13 @@ $("bAdd").onclick = () => {
   const stage = readStage_(BANK_STAGE_KEY);
   if (stage && stage.account && stage.account !== acct) { acct = stage.account; render(); }
   $("addSub").textContent = acct;
-  $("uploadAccount").textContent = acct;
   $("addRows").innerHTML = "";
   if (stage && Array.isArray(stage.rows) && stage.rows.length) {
     stage.rows.forEach(v => addRow(v, false));
     $("uploadStatus").textContent = `${stage.fileName || "Bank statement"}: ${stage.rows.length} staged entries for ${stage.account}. Review before saving.`;
     $("clearBankStage").hidden = false;
   } else {
-    $("uploadStatus").innerHTML = `Choose an ABL or UBL statement CSV for <b>${E(acct)}</b>.`;
+    $("uploadStatus").textContent = `Choose an ABL or UBL statement CSV. The bank account will be selected before upload.`;
     $("clearBankStage").hidden = true;
     addRow();
   }
@@ -162,33 +209,58 @@ $("addRows").onclick = e => { const x = e.target.closest(".x"); if (x && $("addR
 $("addRows").onchange = writeBankFormStage_;
 $("addRows").oninput = writeBankFormStage_;
 $("addRows").onkeydown = e => { if (e.key === "Enter" && e.target.classList.contains("rr")) { e.preventDefault(); addRow({ date: e.target.closest(".rw").querySelector(".rd").value }); writeBankFormStage_(); } };
-$("uploadStatement").onclick = () => $("statementFile").click();
+$("uploadStatement").onclick = () => {
+  const bankAccounts = bankUploadAccounts_();
+  if (!bankAccounts.length) return ERP.ui.toast("No active bank accounts are configured in Settings.", "err");
+  $("bankUploadAccount").innerHTML = '<option value="">Select a bank account</option>' +
+    bankAccounts.map(account => `<option value="${E(account)}">${E(account)}</option>`).join("");
+  $("bankUploadAccount").value = "";
+  $("bankAccountDlg").showModal();
+};
+$("chooseStatementFile").onclick = () => {
+  const account = $("bankUploadAccount").value;
+  if (!account || !bankUploadAccounts_().includes(account)) {
+    return ERP.ui.toast("Select a valid bank account before choosing the statement file.", "err");
+  }
+  pendingImportAccount = account;
+  $("bankAccountDlg").close();
+  $("statementFile").click();
+};
 $("clearBankStage").onclick = () => {
   if (!confirm("Clear the temporary bank statement entries? Nothing in Supabase will be changed.")) return;
   sessionStorage.removeItem(BANK_STAGE_KEY);
   $("addRows").innerHTML = "";
-  $("uploadStatus").innerHTML = `Temporary entries cleared. Choose a CSV for <b>${E(acct)}</b> or enter rows manually.`;
+  $("uploadStatus").textContent = "Temporary entries cleared. Choose a bank CSV or enter rows manually.";
   $("clearBankStage").hidden = true;
   addRow();
 };
 $("statementFile").onchange = async () => {
   const file = $("statementFile").files[0]; if (!file) return;
   try {
+    const importAccount = pendingImportAccount;
+    if (!importAccount || !bankUploadAccounts_().includes(importAccount)) {
+      throw new Error("Choose a valid bank account before uploading a statement.");
+    }
     const text = await file.text();
     const parsed = parseBankStatementCsv_(text);
     const rows = parsed.rows;
     if (!rows.length) throw new Error("No dated statement transactions with valid amounts were found.");
+    acct = importAccount;
+    render();
     writeStage_(BANK_STAGE_KEY, {
       fileName: file.name,
-      fileKey: importFileKey_("bank_statement", parsed.importScope, acct),
-      account: acct,
+      fileKey: importFileKey_("bank_statement", parsed.importScope, importAccount),
+      account: importAccount,
       rows
     });
+    $("addSub").textContent = importAccount;
+    $("uploadStatus").textContent = `${file.name}: ${rows.length} entries staged for ${importAccount}. Review before saving.`;
     showBankStage_();
   } catch (e) {
     $("uploadStatus").textContent = "Could not load the file. Select a supported ABL or UBL CSV statement.";
     ERP.ui.toast(e.message, "err");
   } finally {
+    pendingImportAccount = "";
     $("statementFile").value = "";
   }
 };
@@ -375,6 +447,23 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
   try {
     const links = await ERP.db.reconciliationImports.list(fileKey);
     const linkByRow = new Map(links.map(link => [String(link.row_key), link]));
+    const insertAndLink = async row => {
+      const inserted = await ERP.db.bank.add([{
+        account: row.account,
+        date: row.date,
+        amount: row.amount,
+        remarks: row.remarks
+      }]);
+      const link = {
+        file_key: fileKey,
+        row_key: row.row_key,
+        source_kind: "bank_statement",
+        source_table: "bank_statement",
+        source_id: String(inserted[0].id)
+      };
+      await ERP.db.reconciliationImports.save(link);
+      linkByRow.set(row.row_key, link);
+    };
     for (const row of rows) {
       const prior = linkByRow.get(row.row_key);
       if (prior) {
@@ -395,23 +484,18 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
           update.match_src = null;
           update.match_rid = null;
         }
-        await ERP.db.bank.update(prior.source_id, update);
+        try {
+          await ERP.db.bank.update(prior.source_id, update);
+        } catch (err) {
+          // Linked bank row was deleted (stale link) -> recreate it and re-link
+          if (/not updated|not found|permission/i.test(String(err && err.message))) {
+            await insertAndLink(row);
+          } else {
+            throw err;
+          }
+        }
       } else {
-        const inserted = await ERP.db.bank.add([{
-          account: row.account,
-          date: row.date,
-          amount: row.amount,
-          remarks: row.remarks
-        }]);
-        const link = {
-          file_key: fileKey,
-          row_key: row.row_key,
-          source_kind: "bank_statement",
-          source_table: "bank_statement",
-          source_id: String(inserted[0].id)
-        };
-        await ERP.db.reconciliationImports.save(link);
-        linkByRow.set(row.row_key, link);
+        await insertAndLink(row);
       }
     }
     sessionStorage.removeItem(BANK_STAGE_KEY);
@@ -421,7 +505,7 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
     $("addDlg").close();
     load();
   } catch (e) {
-    ERP.ui.toast("Bank import stopped. Rows already linked to this import can be safely retried with the same file/account. " + e.message, "err");
+    ERP.ui.toast("Bank import stopped. Re-upload the same statement and account to safely retry without creating duplicate rows. If the error mentions import_file_key/import_row_key, run the updated sql/13_reconciliation_imports.sql in Supabase. " + e.message, "err");
   } });
 
 (async () => { await ERP.auth.guard(); const t = new Date(); $("to").value = ERP.ui.today(); $("from").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10);
