@@ -19,6 +19,7 @@
   .sortbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:5px 8px;border-radius:7px;white-space:nowrap}
   .sortbar button:nth-child(3){text-align:right}.sortbar button:hover{color:var(--brand-dark)}.sortbar button.on{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
   .sec{font-size:13px;font-weight:700;margin:12px 0 6px;color:var(--muted)}
+  .it.mg{border-left-width:5px}
   .it.ph{border-left-color:#cbd5e1;border-style:dashed;background:#f8fafc;color:var(--muted);font-size:13px;align-content:center}
   @media(max-width:999px){#recon[data-view="books"] [data-side="bank"],#recon[data-view="bank"] [data-side="books"]{display:none}}
   .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:#fff;border:1px solid var(--line);border-left:5px solid #f59e0b;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:14px}
@@ -48,7 +49,7 @@
   <div id="recon" data-view="books">
     <div class="rgrid">
       <div class="pane-title" data-side="books"><h3>In our books (Day Book)</h3>
-        <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label></span></div>
+        <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label><label title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="booksMerge" checked> Merge same receipt no.</label></span></div>
       <div class="pane-title" data-side="bank"><h3>On the bank statement</h3>
         <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span></div>
     </div>
@@ -99,18 +100,45 @@ async function load() {
   } catch (e) { $("books").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/12_bank.sql if this mentions bank_statement.</small></div>`; $("bank").innerHTML = ""; }
 }
 const booksOf = a => EN.filter(e => acctOf(e) === a && (sg(e) !== 0 || e.needs_review));
+
+/* Receipts that share one receipt no. (one customer deposit split across several customer accounts) are merged
+   into one row with the total so they reconcile with the single bank statement line.
+   Never merged: quick-receipt tags and receipt nos. containing "Advance processing fee" or "1st installment". */
+const NO_MERGE_RE = /advance\s*processing\s*fee|1st\s*install?ment/i;
+const normText = x => String(x == null ? "" : x).replace(/[\s\u00a0\u200b-\u200d\ufeff]+/g, " ").trim().toLowerCase();
+const TAG_SET = new Set(((typeof ERP_CONFIG !== "undefined" && Array.isArray(ERP_CONFIG.QUICK_RECEIPT_TAGS)) ? ERP_CONFIG.QUICK_RECEIPT_TAGS : []).map(normText));
+function mergeKeyFor(e) {
+  const v = normText(e.voucher_no);
+  if (normText(e.kind) !== "receipt" || !v || NO_MERGE_RE.test(v) || TAG_SET.has(v)) return null;
+  return normText(acctOf(e)) + "|" + v;
+}
+function groupsOf(a) {
+  const mergeOn = $("booksMerge").checked, out = [], by = new Map();
+  booksOf(a).forEach(e => {
+    const key = mergeOn ? mergeKeyFor(e) : null, g = key && by.get(key);
+    if (g) { g.money_in += N(e.money_in); g.money_out += N(e.money_out); g.parts.push(e); g.needs_review = g.needs_review || e.needs_review; return; }
+    const ng = { ...e, money_in: N(e.money_in), money_out: N(e.money_out), parts: [e] };
+    out.push(ng); if (key) by.set(key, ng);
+  });
+  out.forEach(g => { if (g.parts.length > 1) {
+    g.party = [...new Set(g.parts.map(p => String(p.party || "").trim()).filter(Boolean))].join(" + ") || g.party;
+    g.remarks = [...new Set(g.parts.map(p => String(p.remarks || "").trim()).filter(Boolean))].join(" · ");
+  } });
+  return out;
+}
+const groupMatched = g => g.parts.some(p => MATCH.has(kk(p)));
 const bankOf = a => BANK.filter(b => b.account === a && b.date >= $("from").value && b.date <= $("to").value);
 
 function render() {
   const modes = [...new Set([...(PM.all || [...PM.bank, ...PM.cash]), ...EN.map(acctOf), ...BANK.map(b => b.account)])];
-  $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = bs.filter(e => !MATCH.has(kk(e)) && sg(e) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
+  $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = groupsOf(a).filter(g => !groupMatched(g) && sg(g) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
     return `<button class="ac" data-a="${E(a)}" aria-pressed="${a === acct}"><small>${E(a)}</small><b>Rs ${M(close)}</b><br>${bn.length || bs.length ? (um + ub ? `<span class="bd">${um + ub} unmatched</span>` : '<span class="bd ok">✓ matched</span>') : ""}</button>`; }).join("");
-  const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), um = bs.filter(e => !MATCH.has(kk(e)) && sg(e) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+  const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), bg = groupsOf(acct), um = bg.filter(g => !groupMatched(g) && sg(g) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
   $("stats").innerHTML = `<div class="stat"><small>Books (net in period)</small><b>Rs ${M(sum(bs, sg))}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(sum(bn, b => N(b.amount)))}</b></div>
     <div class="stat ${um.length ? "bad" : ""}"><small>Not on statement (books)</small><b>${um.length} · Rs ${M(sum(um, sg))}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Not in books (bank)</small><b>${ub.length} · Rs ${M(sum(ub, b => N(b.amount)))}</b></div>`;
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
   const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
-  const bookItem = (e, m) => `<div class="it ${m ? "m" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m ? "ok" : sg(e) ? "warn" : ""}">${m ? "✓ Matched" : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
+  const bookItem = (e, m) => `<div class="it ${m ? "m" : ""}${e.parts && e.parts.length > 1 ? " mg" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}${e.parts && e.parts.length > 1 ? " · " + e.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m ? "ok" : sg(e) ? "warn" : ""}">${m ? "✓ Matched" : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
   const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
   const ph = (side, text) => `<div class="it ph" data-side="${side}"><div>${text}</div></div>`;
   const gap = side => `<div data-side="${side}"></div>`;
@@ -125,29 +153,36 @@ function render() {
     const r = typeof ka === "number" ? ka - kb : ka.localeCompare(kb);
     return (r || String(a.date || "").localeCompare(String(b.date || ""))) * SORT.dir; };
 
-  /* matched pairs: book entry and bank entry on the same row */
-  const bankByKey = new Map(BANK.filter(b => b.match_src).map(b => [b.match_src + ":" + b.match_rid, b]));
+  /* matched pairs: book entry (merged if needed) and its bank entry on the same row */
+  const bankByKey = new Map();
+  BANK.filter(b => b.match_src).forEach(b => { const k = b.match_src + ":" + b.match_rid; if (!bankByKey.has(k)) bankByKey.set(k, []); bankByKey.get(k).push(b); });
   const pairs = [], usedBank = new Set();
-  bs.filter(e => MATCH.has(kk(e))).forEach(e => { const b = bankByKey.get(kk(e)); if (b) usedBank.add(String(b.id)); pairs.push({ e, b: b || null }); });
-  bn.filter(b => b.match_src && !usedBank.has(String(b.id))).forEach(b =>
-    pairs.push({ e: EN.find(x => x.src === b.match_src && String(x.rid) === String(b.match_rid)) || null, b }));
+  bg.filter(groupMatched).forEach(g => {
+    const banks = [];
+    g.parts.forEach(p => (bankByKey.get(kk(p)) || []).forEach(b => { if (!usedBank.has(String(b.id))) { usedBank.add(String(b.id)); banks.push(b); } }));
+    pairs.push({ e: g, banks });
+  });
+  bn.filter(b => b.match_src && !usedBank.has(String(b.id))).forEach(b => {
+    const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid));
+    pairs.push({ e: x ? { ...x, money_in: N(x.money_in), money_out: N(x.money_out), parts: [x] } : null, banks: [b] });
+  });
   const showMB = $("booksMatched").checked, showMK = $("bankMatched").checked;
-  pairs.sort((p, q) => { const sp = p.e ? "books" : "bank", sq = q.e ? "books" : "bank"; return cmpItems(sp, p.e || p.b, sq, q.e || q.b); });
+  pairs.sort((p, q) => { const sp = p.e ? "books" : "bank", sq = q.e ? "books" : "bank"; return cmpItems(sp, p.e || p.banks[0], sq, q.e || q.banks[0]); });
   const pairsVisible = (showMB || showMK) ? pairs : [];
   $("secM").hidden = !pairsVisible.length;
   $("secM").textContent = `✓ Matched (${pairsVisible.length}) — book entry and bank entry side by side`;
   $("pairs").innerHTML = pairsVisible.map(p =>
     (showMB ? (p.e ? bookItem(p.e, true) : ph("books", "Book entry is outside this period")) : gap("books")) +
-    (showMK ? (p.b ? bankItem(p.b) : ph("bank", "Bank entry is outside this period / account")) : gap("bank"))).join("");
+    (showMK ? (p.banks.length ? `<div data-side="bank">${p.banks.map(bankItem).join("")}</div>` : ph("bank", "Bank entry is outside this period / account")) : gap("bank"))).join("");
 
   /* unmatched: independent columns */
-  const visibleBooks = $("booksUnmatched").checked ? bs.filter(e => !MATCH.has(kk(e))).sort((x, y) => cmpItems("books", x, "books", y)) : [];
+  const visibleBooks = $("booksUnmatched").checked ? bg.filter(g => !groupMatched(g)).sort((x, y) => cmpItems("books", x, "books", y)) : [];
   const visibleBank = $("bankUnmatched").checked ? bn.filter(b => !b.match_src).sort((x, y) => cmpItems("bank", x, "bank", y)) : [];
   $("secU").textContent = `Not matched — books ${visibleBooks.length} · bank ${visibleBank.length}`;
   $("books").innerHTML = visibleBooks.map(e => bookItem(e, false)).join("") || '<div class="empty">No unmatched entries.</div>';
   $("bank").innerHTML = visibleBank.map(bankItem).join("") || '<div class="empty">No unmatched entries.</div>';
 }
-["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched"].forEach(id => {
+["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched", "booksMerge"].forEach(id => {
   $(id).onchange = render;
 });
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; render(); } };
@@ -159,9 +194,9 @@ $("recon").addEventListener("click", e => { const b = e.target.closest(".sortbar
 
 /* ---------- auto match: same amount, dates within 3 days, closest first ---------- */
 $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
-  const used = new Set(), pairs = [], free = booksOf(acct).filter(e => !MATCH.has(kk(e)) && sg(e) !== 0);
+  const used = new Set(), pairs = [], free = groupsOf(acct).filter(g => !groupMatched(g) && sg(g) !== 0), near = (g, b) => Math.min(...g.parts.map(p => days(p.date, b.date)));
   bankOf(acct).filter(b => !b.match_src).sort((a, b) => a.date.localeCompare(b.date)).forEach(b => {
-    const c = free.filter(e => !used.has(kk(e)) && Math.abs(sg(e) - N(b.amount)) < 0.005 && days(e.date, b.date) <= 3).sort((x, y) => days(x.date, b.date) - days(y.date, b.date))[0];
+    const c = free.filter(g => !used.has(kk(g)) && Math.abs(sg(g) - N(b.amount)) < 0.005 && near(g, b) <= 3).sort((x, y) => near(x, b) - near(y, b))[0];
     if (c) { used.add(kk(c)); pairs.push([b.id, c.src, c.rid]); } });
   if (!pairs.length) return ERP.ui.toast("Nothing to match automatically", "err");
   try { await Promise.all(pairs.map(p => ERP.db.bank.setMatch(...p))); ERP.ui.toast(pairs.length + " entries matched"); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
@@ -169,12 +204,12 @@ $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
 /* ---------- match one bank entry by hand ---------- */
 $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
   $("mSub").textContent = `${b.date} · ${b.amount >= 0 ? "+" : "−"}${M(Math.abs(b.amount))} · ${b.remarks || ""}`; $("mDel").hidden = !ERP.auth.can("delete");
-  if (b.match_src) { const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid));
-    $("mList").innerHTML = `<p>Matched with: <b>${x ? E(x.party || x.head || x.kind) + " · " + E(x.date) + " · " + E(x.voucher_no) : E(b.match_src) + " #" + E(b.match_rid)}</b></p>${edit ? '<button class="btn danger" id="unm">Remove the match</button>' : ""}`;
+  if (b.match_src) { const mk = b.match_src + ":" + b.match_rid, x = groupsOf(b.account).find(g => g.parts.some(p => kk(p) === mk)) || EN.find(en => kk(en) === mk);
+    $("mList").innerHTML = `<p>Matched with: <b>${x ? E(x.party || x.head || x.kind) + " · " + E(x.date) + " · " + E(x.voucher_no) + (x.parts && x.parts.length > 1 ? " · " + x.parts.length + " entries · Rs " + M(Math.abs(sg(x))) : "") : E(b.match_src) + " #" + E(b.match_rid)}</b></p>${edit ? '<button class="btn danger" id="unm">Remove the match</button>' : ""}`;
     const u = $("unm"); if (u) u.onclick = async () => { try { await ERP.db.bank.setMatch(b.id, null, null); $("mDlg").close(); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
-  } else { const c = booksOf(acct).filter(x => !MATCH.has(kk(x)) && sg(x) !== 0).map(x => ({ x, same: Math.abs(sg(x) - N(b.amount)) < 0.005, d: days(x.date, b.date) })).sort((p, q) => q.same - p.same || p.d - q.d).slice(0, 15);
+  } else { const c = groupsOf(acct).filter(x => !groupMatched(x) && sg(x) !== 0).map(x => ({ x, same: Math.abs(sg(x) - N(b.amount)) < 0.005, d: Math.min(...x.parts.map(p => days(p.date, b.date))) })).sort((p, q) => q.same - p.same || p.d - q.d).slice(0, 15);
     $("mList").innerHTML = (c.length ? `<p style="font-size:13px;color:var(--muted)">Choose the entry from your books that this bank line belongs to. Same-amount entries are shown first.</p>` : '<div class="empty">No unmatched entry in your books for this period.</div>')
-      + c.map(o => `<button class="cand ${o.same ? "same" : ""}" data-s="${E(o.x.src)}" data-r="${E(o.x.rid)}" ${edit ? "" : "disabled"}><span><b>${E(o.x.party || o.x.head || o.x.kind)}</b><br><small>${E(o.x.date)} · ${E(o.x.voucher_no)}</small></span><span class="${sg(o.x) >= 0 ? "in" : "out"}"><b>${sg(o.x) >= 0 ? "+" : "−"}${M(Math.abs(sg(o.x)))}</b>${o.same ? "<br><small>same amount ✓</small>" : ""}</span></button>`).join(""); }
+      + c.map(o => `<button class="cand ${o.same ? "same" : ""}" data-s="${E(o.x.src)}" data-r="${E(o.x.rid)}" ${edit ? "" : "disabled"}><span><b>${E(o.x.party || o.x.head || o.x.kind)}</b><br><small>${E(o.x.date)} · ${E(o.x.voucher_no)}${o.x.parts.length > 1 ? " · " + o.x.parts.length + " entries merged" : ""}</small></span><span class="${sg(o.x) >= 0 ? "in" : "out"}"><b>${sg(o.x) >= 0 ? "+" : "−"}${M(Math.abs(sg(o.x)))}</b>${o.same ? "<br><small>same amount ✓</small>" : ""}</span></button>`).join(""); }
   $("mDlg").showModal(); };
 $("mList").onclick = async e => { const c = e.target.closest(".cand"); if (!c || !cur) return;
   try { await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
