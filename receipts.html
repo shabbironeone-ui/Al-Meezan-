@@ -3,207 +3,760 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Receipts</title>
+<title>Accounts &amp; Day Book</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:12px}
-  .tabs button{min-height:40px;padding:6px 18px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
-  .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
-  .hdr{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-  @media(min-width:760px){.hdr{grid-template-columns:150px 140px 1fr 1.4fr}}
-  .hdr .wide{grid-column:1/-1}@media(min-width:760px){.hdr .wide{grid-column:auto}}
-  .tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 10px}.tags small{color:var(--muted);font-weight:600}
-  .rrow{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;box-shadow:var(--shadow)}
-  .rgrid{display:grid;gap:8px;grid-template-columns:1fr 1fr auto}
-  .rgrid .acc{grid-column:1/-1}
-  @media(min-width:760px){.rgrid{grid-template-columns:160px 1fr 140px auto}.rgrid .acc{grid-column:auto}}
-  .rgrid label{font-size:11px}.rgrid .del{align-self:end;min-width:44px}
-  .rinfo{margin-top:6px;font-size:13px;color:var(--muted);min-height:20px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .rinfo b{color:var(--ink)}
-  .sumbar{position:sticky;bottom:0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff;border-top:1px solid var(--line);
-    padding:10px 14px calc(10px + env(safe-area-inset-bottom));margin:0 -12px;box-shadow:0 -6px 18px rgba(15,23,42,.08);z-index:5}
-  .sumbar b{font-size:20px;font-variant-numeric:tabular-nums}.sumbar small{color:var(--muted);display:block}
-  .ft{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
-  @media(min-width:900px){.ft{grid-template-columns:140px 140px 1.4fr 1fr 1fr auto}}
-  .ft .wide{grid-column:1/-1}@media(min-width:900px){.ft .wide{grid-column:auto}}
-  td .badge{white-space:nowrap}
-  .selbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
-  .tr-click{cursor:pointer}.tr-click:hover td{background:#f8fafc}
-  @media print{body{background:#fff}.page>*:not(#pList){display:none!important}#pList .no-print,.ft,.tabs,.selbar{display:none!important}th:first-child,td:first-child,th:last-child,td:last-child{display:none}.table-wrap{border:0;overflow:visible}table{min-width:0;font-size:11px}}
+  .intro{color:var(--muted);margin:0}
+  .acts{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:14px 0}
+  .acts .btn{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;text-align:left;padding:10px 14px}
+  .acts .btn span{display:block}.acts .btn small{display:block;font-size:11px;font-weight:400;opacity:.82}
+  .btn.in{background:#047857}.btn.out{background:#b45309}.btn.xfer{background:#1d4ed8}
+  .range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
+  .range .wide{grid-column:1/-1}
+  @media(min-width:900px){.range{grid-template-columns:150px 140px 140px minmax(220px,1.4fr) 170px auto}.range .wide{grid-column:auto}}
+  .range-actions{display:flex;gap:6px}
+  .range-actions .btn{min-width:44px;padding-inline:10px}
+  .section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:18px 0 8px}
+  .section-title h2{font-size:15px;margin:0}.section-title small{color:var(--muted)}
+  .accs{display:grid;gap:9px;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));padding:2px;margin-bottom:12px}
+  .ac{min-width:0;text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px;font:inherit;cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,transform .15s}
+  .ac:hover{border-color:var(--brand);transform:translateY(-1px)}
+  .ac[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 2px rgba(15,118,110,.13),var(--shadow)}
+  .ac small{color:var(--muted);font-size:12px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ac b{display:block;font-size:18px;font-variant-numeric:tabular-nums;margin-top:3px}
+  .ac .account-hint{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+  .ac b.neg{color:var(--danger)}
+  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+  .stat.in b{color:#047857}.stat.out b{color:var(--warn)}
+  .ledger-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
+  .ledger-toolbar .actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .merge-chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer;margin-right:6px}
+  .head,.ent{display:grid;align-items:center;gap:10px;grid-template-columns:92px 90px 105px minmax(160px,2fr) minmax(130px,1fr) 95px 95px 105px}
+  .head{padding:0 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .head span.r,.ent .r{text-align:right}
+  .ent{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow);font-size:13px;transition:border-color .15s}
+  .ent:hover{border-color:var(--brand)}.ent:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+  .ent.merged{border-left:5px solid #0f766e}
+  .ent .num{font-variant-numeric:tabular-nums}.ent .in{color:#047857;font-weight:700}.ent .out{color:var(--warn);font-weight:700}.ent .bal{color:var(--muted)}
+  .ent small{color:var(--muted);display:block;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
+  .kd{white-space:nowrap}.open{background:#f8fafc;cursor:default;font-weight:600}.open:hover{border-color:var(--line)}
+  .ent .kind-mobile,.ent .amount-mobile{display:none}
+  .empty-state{padding:32px 18px;text-align:center;background:#fff;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted)}
+  .empty-state b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+  #loadErr{border-color:#fecaca;background:#fff7f7;color:#991b1b}
+  .fld[hidden],.kd2[hidden]{display:none}
+  .head-select{display:flex;gap:6px;align-items:center}
+  .head-select select{flex:1;min-width:0}
+  .quick-add{width:38px;height:38px;flex:0 0 38px;padding:0;font-size:20px;line-height:1}
+  #partyDialog .sh-body{padding-top:4px}
+  .party-balance{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .party-balance .stat{margin:0}
+  .party-ledger{width:100%;border-collapse:collapse;font-size:13px}
+  .party-ledger th,.party-ledger td{padding:8px;text-align:left;border-bottom:1px solid var(--line)}
+  .party-ledger th.num,.party-ledger td.num{text-align:right}
+  .party-ledger-wrap{overflow:auto;max-height:42vh}
+  #mgRows tr{cursor:pointer}#mgRows tr:hover{background:#f1f5f9}
+  @media(max-width:899px){
+    .head{display:none}
+    .ent{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p amt" "m bal";gap:7px 10px}
+    .ent .d,.ent .v,.ent .k,.ent .a,.ent .in2,.ent .out2{display:none}
+    .ent .p{grid-area:p;min-width:0}.ent .amt{grid-area:amt;text-align:right}
+    .ent .mm{grid-area:m;color:var(--muted);font-size:11px}.ent .bal{grid-area:bal;text-align:right;font-size:11px}
+    .ent .kind-mobile,.ent .amount-mobile{display:inline}
+  }
+  @media(max-width:520px){.acts{grid-template-columns:1fr 1fr;gap:7px}.acts .btn{min-width:0;padding:8px;font-size:13px}.acts .btn small{font-size:10px}.accs{grid-template-columns:repeat(2,minmax(0,1fr))}.ac{padding:10px}.range{gap:8px}}
+  @media print{.page>*:not(#ledger):not(.stats):not(.appbar){display:none!important}.acts,.accs,.ledger-toolbar{display:none!important}.ent{box-shadow:none;break-inside:avoid}}
 </style>
 </head>
 <body>
 <main class="page">
-  <header class="appbar"><div><h1>Receipts</h1><p>Recovery from customers</p></div></header>
-  <div class="tabs" role="tablist"><button role="tab" id="tNew" aria-selected="true">New receipts</button><button role="tab" id="tList" aria-selected="false">All receipts</button></div>
+  <header class="appbar"><div><h1>Accounts &amp; Day Book</h1><p class="intro" id="sub">Your cash and bank activity, together in one clear view.</p></div></header>
+  <div class="acts no-print" id="acts">
+    <button class="btn in" data-k="receipt"><span>＋ Receipt<small>Record money received from a customer</small></span></button>
+    <button class="btn in" data-k="income"><span>＋ Other income<small>Record other money received</small></span></button>
+    <button class="btn out" data-k="pay"><span>－ Payment / expense<small>Record money paid out</small></span></button>
+    <button class="btn xfer" data-k="transfer"><span>⇄ Transfer<small>Move money between accounts</small></span></button>
+  </div>
 
-  <!-- ENTRY -->
-  <section id="pNew">
-    <div class="card"><div class="hdr">
-      <div><label for="rDate">Receipt date</label><input id="rDate" type="date"></div>
-      <div><label for="rType">Type</label><select id="rType"><option>Cash</option><option>Bank</option></select></div>
-      <div><label for="rMode">Account / pay mode</label><select id="rMode"></select></div>
-      <div class="wide"><label for="rRem">Remarks (for all rows)</label><input id="rRem" autocomplete="off"></div></div></div>
-    <div class="tags"><small>Quick receipt no:</small><span id="tags"></span></div>
-    <div id="rows"></div>
-    <button class="btn soft" id="addRow" style="width:100%;margin-bottom:12px">＋ Add row</button>
-    <div class="sumbar"><div><small id="sCount">0 receipts</small><b id="sTotal">Rs 0</b></div><button class="btn" id="btnSave">Save receipts</button></div>
+  <section class="card range" style="margin-top:12px">
+    <div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
+    <div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div>
+    <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Voucher, party, head or remarks"></div>
+    <div><label>Entry type</label><select id="fKind"><option value="">All types</option><option>Receipt</option><option>Sale advance</option><option>Income</option><option>Expense</option><option>Payment</option><option>Transfer</option></select></div>
+    <div class="range-actions"><button class="btn ghost" id="btnApply" type="button">Apply</button><button class="btn ghost" id="btnToday" type="button" title="Show today">Today</button></div>
   </section>
 
-  <!-- LIST -->
-  <section id="pList" hidden>
-    <div class="card ft">
-      <div><label>From</label><input type="date" id="fFrom"></div><div><label>To</label><input type="date" id="fTo"></div>
-      <div class="wide"><label>Search</label><input id="fQ" type="search" placeholder="Receipt no, account no or name"></div>
-      <div><label>Account / mode</label><select id="fMode"></select></div>
-      <div><label>Head</label><select id="fHead"></select></div>
-      <button class="btn ghost no-print" id="btnPrint">Print</button></div>
-    <div class="selbar no-print"><span id="lSum" style="color:var(--muted);font-size:13px"></span><button class="btn sm danger" id="btnBulk" hidden>Delete selected</button></div>
-    <div class="table-wrap"><table><thead><tr><th style="width:36px"><input type="checkbox" id="selAll" aria-label="Select all"></th><th>Date</th><th>Receipt</th><th>Account</th><th>Name</th><th>Head</th><th>Mode</th><th class="num">Amount</th></tr></thead><tbody id="lBody"></tbody></table></div>
-    <div style="text-align:center;margin:8px 0 24px"><button class="btn ghost" id="more" hidden></button></div>
-  </section>
+  <div class="section-title"><h2>Accounts</h2><small id="accountHint">Choose an account to see its activity</small></div>
+  <div class="accs" id="accs"></div>
+  <section class="stats four" id="stats"></section>
+  <div class="ledger-toolbar no-print"><span id="cnt" style="color:var(--muted);font-size:13px"></span>
+    <span class="actions"><label class="merge-chk" title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="mergeBank" checked> Merge same receipt no.</label><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
+  <div class="head"><span>Date</span><span>Voucher</span><span>Type</span><span>Particulars</span><span>Account</span><span class="r">Money in</span><span class="r">Money out</span><span class="r">Balance</span></div>
+  <section id="ledger"></section>
+  <div class="card" id="loadErr" hidden role="alert"></div>
 </main>
 
-<dialog id="dlg" class="sheet"><div class="sh-head"><div><h2>Edit receipt</h2><p id="dSub"></p></div><button class="x" data-close>✕</button></div>
+<!-- MERGED RECEIPT BREAKDOWN -->
+<dialog id="mergeDlg" class="sheet">
+  <div class="sh-head"><div><h2 id="mgTitle"></h2><p id="mgSub"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body">
+    <div class="party-ledger-wrap"><table class="party-ledger"><thead><tr><th>Customer / party</th><th>Date</th><th class="num">Amount</th></tr></thead><tbody id="mgRows"></tbody></table></div>
+    <p style="color:var(--muted);font-size:12px;margin:10px 0 0">These entries were received under one receipt no.. Tap a row to view, edit or delete that entry.</p>
+  </div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div>
+</dialog>
+
+<!-- NEW ENTRY -->
+<dialog id="dlg" class="sheet">
+  <div class="sh-head"><div><h2 id="dTitle"></h2><p id="dSub"></p></div><button class="x" data-close>✕</button></div>
   <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
-    <div><label>Date</label><input id="eDate" type="date"></div><div><label>Receipt no</label><input id="eRct"></div>
-    <div><label>Account no</label><input id="eAcc" inputmode="numeric"><small class="err" id="eAccErr"></small></div><div><label>Customer name</label><input id="eTitle"></div>
-    <div><label>Head</label><input id="eHead" list="dHead"></div><div><label>Account / pay mode</label><select id="eMode"></select></div>
-    <div><label>Amount (Rs)</label><input id="eAmt" type="number" inputmode="decimal" min="0"></div><div><label>Remarks</label><input id="eRem"></div></div></div></form>
-  <div class="sh-foot"><button class="btn danger" id="eDel" hidden style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="eSave">Save changes</button></div>
-  <datalist id="dHead"></datalist></dialog>
+    <div class="fld"><label>Date</label><input id="fDate" type="date"></div>
+    <div class="fld" id="gSub"><label id="lSub">Head / category</label><select id="fSub"></select></div>
+    <div class="fld" id="gAcc"><label>Customer account no</label><input id="fAcc" inputmode="numeric" value="786" autocomplete="off"><small class="err" id="fAccInfo" style="color:var(--muted)"></small></div>
+    <div class="fld" id="gRct"><label>Receipt no</label><input id="fRct" list="dTags" autocomplete="off"></div>
+    <div class="fld" id="gName"><label id="lName">Subhead</label><div class="head-select"><select id="fName"></select><button type="button" class="btn ghost quick-add" id="btnQuickParty" aria-label="Quick add person" title="Add a person for this entry" hidden>＋</button></div><small id="partyHint" style="color:var(--muted)" hidden>This name is saved with the transaction only; it is not added to Settings.</small></div>
+    <div class="fld" id="gContra"><label>Contra head</label><select id="fContra"></select></div>
+    <div class="fld"><label id="lMode">Account</label><select id="fMode"></select></div>
+    <div class="fld" id="gTo"><label>To account</label><select id="fTo"></select></div>
+    <div class="fld"><label>Amount (Rs)</label><input id="fAmt" type="number" inputmode="decimal" min="0"></div>
+    <div class="fld wide"><label>Remarks</label><div class="inp"><input id="fRem" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div></div>
+    <small class="err" id="fErr"></small></div></form>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn soft" id="btnAgain">Save &amp; add another</button><button class="btn" id="btnSave">Save</button></div>
+  <datalist id="dTags"></datalist>
+</dialog>
+
+<dialog id="partyDialog" class="sheet">
+  <div class="sh-head"><div><h2 id="partyTitle">Add person</h2><p>This person will be saved with this transaction, not in Settings.</p></div><button class="x" type="button" data-party-close aria-label="Close">✕</button></div>
+  <form class="sh-body" id="partyForm">
+    <div class="fld"><label for="partyName">Person name</label><input id="partyName" maxlength="120" autocomplete="off" required></div>
+    <small class="err" id="partyErr"></small>
+    <div class="sh-foot"><button class="btn ghost" type="button" data-party-close>Cancel</button><button class="btn" type="submit">Use this name</button></div>
+  </form>
+</dialog>
+
+<dialog id="partyLedgerDialog" class="sheet">
+  <div class="sh-head"><div><h2 id="partyLedgerTitle">Party ledger</h2><p id="partyLedgerSub"></p></div><button class="x" type="button" data-ledger-close aria-label="Close">✕</button></div>
+  <div class="sh-body">
+    <div class="party-balance"><div class="stat"><small id="partyBalanceLabel">Outstanding</small><b id="partyBalance"></b></div><div class="stat"><small>Transactions</small><b id="partyCount"></b></div></div>
+    <div class="party-ledger-wrap"><table class="party-ledger"><thead><tr><th>Date</th><th>Details</th><th>Account</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody id="partyLedgerRows"></tbody></table></div>
+    <p id="partyLedgerHint" style="color:var(--muted);font-size:12px;margin:10px 0 0"></p>
+  </div>
+  <div class="sh-foot"><button class="btn" type="button" data-ledger-close>Continue entry</button></div>
+</dialog>
+
+<!-- ENTRY DETAILS -->
+<dialog id="det" class="sheet">
+  <div class="sh-head"><div><h2 id="tTitle"></h2><p id="tSub"></p></div><button class="x" data-close>✕</button></div>
+  <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
+    <div class="fld"><label>Date</label><input id="eDate" type="date"></div><div class="fld"><label>Account</label><select id="eMode"></select></div>
+    <div class="fld"><label>Party / name</label><input id="eParty"></div><div class="fld"><label>Head / subhead</label><select id="eHead"></select></div>
+    <div class="fld"><label>Amount (Rs)</label><input id="eAmt" type="number" inputmode="decimal" min="0"></div><div class="fld"><label>Remarks</label><input id="eRem"></div></div>
+    <p id="tNote" style="font-size:13px;color:var(--muted);margin:8px 0 0"></p></div></form>
+  <div class="sh-foot"><button class="btn danger" id="eDel" style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Close</button><button class="btn" id="eSave">Save changes</button></div>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, TAGS = ERP_CONFIG.QUICK_RECEIPT_TAGS;
-const SPECIAL = ERP_CONFIG.SPECIAL_RECEIPT_NOS, isTag = v => SPECIAL.some(t => t.toLowerCase() === String(v).trim().toLowerCase());
-let PM = { cash: [], bank: [] }, CUST = new Map(), DUES = new Map(), REC = [], shown = 100, editing = null, lastRct = null;
+const KIND_CLS = { Receipt: "ok", "Sale advance": "ok", Income: "ok", Expense: "warn", Payment: "warn", Transfer: "" };
+const PAYMENT_HEAD_CATEGORIES = {
+  EXPENSE_HEAD: "Expense",
+  PAYABLE_HEAD: "Investor",
+  VENDOR: "Vendor",
+  ACCOUNT_PAYABLE_HEAD: "Account Payable",
+  INVESTMENT_INCOME: "Investment",
+  INCOME_HEAD: "Income",
+  ACCOUNT_RECEIVABLE_HEAD: "Account Receivable"
+};
+const HEAD_CATEGORIES = new Set(Object.keys(PAYMENT_HEAD_CATEGORIES));
+const PARTY_CATEGORIES = new Set(["ACCOUNT_RECEIVABLE_HEAD", "ACCOUNT_PAYABLE_HEAD"]);
+const PARTY_CATEGORY_LABELS = { ACCOUNT_RECEIVABLE_HEAD: "Account Receivable", ACCOUNT_PAYABLE_HEAD: "Account Payable" };
+const HEAD_CHILD_CATEGORIES = {
+  EXPENSE_HEAD: "EXPENSE_SUBHEAD",
+  PAYABLE_HEAD: "PAYABLE_SUBHEAD",
+  VENDOR: "VENDOR_SUBHEAD",
+  INCOME_HEAD: "INCOME_SUBHEAD",
+  INVESTMENT_INCOME: "INVESTMENT_INCOME_SUBHEAD",
+  ACCOUNT_PAYABLE_HEAD: "ACCOUNT_PAYABLE_SUBHEAD",
+  ACCOUNT_RECEIVABLE_HEAD: "ACCOUNT_RECEIVABLE_SUBHEAD"
+};
+const CONTRA_FLOWS = [
+  { value: "CashToBank", label: "Cash to Bank" },
+  { value: "BankToCash", label: "Bank to Cash" },
+  { value: "BankToBank", label: "Bank to Bank" }
+];
+const categoryOf = row => String(row.category || "").trim().toUpperCase();
+const activeSettings = () => SETT.filter(row => row.is_active !== false);
+const escapeOption = value => `<option value="${E(value)}">${E(value)}</option>`;
+function sortSettings(rows) {
+  return rows.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
+}
+let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, OPEN = new Map(), ACCS = [], sel = "", SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [], MERGED = null;
+const TEMP_PARTIES = { ACCOUNT_RECEIVABLE_HEAD: [], ACCOUNT_PAYABLE_HEAD: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const configuredModes = () => PM.all || [...new Set([...PM.cash, ...PM.bank])];
+const isCashAccount = account => /^(?:daybook(?:\s*\(\s*cash\s*\))?|cash)$/i.test(String(account || "").trim());
+const bankAccounts = () => [...new Set([...PM.bank, ...configuredModes().filter(account => !isCashAccount(account))])];
+const allModes = () => [...new Set([...configuredModes(), ...ACCS])];
+const canonicalAccount = account => /^(?:daybook(?:\s*\(\s*cash\s*\))?|cash)$/i.test(String(account || "").trim()) ? "Daybook (Cash)" : String(account || "").trim() || "(none)";
+const displayModes = () => [...new Set(allModes().map(canonicalAccount))];
+const entryCount = account => ENT.filter(e => acct(e) === account).length;
+function headGroupsForEntry(entry) {
+  if (entry.src === "expenses") return [{ parent: "EXPENSE_HEAD", child: "EXPENSE_SUBHEAD" }];
+  if (entry.src === "payments") return [
+    { parent: "VENDOR", child: "VENDOR_SUBHEAD" },
+    { parent: "PAYABLE_HEAD", child: "PAYABLE_SUBHEAD" },
+    { parent: "ACCOUNT_PAYABLE_HEAD", child: "ACCOUNT_PAYABLE_SUBHEAD" },
+    { parent: "ACCOUNT_RECEIVABLE_HEAD", child: "ACCOUNT_RECEIVABLE_SUBHEAD" }
+  ];
+  if (entry.src === "general_receipts") return [
+    { parent: "INCOME_HEAD", child: "INCOME_SUBHEAD" },
+    { parent: "INVESTMENT_INCOME", child: "INVESTMENT_INCOME_SUBHEAD" },
+    { parent: "PAYABLE_HEAD", child: "PAYABLE_SUBHEAD" },
+    { parent: "ACCOUNT_RECEIVABLE_HEAD", child: "ACCOUNT_RECEIVABLE_SUBHEAD" },
+    { parent: "ACCOUNT_PAYABLE_HEAD", child: "ACCOUNT_PAYABLE_SUBHEAD" }
+  ];
+  if (entry.src === "contra") return [{ parent: "CONTRA_HEAD", child: "CONTRA_SUBHEAD" }];
+  return [];
+}
+function partyIdentity(entry) {
+  const head = String(entry.head || "").trim();
+  for (const category of PARTY_CATEGORIES) {
+    const prefix = `${PARTY_CATEGORY_LABELS[category]}:`;
+    if (head.toLowerCase().startsWith(prefix.toLowerCase())) {
+      const name = head.slice(prefix.length).trim();
+      return name ? { category, name } : null;
+    }
+  }
+  const matches = SETT.filter(row => {
+    const category = categoryOf(row);
+    if (!PARTY_CATEGORIES.has(category)) return false;
+    const parent = SETT.find(item => String(item.id) === String(row.parent_setting_id));
+    const path = parent ? `${parent.display_name} › ${row.display_name}` : String(row.display_name || "");
+    return path.toLowerCase() === head.toLowerCase() || String(row.display_name || "").trim().toLowerCase() === head.toLowerCase();
+  });
+  const categories = [...new Set(matches.map(categoryOf))];
+  if (categories.length !== 1) return null;
+  const match = matches.find(row => categoryOf(row) === categories[0]);
+  const parent = SETT.find(item => String(item.id) === String(match.parent_setting_id));
+  return { category: categories[0], name: parent ? `${parent.display_name} › ${match.display_name}` : String(match.display_name || head) };
+}
+function partyLedgerRows(category, name) {
+  return PARTY_ENTRIES.filter(entry => {
+    const identity = partyIdentity(entry);
+    return identity && identity.category === category && identity.name.toLowerCase() === name.toLowerCase();
+  }).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.voucher_no || "").localeCompare(String(b.voucher_no || "")));
+}
+function partyBalance(category, rows) {
+  return rows.reduce((balance, entry) => balance + (category === "ACCOUNT_RECEIVABLE_HEAD"
+    ? (Number(entry.money_out) || 0) - (Number(entry.money_in) || 0)
+    : (Number(entry.money_in) || 0) - (Number(entry.money_out) || 0)), 0);
+}
+function historicalHeadLabel(entry) {
+  const value = String(entry.head || "").trim();
+  if (!value) return "";
+  const identity = partyIdentity(entry);
+  if (identity) {
+    const candidates = SETT.filter(row => categoryOf(row) === identity.category);
+    const match = candidates.find(row => {
+      const parent = SETT.find(item => String(item.id) === String(row.parent_setting_id));
+      const path = parent ? `${parent.display_name} › ${row.display_name}` : String(row.display_name || "");
+      return path.toLowerCase() === identity.name.toLowerCase() || String(row.display_name || "").trim().toLowerCase() === identity.name.toLowerCase();
+    });
+    if (!match) return `${PARTY_CATEGORY_LABELS[identity.category]} · ${identity.name}`;
+    const parent = SETT.find(row => String(row.id) === String(match.parent_setting_id));
+    return parent ? `${parent.display_name} › ${match.display_name}` : String(match.display_name || identity.name);
+  }
+  const preferred = headGroupsForEntry(entry).flatMap(group => [group.parent, group.child]);
+  const matches = SETT.filter(row => String(row.display_name || "").trim().toLowerCase() === value.toLowerCase());
+  const match = matches.find(row => preferred.includes(categoryOf(row))) || matches[0];
+  if (!match) return value;
+  const childCategories = new Set(Object.values(HEAD_CHILD_CATEGORIES).concat("CONTRA_SUBHEAD"));
+  if (!childCategories.has(categoryOf(match)) || match.parent_setting_id == null) return String(match.display_name || value);
+  const parent = SETT.find(row => String(row.id) === String(match.parent_setting_id));
+  return parent ? `${parent.display_name} › ${match.display_name}` : String(match.display_name || value);
+}
+function populateEntryHeadEditor(entry) {
+  const select = $("eHead"), stored = String(entry.head || "").trim(), groups = headGroupsForEntry(entry);
+  const options = [];
+  groups.forEach(group => {
+    const heads = sortSettings(activeSettings().filter(row => categoryOf(row) === group.parent));
+    heads.forEach(head => {
+      const children = sortSettings(activeSettings().filter(row =>
+        categoryOf(row) === group.child && String(row.parent_setting_id) === String(head.id)));
+      if (children.length) {
+        children.forEach(child => options.push({
+          value: child.display_name,
+          label: `${head.display_name} › ${child.display_name}`
+        }));
+      } else {
+        options.push({ value: head.display_name, label: head.display_name });
+      }
+    });
+  });
+  if (stored && !options.some(option => option.value.toLowerCase() === stored.toLowerCase())) {
+    options.unshift({ value: stored, label: `${stored} (legacy)` });
+  }
+  select.innerHTML = '<option value="">No head</option>' + options.map(option =>
+    `<option value="${E(option.value)}">${E(option.label)}</option>`).join("");
+  select.value = stored;
+}
 
-/* ---------- entry rows ---------- */
-function addRow(prefill = {}) {
-  const prev = [...document.querySelectorAll("#rows .rct")].pop();
-  const rct = prefill.rct ?? (prev && !isTag(prev.value) ? prev.value : "");
-  const d = document.createElement("div"); d.className = "rrow";
-  d.innerHTML = `<div class="rgrid">
-    <div class="acc"><label>Account no</label><div class="inp"><input class="acc-in" value="786" inputmode="numeric" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div>
-    <div><label>Receipt no</label><input class="rct" value="${E(rct)}" list="dTags" autocomplete="off"></div>
-    <div><label>Amount</label><input class="amt" type="number" inputmode="decimal" min="0"></div>
-    <button type="button" class="btn sm ghost del" aria-label="Remove row" style="color:var(--danger)">✕</button></div>
-    <div class="rinfo"></div>`;
-  $("rows").appendChild(d); ERP.voice.wire(d); totals(); return d;
+/* ---------- period ---------- */
+function setPreset(p) {
+  const t = new Date(), d = new Date(t); let a = t, b = t;
+  if (p === "yday") { d.setDate(t.getDate() - 1); a = b = d; }
+  else if (p === "week") { d.setDate(t.getDate() - ((t.getDay() + 6) % 7)); a = d; }
+  else if (p === "month") a = new Date(t.getFullYear(), t.getMonth(), 1);
+  if (p !== "custom") { $("from").value = iso(a); $("to").value = iso(b); }
 }
-function lookup(row) {
-  const acc = row.querySelector(".acc-in").value.trim(), info = row.querySelector(".rinfo"), c = CUST.get(acc);
-  row._c = c || null;
-  if (!acc || acc === "786" || acc.length < 5) { info.innerHTML = ""; return; }
-  if (!c) { info.innerHTML = '<span class="badge bad">Account not found</span>'; return; }
-  const b = Number(c.balance) || 0, inst = Number(c.installment) || 0;
-  const d = DUES.get(acc), mk = (t, tag, v) => Number(v) > 0 ? `<button type="button" class="chip" style="min-height:30px;padding:0 10px" data-due="${tag}|${v}">${t} ${M(v)}</button>` : "";
-  info.innerHTML = `<b>${E(c.account_title)}</b>${inst ? `<span>· Inst Rs ${M(inst)}</span>` : ""}<span class="badge ${b > 0 ? "warn" : "ok"}">${b > 0 ? "Balance Rs " + M(b) : "Clear"}</span>` + (d ? mk("Advance due", "Advance", d.advance_due) + mk("Fee due", "Processing Fee", d.fee_due) + mk("1st inst due", "1st Installment", d.first_due) : "");
-}
-function totals() {
-  let n = 0, t = 0; document.querySelectorAll("#rows .rrow").forEach(r => { const a = +r.querySelector(".amt").value || 0; if (a > 0) { n++; t += a; } });
-  $("sCount").textContent = n + " receipt" + (n === 1 ? "" : "s"); $("sTotal").textContent = "Rs " + M(t);
-}
-$("rows").addEventListener("input", e => { const r = e.target.closest(".rrow"); if (!r) return; if (e.target.matches(".acc-in")) lookup(r); totals(); });
-$("rows").addEventListener("click", e => { const b = e.target.closest("[data-due]"); if (!b) return; const r = b.closest(".rrow"), [tag, v] = b.dataset.due.split("|"); r.querySelector(".rct").value = tag; r.querySelector(".amt").value = v; totals(); r.querySelector(".amt").focus(); });
-$("rows").addEventListener("focusin", e => { if (e.target.matches(".rct")) lastRct = e.target; });
-$("rows").addEventListener("click", e => { const r = e.target.closest(".rrow"); if (r && e.target.closest(".del")) { if (document.querySelectorAll("#rows .rrow").length > 1) { r.remove(); totals(); } else { r.querySelector(".amt").value = ""; r.querySelector(".acc-in").value = "786"; lookup(r); totals(); } } });
-$("rows").addEventListener("keydown", e => {   // Enter flows: account -> receipt no -> amount -> next row
-  if (e.key !== "Enter") return; const r = e.target.closest(".rrow"); if (!r) return; e.preventDefault();
-  if (e.target.matches(".acc-in")) r.querySelector(".rct").focus();
-  else if (e.target.matches(".rct")) r.querySelector(".amt").focus();
-  else if (e.target.matches(".amt")) { const n = r.nextElementSibling && r.nextElementSibling.classList.contains("rrow") ? r.nextElementSibling : addRow(); n.querySelector(".acc-in").focus(); n.querySelector(".acc-in").select(); }
-});
-$("addRow").onclick = () => addRow().querySelector(".acc-in").focus();
-$("tags").innerHTML = TAGS.map(t => `<button type="button" class="chip" style="min-height:34px;padding:2px 12px" data-t="${E(t)}">${E(t)}</button>`).join("");
-$("tags").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; const t = lastRct && document.body.contains(lastRct) ? lastRct : document.querySelector("#rows .rct"); t.value = b.dataset.t; t.focus(); };
-const dl = document.createElement("datalist"); dl.id = "dTags"; dl.innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); document.body.appendChild(dl);
+$("preset").onchange = () => { setPreset($("preset").value); load(); };
+["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; load(); });
 
-function fillModes(sel, type, withAll) {
-  const list = PM.all || [...PM.cash, ...PM.bank];
-  sel.innerHTML = (withAll ? '<option value="">All</option>' : "") + list.map(x => `<option>${E(x)}</option>`).join("");
-}
-$("rType").onchange = () => fillModes($("rMode"), $("rType").value);
-
-function resetEntry() { $("rows").innerHTML = ""; addRow({ rct: "" }); $("rRem").value = ""; $("rDate").value = ERP.ui.today(); totals(); }
-$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
-  const date = $("rDate").value; if (!date) return ERP.ui.toast("Select the receipt date", "err");
-  const recs = [], seen = new Set(), vnos = []; let bad = null;
-  document.querySelectorAll("#rows .rrow").forEach((r, i) => { if (bad) return;
-    const acc = r.querySelector(".acc-in").value.trim(), rct = r.querySelector(".rct").value.trim(), amt = +r.querySelector(".amt").value || 0;
-    if ((acc === "786" || !acc) && !rct && !amt) return;            // untouched row
-    if (!CUST.get(acc)) bad = [r, `Row ${i + 1}: account ${acc} not found`]; else if (!rct) bad = [r, `Row ${i + 1}: enter the receipt number`];
-    else if (!(amt > 0)) bad = [r, `Row ${i + 1}: enter the amount`];
-    else if (!isTag(rct) && seen.has(rct.toLowerCase())) bad = [r, `Receipt no ${rct} is repeated in this list`];
-    else { seen.add(rct.toLowerCase()); if (!isTag(rct)) vnos.push(rct);
-      recs.push({ voucher_no: rct, date, account_no: acc, account_title: CUST.get(acc).account_title, account_head: "Recovery", pay_mode: $("rMode").value, amount: amt, remarks: $("rRem").value.trim() }); } });
-  if (bad) { bad[0].scrollIntoView({ block: "center" }); return ERP.ui.toast(bad[1], "err"); }
-  if (!recs.length) return ERP.ui.toast("Enter at least one complete receipt", "err");
+/* ---------- load + compute ---------- */
+async function load() {
+  const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
+  $("loadErr").hidden = true;
+  $("ledger").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div><br><div class="skeleton"></div></div>';
+  $("accs").innerHTML = '<div class="card"><div class="skeleton" style="width:45%"></div><br><div class="skeleton"></div></div>';
   try {
-    if (vnos.length) { const dup = await ERP.db.receipts.existing(vnos); if (dup.length) return ERP.ui.toast("Already saved: " + [...new Set(dup)].join(", "), "err"); }
-    await ERP.db.receipts.add(recs); ERP.ui.toast(recs.length + " receipt" + (recs.length > 1 ? "s" : "") + " saved"); resetEntry(); loadCust(); loadList();
-  } catch (e) { ERP.ui.toast(e.message, "err"); }
+    const [en, op, partyEntries] = await Promise.all([
+      ERP.db.accounts.entries({ from, to }),
+      ERP.db.accounts.opening(from),
+      partyEntriesLoaded ? Promise.resolve(PARTY_ENTRIES) : ERP.db.accounts.partyEntries([...new Set(
+        SETT.filter(row => PARTY_CATEGORIES.has(categoryOf(row))).map(row => String(row.display_name || "").trim()).filter(Boolean)
+      )])
+    ]);
+    ENT = en;
+    PARTY_ENTRIES = partyEntries;
+    partyEntriesLoaded = true;
+    OPEN = new Map();
+    op.forEach(r => {
+      const account = canonicalAccount(r.account);
+      OPEN.set(account, (OPEN.get(account) || 0) + (Number(r.opening) || 0));
+    });
+    ACCS = [...new Set([...displayModes(), ...OPEN.keys(), ...ENT.map(e => acct(e))])].filter(Boolean);
+    render();
+  } catch (e) {
+    $("accs").innerHTML = "";
+    $("stats").innerHTML = "";
+    $("cnt").textContent = "";
+    $("loadErr").hidden = false;
+    $("loadErr").innerHTML = `<b>Accounts could not be loaded.</b><br><small>${E(e.message)}</small><br><button class="btn sm ghost" id="retryLoad" style="margin-top:10px">Try again</button>`;
+    $("ledger").innerHTML = "";
+    $("retryLoad").onclick = load;
+  }
+}
+const acct = e => canonicalAccount(e.account);
+
+/* Receipts that share one receipt no. (one customer paying for several accounts in a single deposit)
+   are shown as one merged row with the total. Receipt nos. that must stay separate are never merged:
+   the quick-receipt tags and anything containing "Advance processing fee" or "1st installment". */
+const NO_MERGE_RE = /advance\s*processing\s*fee|1st\s*install?ment/i;
+const TAG_SET = new Set((Array.isArray(TAGS) ? TAGS : []).map(t => String(t).trim().toLowerCase()));
+function mergeKeyFor(e) {
+  const v = String(e.voucher_no || "").trim();
+  if (e.kind !== "Receipt" || !v) return null;
+  if (NO_MERGE_RE.test(v) || TAG_SET.has(v.toLowerCase())) return null;
+  return acct(e) + "|" + v.toLowerCase();
+}
+function mergedNames(g) {
+  return [...new Set(g.parts.map(p => String(p.party || "").trim()).filter(Boolean))];
+}
+function render() {
+  const acc = {}; ACCS.forEach(a => acc[a] = { open: OPEN.get(a) || 0, in: 0, out: 0 });
+  ENT.forEach(e => { const a = acc[acct(e)]; if (!a) return; a.in += Number(e.money_in) || 0; a.out += Number(e.money_out) || 0; });
+  const tot = Object.values(acc).reduce((s, a) => ({ open: s.open + a.open, in: s.in + a.in, out: s.out + a.out }), { open: 0, in: 0, out: 0 });
+  const used = ACCS.filter(a => acc[a].open || acc[a].in || acc[a].out || displayModes().includes(a));
+  $("accs").innerHTML = [["", "All accounts", tot, ENT.length]].concat(used.map(a => [a, a, acc[a], entryCount(a)])).map(([k, n, v, count]) => { const c = v.open + v.in - v.out;
+    return `<button class="ac" data-a="${E(k)}" aria-pressed="${sel === k}"><small>${E(n)}</small><b class="${c < 0 ? "neg" : ""}">Rs ${M(c)}</b><span class="account-hint">${M(count)} ${count === 1 ? "entry" : "entries"} · closing balance</span></button>`; }).join("")
+    || '<div class="empty-state">No cash or bank accounts are configured. Add active values under PAY_MODE or BANK in Settings.</div>';
+  const s = sel ? acc[sel] || { open: 0, in: 0, out: 0 } : tot;
+  $("accountHint").textContent = sel ? `${sel} · ${M(entryCount(sel))} entries in this period` : `${M(used.length)} cash and bank accounts`;
+  $("stats").innerHTML = `<div class="stat"><small>Opening balance</small><b>Rs ${M(s.open)}</b></div><div class="stat in"><small>Money received</small><b>Rs ${M(s.in)}</b></div><div class="stat out"><small>Money paid</small><b>Rs ${M(s.out)}</b></div><div class="stat"><small>Closing balance</small><b>Rs ${M(s.open + s.in - s.out)}</b></div>`;
+
+  let bal = s.open; const scope = ENT.filter(e => !sel || acct(e) === sel).map(e => (bal += (Number(e.money_in) || 0) - (Number(e.money_out) || 0), { ...e, bal, orig: e }));
+  const q = $("q").value.trim().toLowerCase(), k = $("fKind").value;
+
+  /* merge receipts that share the same receipt no. (same account) into one row with the total */
+  const mergeOn = $("mergeBank").checked, groups = [], byKey = new Map();
+  scope.forEach(e => {
+    const key = mergeOn ? mergeKeyFor(e) : null, g = key && byKey.get(key);
+    if (g) { g.money_in += Number(e.money_in) || 0; g.money_out += Number(e.money_out) || 0; g.bal = e.bal; g.parts.push(e.orig); return; }
+    const ng = { ...e, money_in: Number(e.money_in) || 0, money_out: Number(e.money_out) || 0, parts: [e.orig] };
+    groups.push(ng); if (key) byKey.set(key, ng);
+  });
+  const rows = groups.filter(g => (!k || g.kind === k) && (!q || g.parts.map(p =>
+    [p.voucher_no, p.party, p.head, historicalHeadLabel(p), p.remarks, p.party_no].join(" ")).join(" ").toLowerCase().includes(q)));
+  VIEW = rows;
+  const note = ENT.some(e => e.needs_review) ? ' <span class="badge warn" title="Old contra rows: direction unknown, not counted in balances">some old transfers need review</span>' : "";
+  $("cnt").innerHTML = `${M(rows.length)} ${rows.length === 1 ? "entry" : "entries"}${note}`;
+  $("sub").textContent = `${$("from").value} to ${$("to").value}${sel ? " · " + sel : ""}`;
+  $("btnClear").hidden = !(sel || k || q);
+  $("ledger").innerHTML = (!k && !q ? `<div class="ent open"><span class="d">${E($("from").value)}</span><span class="v"></span><span class="k"></span><span class="p">Opening balance</span><span class="a"></span><span></span><span></span><span class="r num bal"><b>${M(s.open)}</b></span></div>` : "")
+    + rows.map((e, i) => { const inn = e.money_in, out = e.money_out, amt = inn ? "+" + M(inn) : out ? "−" + M(out) : "0";
+      const merged = e.parts.length > 1, names = merged ? mergedNames(e) : [];
+      const headLabel = historicalHeadLabel(e);
+      const particulars = merged ? (names.join(" + ") || headLabel || "(no description)") : (e.party || headLabel || "(no description)");
+      const remarks = merged ? [...new Set(e.parts.map(p => String(p.remarks || "").trim()).filter(Boolean))].join(" · ") : e.remarks;
+      return `<article class="ent${merged ? " merged" : ""}" data-r="${i}" tabindex="0">
+        <span class="d">${E(e.date)}</span><span class="v">${E(e.voucher_no)}</span><span class="k"><span class="badge kd ${KIND_CLS[e.kind] || ""}">${E(e.kind)}</span></span>
+        <span class="p"><b>${E(particulars)}</b><small>${E([headLabel && e.party ? headLabel : "", remarks, merged ? `${e.parts.length} entries merged · tap to see split` : ""].filter(Boolean).join(" · "))}${e.needs_review ? " · Needs review" : ""}</small></span>
+        <span class="mm">${E(e.date)} · ${E(e.kind)} · ${E(acct(e))}${e.voucher_no ? " · " + E(e.voucher_no) : ""}${merged ? " · " + e.parts.length + " merged" : ""}</span>
+        <span class="a">${E(acct(e))}</span><span class="r num in in2">${inn ? M(inn) : ""}</span><span class="r num out out2">${out ? M(out) : ""}</span>
+        <span class="amt num ${inn ? "in" : out ? "out" : ""}">${amt}<span class="kind-mobile"> · ${E(e.kind)}</span></span><span class="r num bal">${M(e.bal)}</span></article>`; }).join("")
+    || `<div class="empty-state"><b>${sel || q || k ? "No matching entries" : "Nothing recorded for these dates yet"}</b>${sel || q || k ? "Try changing the account, search text or entry type." : "Use one of the buttons above to add a receipt, income, payment or transfer."}</div>`;
+}
+$("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { sel = b.dataset.a; render(); } };
+$("fKind").onchange = render; $("q").oninput = ERP.ui.debounce(render, 200);
+$("mergeBank").onchange = render;
+$("btnApply").onclick = load;
+$("btnToday").onclick = () => { $("preset").value = "today"; setPreset("today"); load(); };
+$("btnClear").onclick = () => { sel = ""; $("fKind").value = ""; $("q").value = ""; render(); };
+$("btnPrint").onclick = () => window.print();
+$("btnCsv").onclick = () => ERP.ui.downloadCSV(`daybook_${$("from").value}_${$("to").value}.csv`, ENT.map(e => ({ date: e.date, voucher: e.voucher_no, type: e.kind, account: acct(e), party: e.party, head: historicalHeadLabel(e), remarks: e.remarks, money_in: e.money_in, money_out: e.money_out })));
+function navigatePage(page) {
+  const target = window.top;
+  if (target !== window && typeof target.go === "function") { target.go(page); return; }
+  location.href = page;
+}
+
+/* ---------- merged receipt breakdown ---------- */
+function openMerged(g) {
+  MERGED = g;
+  $("mgTitle").textContent = "Receipt " + (g.voucher_no || "");
+  $("mgSub").textContent = `${g.date} · ${acct(g)} · ${g.parts.length} entries · Total Rs ${M(g.money_in)}`;
+  $("mgRows").innerHTML = g.parts.map((p, i) => `<tr data-p="${i}"><td>${E(p.party || "(no name)")}<small style="display:block;color:var(--muted)">${E([p.party_no, historicalHeadLabel(p), p.remarks].filter(Boolean).join(" · "))}</small></td><td>${E(p.date)}</td><td class="num"><b>${M(Number(p.money_in) || 0)}</b></td></tr>`).join("")
+    + `<tr style="cursor:default"><td colspan="2"><b>Total</b></td><td class="num"><b>${M(g.money_in)}</b></td></tr>`;
+  $("mergeDlg").showModal();
+}
+$("mgRows").onclick = e => {
+  const tr = e.target.closest("tr[data-p]"); if (!tr || !MERGED) return;
+  const part = MERGED.parts[+tr.dataset.p]; $("mergeDlg").close(); openDetail(part);
+};
+
+/* ---------- new entry ---------- */
+const CFG = { receipt: ["New receipt", "Money received from a customer", "Account it was received in"], income: ["New income", "Money received (not from a customer sale)", "Account it was received in"],
+  pay: ["New payment / expense", "Money paid out", "Account it was paid from"], transfer: ["Transfer", "Move money between your accounts", "From account"] };
+const show = (id, on) => $(id).hidden = !on;
+function paymentCategoryFor(value) {
+  if (!String(value || "").startsWith("category:")) return "";
+  const category = value.slice("category:".length);
+  return HEAD_CATEGORIES.has(category) ? category : "";
+}
+function populateHeads(flow) {
+  const select = $("fSub");
+  const included = flow === "income"
+    ? ["INCOME_HEAD", "INVESTMENT_INCOME", "PAYABLE_HEAD", "ACCOUNT_RECEIVABLE_HEAD", "ACCOUNT_PAYABLE_HEAD"]
+    : ["EXPENSE_HEAD", "VENDOR", "PAYABLE_HEAD", "ACCOUNT_PAYABLE_HEAD", "ACCOUNT_RECEIVABLE_HEAD"];
+  const categories = included.filter(category =>
+    PARTY_CATEGORIES.has(category) || activeSettings().some(row => categoryOf(row) === category));
+  select.innerHTML = `<option value="">Select ${flow === "income" ? "an Amount In" : "a Payment"} category</option>` +
+    categories.map(category => `<option value="category:${E(category)}">${E(PAYMENT_HEAD_CATEGORIES[category])}</option>`).join("");
+}
+function populateSubheads(category) {
+  const select = $("fName");
+  const quickAdd = $("btnQuickParty");
+  const hint = $("partyHint");
+  const isParty = PARTY_CATEGORIES.has(category);
+  quickAdd.hidden = !isParty;
+  hint.hidden = !isParty;
+  if (isParty) {
+    const receivable = category === "ACCOUNT_RECEIVABLE_HEAD";
+    hint.textContent = receivable
+      ? kindNow === "income" ? "Money returned to you by this person. The name is saved with the transaction, not Settings." : "Money you give this person and expect back. The name is saved with the transaction, not Settings."
+      : kindNow === "income" ? "Money you received from this person and must repay. The name is saved with the transaction, not Settings." : "Repayment you make to this person. The name is saved with the transaction, not Settings.";
+  }
+  if (!category) {
+    select.innerHTML = '<option value="">Select a category first</option>';
+    select.disabled = true;
+    return;
+  }
+  const childCategory = HEAD_CHILD_CATEGORIES[category];
+  const heads = sortSettings(activeSettings().filter(row => categoryOf(row) === category));
+  const options = heads.map(head => {
+    const children = childCategory ? sortSettings(activeSettings().filter(row =>
+      categoryOf(row) === childCategory && String(row.parent_setting_id) === String(head.id))) : [];
+    const leaves = children.length ? children : [head];
+    return `<optgroup label="${E(head.display_name)}">${leaves.map(row => {
+      if (!isParty) return escapeOption(row.display_name);
+      const partyName = children.length ? `${head.display_name} › ${row.display_name}` : String(row.display_name);
+      return `<option value="party:${E(category)}:${E(encodeURIComponent(partyName))}" data-party-name="${E(partyName)}">${E(row.display_name)}</option>`;
+    }).join("")}</optgroup>`;
+  }).join("");
+  const partyNames = new Set(TEMP_PARTIES[category] || []);
+  if (isParty) {
+    PARTY_ENTRIES.forEach(entry => {
+      const identity = partyIdentity(entry);
+      if (identity && identity.category === category) partyNames.add(identity.name);
+    });
+  }
+  const partyOptions = [...partyNames].sort((a, b) => a.localeCompare(b)).map(person =>
+    `<option value="party:${E(category)}:${E(encodeURIComponent(person))}" data-party-name="${E(person)}">${E(person)}</option>`).join("");
+  const partyGroup = partyOptions ? `<optgroup label="People (saved on transactions)">${partyOptions}</optgroup>` : "";
+  select.innerHTML = `<option value="">Select a head / subhead</option>${options}${partyGroup}`;
+  select.disabled = false;
+  select.required = true;
+}
+function showPartyLedger(category, name) {
+  if (!PARTY_CATEGORIES.has(category) || !name) return;
+  const rows = partyLedgerRows(category, name);
+  let balance = 0;
+  const signed = entry => category === "ACCOUNT_RECEIVABLE_HEAD"
+    ? (Number(entry.money_out) || 0) - (Number(entry.money_in) || 0)
+    : (Number(entry.money_in) || 0) - (Number(entry.money_out) || 0);
+  const total = partyBalance(category, rows);
+  const isSettlement = category === "ACCOUNT_RECEIVABLE_HEAD" ? kindNow === "income" : kindNow === "pay";
+  if (isSettlement && !$("fAmt").value && total > 0) $("fAmt").value = String(total);
+  $("partyLedgerTitle").textContent = name;
+  $("partyLedgerSub").textContent = `${PARTY_CATEGORY_LABELS[category]} · All recorded transactions`;
+  $("partyBalanceLabel").textContent = total < 0
+    ? category === "ACCOUNT_RECEIVABLE_HEAD" ? "Advance / extra received" : "Advance / extra paid"
+    : category === "ACCOUNT_RECEIVABLE_HEAD" ? "They owe you" : "You owe them";
+  $("partyBalance").textContent = `Rs ${M(total)}`;
+  $("partyCount").textContent = M(rows.length);
+  $("partyLedgerHint").textContent = isSettlement && total > 0
+    ? `Outstanding Rs ${M(total)} has been filled in the entry amount. Change it if this transaction is a partial repayment.`
+    : rows.length ? "This ledger is based on the transactions recorded under this person." : "No earlier transactions for this person. The current entry will start their ledger.";
+  $("partyLedgerRows").innerHTML = rows.length ? rows.map(entry => {
+    balance += signed(entry);
+    return `<tr><td>${E(entry.date)}</td><td>${E(entry.kind || entry.voucher_no || "Entry")}${entry.voucher_no ? `<small style="display:block;color:var(--muted)">${E(entry.voucher_no)}</small>` : ""}</td><td>${E(acct(entry))}</td><td class="num">${Number(entry.money_in) ? M(entry.money_in) : ""}</td><td class="num">${Number(entry.money_out) ? M(entry.money_out) : ""}</td><td class="num"><b>${M(balance)}</b></td></tr>`;
+  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No transactions yet</td></tr>';
+  $("partyLedgerDialog").showModal();
+}
+$("fName").onchange = () => {
+  const option = $("fName").selectedOptions[0];
+  const category = paymentCategoryFor($("fSub").value);
+  if (PARTY_CATEGORIES.has(category) && option?.dataset.partyName) showPartyLedger(category, option.dataset.partyName);
+};
+$("partyLedgerDialog").addEventListener("click", event => {
+  if (event.target.closest("[data-ledger-close]")) $("partyLedgerDialog").close();
 });
+function contraFlowFor(head) {
+  const key = String(head.lookup_code || head.display_name || "").replace(/[^a-z0-9]/gi, "").toUpperCase();
+  return { CASHTOBANK: "CashToBank", BANKTOCASH: "BankToCash", BANKTOBANK: "BankToBank" }[key] || "";
+}
+function populateContraHeads() {
+  const select = $("fContra");
+  const accounts = configuredModes();
+  const heads = sortSettings(activeSettings().filter(row => categoryOf(row) === "CONTRA_HEAD"));
+  const options = heads.map(head => {
+    const flow = contraFlowFor(head);
+    if (!flow) return "";
+    const subheads = activeSettings().filter(row => categoryOf(row) === "CONTRA_SUBHEAD" &&
+      String(row.parent_setting_id) === String(head.id));
+    const configuredAccounts = subheads.map(row => accounts.find(account =>
+      canonicalAccount(account).toLowerCase() === canonicalAccount(row.display_name).toLowerCase())).filter(Boolean);
+    return `<option value="setting:${E(head.id)}" data-flow="${E(flow)}" data-restricted="${subheads.length > 0}" data-accounts="${E(JSON.stringify(configuredAccounts))}">${E(head.display_name)}</option>`;
+  }).filter(Boolean);
+  const configuredFlows = new Set(heads.map(contraFlowFor).filter(Boolean));
+  const defaults = CONTRA_FLOWS.filter(item => !configuredFlows.has(item.value))
+    .map(item => `<option value="flow:${E(item.value)}" data-flow="${E(item.value)}" data-restricted="false" data-accounts="[]">${E(item.label)}</option>`);
+  select.innerHTML = [...options, ...defaults].join("");
+  if (select.options.length) select.value = select.options[0].value;
+}
+function selectedContraAccounts() {
+  const option = $("fContra").selectedOptions[0];
+  try {
+    const configured = JSON.parse(option?.dataset.accounts || "[]");
+    const restricted = option?.dataset.restricted === "true";
+    return { accounts: restricted ? configured : configuredModes(), restricted };
+  } catch (error) {
+    console.error("Invalid Contra account configuration", error);
+    return { accounts: configuredModes(), restricted: false };
+  }
+}
+function setContraAccountOptions() {
+  const option = $("fContra").selectedOptions[0];
+  const flow = option?.dataset.flow || "BankToBank";
+  const contraConfig = selectedContraAccounts();
+  const allowed = contraConfig.accounts;
+  const filterAllowed = accounts => accounts.filter(account => allowed.includes(account));
+  const cash = configuredModes().filter(isCashAccount);
+  const banks = bankAccounts();
+  const sourceAccounts = flow === "CashToBank" ? cash
+    : flow === "BankToCash" || flow === "BankToBank" ? banks : allowed;
+  const targetAccounts = flow === "CashToBank" ? banks
+    : flow === "BankToCash" ? cash
+      : flow === "BankToBank" ? banks : allowed;
+  const from = contraConfig.restricted ? filterAllowed(sourceAccounts) : sourceAccounts;
+  const to = contraConfig.restricted ? filterAllowed(targetAccounts) : targetAccounts;
+  const currentFrom = $("fMode").value, currentTo = $("fTo").value;
+  $("fMode").innerHTML = from.map(account => `<option value="${E(account)}">${E(canonicalAccount(account))}</option>`).join("");
+  $("fTo").innerHTML = to.map(account => `<option value="${E(account)}">${E(canonicalAccount(account))}</option>`).join("");
+  $("fMode").value = from.includes(currentFrom) ? currentFrom : from[0] || "";
+  $("fTo").value = to.includes(currentTo) && currentTo !== $("fMode").value
+    ? currentTo
+    : to.find(account => account !== $("fMode").value) || to[0] || "";
+  $("fErr").textContent = contraConfig.restricted && (!from.length || !to.length)
+    ? "This Contra head has no matching accounts. Check its account subheads in Settings."
+    : "";
+}
+async function openNew(k) {
+  kindNow = k; const c = CFG[k]; $("dTitle").textContent = c[0]; $("dSub").textContent = c[1]; $("lMode").textContent = c[2]; $("fErr").textContent = "";
+  const modes = configuredModes();
+  if (!modes.length) return ERP.ui.toast("Add active PAY_MODE or BANK values in Settings first", "err");
+  const opts = modes.map(a => `<option value="${E(a)}">${E(canonicalAccount(a))}</option>`).join(""); $("fMode").innerHTML = opts; $("fTo").innerHTML = opts;
+  $("fMode").value = PM.cash[0] || modes[0];
+  if (k === "transfer") $("fTo").value = PM.bank[0] || modes.find(a => a !== $("fMode").value) || modes[0];
+  show("gSub", k === "income" || k === "pay"); show("gAcc", k === "receipt"); show("gRct", k === "receipt");
+  show("gName", k === "income" || k === "pay"); show("gTo", k === "transfer"); show("gContra", k === "transfer");
+  $("fDate").value = ERP.ui.today(); $("fAmt").value = ""; $("fRem").value = ""; $("fName").value = ""; $("fRct").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = "";
+  $("btnQuickParty").hidden = true; $("partyHint").hidden = true; $("lName").textContent = "Head / subhead";
+  if (k === "income" || k === "pay") {
+    $("lSub").textContent = k === "income" ? "Amount In category" : "Payment type";
+    populateHeads(k);
+    $("fName").innerHTML = '<option value="">Select a category first</option>';
+    $("fName").disabled = true;
+    $("fSub").required = true;
+    $("fName").required = true;
+  } else {
+    $("fSub").required = false;
+    $("fName").required = false;
+  }
+  if (k === "transfer") { populateContraHeads(); setContraAccountOptions(); }
+  $("dTags").innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); ERP.voice.wire($("dlg"));
+  if (k === "receipt" && !CUST) ERP.db.customers.balances().then(r => { CUST = new Map(r.map(c => [String(c.account_no).trim(), c])); lookup(); }).catch(() => {});
+  $("dlg").showModal(); setTimeout(() => ($(k === "receipt" ? "fAcc" : k === "transfer" ? "fAmt" : "fName")).focus(), 50);
+}
+function lookup() { const a = $("fAcc").value.trim(), i = $("fAccInfo"); if (!CUST || a.length < 5 || a === "786") { i.textContent = ""; return; } const c = CUST.get(a);
+  i.style.color = c ? "var(--brand-dark)" : "var(--danger)"; i.textContent = c ? `${c.account_title} · ${Number(c.balance) > 0 ? "Balance Rs " + M(c.balance) : "Clear"}` : "Account not found"; }
+$("fAcc").oninput = lookup;
+$("fSub").onchange = () => {
+  const category = paymentCategoryFor($("fSub").value);
+  populateSubheads(category);
+  $("fName").value = "";
+  $("lName").textContent = "Head / subhead";
+  if (PARTY_CATEGORIES.has(category)) $("lName").textContent = "Person / account head";
+};
+$("btnQuickParty").onclick = () => {
+  const category = paymentCategoryFor($("fSub").value);
+  if (!PARTY_CATEGORIES.has(category)) return;
+  $("partyTitle").textContent = `Add ${PARTY_CATEGORY_LABELS[category]} person`;
+  $("partyErr").textContent = "";
+  $("partyName").value = "";
+  $("partyDialog").showModal();
+  setTimeout(() => $("partyName").focus(), 20);
+};
+$("partyDialog").addEventListener("click", event => {
+  if (event.target.closest("[data-party-close]")) $("partyDialog").close();
+});
+$("partyForm").onsubmit = event => {
+  event.preventDefault();
+  const category = paymentCategoryFor($("fSub").value);
+  const person = $("partyName").value.trim();
+  if (!PARTY_CATEGORIES.has(category)) return;
+  if (!person) { $("partyErr").textContent = "Enter the person's name."; return; }
+  const names = TEMP_PARTIES[category];
+  const existing = names.find(name => name.toLowerCase() === person.toLowerCase());
+  if (!existing) names.push(person);
+  populateSubheads(category);
+  const selectedName = existing || person;
+  $("fName").value = `party:${category}:${encodeURIComponent(selectedName)}`;
+  $("partyDialog").close();
+  showPartyLedger(category, selectedName);
+};
+$("fContra").onchange = setContraAccountOptions;
+$("fMode").onchange = () => {
+  if (kindNow === "transfer" && $("fTo").value === $("fMode").value) {
+    const alternative = [...$("fTo").options].map(option => option.value).find(account => account !== $("fMode").value);
+    if (alternative) $("fTo").value = alternative;
+  }
+};
+$("acts").onclick = e => {
+  const b = e.target.closest("[data-k],[data-page]");
+  if (!b) return;
+  if (b.dataset.page) navigatePage(b.dataset.page);
+  else openNew(b.dataset.k);
+};
 
-/* ---------- list ---------- */
-async function loadList() {
-  $("lBody").innerHTML = '<tr><td colspan="8"><div class="skeleton"></div></td></tr>';
-  try { REC = await ERP.db.receipts.list({ from: $("fFrom").value, to: $("fTo").value }); shown = 100;
-    const heads = [...new Set(REC.map(r => r.account_head).filter(Boolean))].sort(), modes = PM.all || [...PM.cash, ...PM.bank];
-    const hv = $("fHead").value, mv = $("fMode").value;
-    $("fHead").innerHTML = '<option value="">All</option>' + heads.map(h => `<option>${E(h)}</option>`).join(""); $("fHead").value = hv;
-    $("fMode").innerHTML = '<option value="">All</option>' + modes.map(h => `<option>${E(h)}</option>`).join(""); $("fMode").value = mv;
-    $("dHead").innerHTML = heads.map(h => `<option value="${E(h)}">`).join(""); renderList();
-  } catch (e) { $("lBody").innerHTML = `<tr><td colspan="8">${E(e.message)}</td></tr>`; }
+async function save(again) {
+  const bad = m => { $("fErr").textContent = m; return null; }; $("fErr").textContent = "";
+  const date = $("fDate").value, amt = +$("fAmt").value, mode = $("fMode").value, rem = $("fRem").value.trim(), name = $("fName").value.trim();
+  if (!date) return bad("Select the date"); if (!(amt > 0)) return bad("Enter the amount");
+  if (kindNow === "transfer" && (!mode || !$("fTo").value)) return bad("The selected Contra head has no matching accounts. Check its account subheads in Settings.");
+  if (!mode) return bad("Select the account");
+  try {
+    if (kindNow === "receipt") {
+      const acc = $("fAcc").value.trim(), rct = $("fRct").value.trim(), c = CUST && CUST.get(acc);
+      if (!c) return bad("Account not found"); if (!rct) return bad("Enter the receipt number");
+      if (!TAGS.some(t => t.toLowerCase() === rct.toLowerCase()) && (await ERP.db.receipts.existing([rct])).length) return bad("This receipt number is already saved");
+      await ERP.db.receipts.add([{ voucher_no: rct, date, account_no: acc, account_title: c.account_title, account_head: "Recovery", pay_mode: mode, amount: amt, remarks: rem }]); ERP.ui.toast("Receipt saved");
+    } else if (kindNow === "transfer") {
+      const contraOption = $("fContra").selectedOptions[0];
+      const head = $("fContra").value.startsWith("setting:")
+        ? (SETT.find(row => String(row.id) === $("fContra").value.slice(8)) || {}).display_name
+        : contraOption?.textContent || "";
+      const toAccount = $("fTo").value;
+      if (!head) return bad("Select a Contra head");
+      if (!toAccount || toAccount === mode) return bad("Select a different destination account");
+      const r = await ERP.db.accounts.create({ kind: "transfer", date, amount: amt, pay_mode: mode, to_account: toAccount, head, remarks: rem });
+      ERP.ui.toast("Transfer saved: " + r.voucher_no);
+    } else {
+      const category = paymentCategoryFor($("fSub").value);
+      if (!category) return bad("Select a category");
+      if (!name) return bad("Select a head or subhead");
+      const kind = kindNow === "income" ? "income" : category === "EXPENSE_HEAD" ? "expense" : "payment";
+      const partyName = $("fName").selectedOptions[0]?.dataset.partyName;
+      const savedName = PARTY_CATEGORIES.has(category)
+        ? `${PARTY_CATEGORY_LABELS[category]}: ${partyName !== undefined ? partyName : name}`
+        : name;
+      const r = await ERP.db.accounts.create({ kind, date, amount: amt, pay_mode: mode, name: savedName, remarks: rem }); ERP.ui.toast("Saved. Voucher " + r.voucher_no);
+    }
+    if (again) { $("fAmt").value = ""; $("fRem").value = ""; $("fRct").value = ""; $("fName").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = ""; $("fAmt").focus(); } else $("dlg").close();
+    partyEntriesLoaded = false;
+    load();
+  } catch (e) { bad(e.message); }
 }
-const filtered = () => { const q = $("fQ").value.trim().toLowerCase(), m = $("fMode").value, h = $("fHead").value;
-  return REC.filter(r => (!m || r.pay_mode === m) && (!h || r.account_head === h) && (!q || [r.voucher_no, r.account_no, r.account_title].join(" ").toLowerCase().includes(q))); };
-function renderList() {
-  const rows = filtered(), tot = rows.reduce((s, r) => s + (+r.amount || 0), 0);
-  $("lSum").textContent = `${M(rows.length)} receipts · Rs ${M(tot)}`; $("selAll").checked = false; $("btnBulk").hidden = true;
-  $("lBody").innerHTML = rows.slice(0, shown).map(r => `<tr class="tr-click" data-id="${r.id}"><td><input type="checkbox" class="sel" value="${r.id}" aria-label="Select"></td><td>${E(r.date)}</td><td>${E(r.voucher_no)}</td><td>${E(r.account_no)}</td><td>${E(r.account_title)}</td><td>${E(r.account_head)}</td><td>${E(r.pay_mode)}</td><td class="num"><b>${M(r.amount)}</b></td></tr>`).join("")
-    || '<tr><td colspan="8" class="empty">No receipts found.</td></tr>';
-  $("more").hidden = rows.length <= shown; $("more").textContent = `Show more (${M(rows.length - shown)} remaining)`;
-}
-function updBulk() { const n = document.querySelectorAll(".sel:checked").length; $("btnBulk").hidden = !(n && ERP.auth.can("delete")); $("btnBulk").textContent = `Delete selected (${n})`; }
-$("lBody").onclick = e => { if (e.target.classList.contains("sel")) return updBulk(); const tr = e.target.closest("tr[data-id]"); if (tr && ERP.auth.can("edit")) openEdit(REC.find(r => String(r.id) === tr.dataset.id)); };
-$("selAll").onchange = e => { document.querySelectorAll(".sel").forEach(c => c.checked = e.target.checked); updBulk(); };
-$("btnBulk").onclick = async () => { const ids = [...document.querySelectorAll(".sel:checked")].map(c => Number(c.value));
-  if (!confirm(`Delete ${ids.length} receipt(s)? This cannot be undone.`)) return;
-  try { await ERP.db.receipts.remove(ids); ERP.ui.toast(ids.length + " deleted"); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
-["fFrom", "fTo"].forEach(i => $(i).onchange = () => loadList()); ["fMode", "fHead"].forEach(i => $(i).onchange = renderList); $("fQ").oninput = ERP.ui.debounce(() => { shown = 100; renderList(); }, 200);
-$("more").onclick = () => { shown += 100; renderList(); };
-$("btnPrint").onclick = () => { shown = 1e9; renderList(); window.print(); };
+$("btnSave").onclick = () => ERP.ui.busy($("btnSave"), () => save(false)); $("btnAgain").onclick = () => ERP.ui.busy($("btnAgain"), () => save(true));
 
-function openEdit(r) {
-  editing = r; $("dSub").textContent = "Receipt " + r.voucher_no; fillModes($("eMode"), null); if (r.pay_mode && ![...$("eMode").options].some(o => o.value === r.pay_mode)) $("eMode").add(new Option(r.pay_mode + " (legacy)", r.pay_mode));
-  $("eDate").value = r.date; $("eRct").value = r.voucher_no || ""; $("eAcc").value = r.account_no || ""; $("eTitle").value = r.account_title || ""; $("eHead").value = r.account_head || "";
-  $("eMode").value = r.pay_mode || ""; $("eAmt").value = r.amount; $("eRem").value = r.remarks || ""; $("eAccErr").textContent = ""; $("eDel").hidden = !ERP.auth.can("delete"); $("dlg").showModal();
+/* ---------- entry details: edit / delete ---------- */
+function openDetail(e) {
+  cur = e; const isAdv = e.src === "sales", isTr = e.src === "contra";
+  $("tTitle").textContent = e.kind + " " + (e.voucher_no || ""); $("tSub").textContent = e.date + " · " + acct(e);
+  const storedAccount = e.account || "(none)";
+  const editModes = [...new Set([...configuredModes(), storedAccount])].filter(Boolean);
+  $("eDate").value = e.date; $("eMode").innerHTML = editModes.map(a => `<option value="${E(a)}">${E(canonicalAccount(a))}${configuredModes().includes(a) ? "" : " (legacy)"}</option>`).join(""); $("eMode").value = storedAccount;
+  $("eParty").value = e.party || ""; populateEntryHeadEditor(e); $("eAmt").value = +e.money_in || +e.money_out; $("eRem").value = e.remarks || "";
+  const lock = isAdv || isTr || !ERP.auth.can("edit");
+  document.querySelectorAll("#det input,#det select").forEach(x => x.disabled = lock); $("eSave").hidden = lock;
+  $("eDel").hidden = isAdv || !ERP.auth.can("delete");
+  $("tNote").textContent = isAdv ? "This is the advance taken with a sale. Change it from the Sales page." : isTr ? "Transfers cannot be edited. Delete and enter it again if it is wrong (both sides are removed together)." : e.needs_review ? "Old transfer entry: its direction is not recorded." : "";
+  $("det").showModal();
 }
-$("eAcc").oninput = () => { const c = CUST.get($("eAcc").value.trim()); $("eAccErr").textContent = ""; if (c) $("eTitle").value = c.account_title; };
+const openRow = i => { const g = VIEW[+i]; if (!g) return; if (g.parts.length > 1) openMerged(g); else openDetail(g.parts[0]); };
+$("ledger").onclick = e => { const a = e.target.closest(".ent[data-r]"); if (a) openRow(a.dataset.r); };
+$("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.r !== undefined) openRow(e.target.dataset.r); };
 $("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
-  const f = { date: $("eDate").value, voucher_no: $("eRct").value.trim(), account_no: $("eAcc").value.trim(), account_title: $("eTitle").value.trim(), account_head: $("eHead").value.trim(), pay_mode: $("eMode").value, amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
-  if (!f.date || !f.voucher_no || !(f.amount > 0)) return ERP.ui.toast("Date, receipt no and amount are required", "err");
-  if (!CUST.get(f.account_no)) { $("eAccErr").textContent = "Account not found"; return; }
-  try { if (f.voucher_no !== editing.voucher_no && !isTag(f.voucher_no) && (await ERP.db.receipts.existing([f.voucher_no])).length) return ERP.ui.toast("That receipt no is already used", "err");
-    await ERP.db.receipts.update(editing.id, f); ERP.ui.toast("Receipt updated"); $("dlg").close(); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); }
-});
-$("eDel").onclick = async () => { if (!confirm("Delete this receipt?")) return; try { await ERP.db.receipts.remove([editing.id]); ERP.ui.toast("Receipt deleted"); $("dlg").close(); loadList(); loadCust(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
+  const f = { date: $("eDate").value, account: $("eMode").value, party: $("eParty").value.trim(), head: $("eHead").value.trim(), amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
+  if (!f.date || !(f.amount > 0)) return ERP.ui.toast("Date and amount are required", "err");
+  try {
+    await ERP.db.accounts.update(cur.src, cur.rid, f);
+    ERP.ui.toast("Saved"); $("det").close(); partyEntriesLoaded = false; load();
+  } catch (er) { ERP.ui.toast(er.message, "err"); } });
+$("eDel").onclick = async () => {
+  if (!confirm(cur.src === "contra" && !cur.needs_review ? `Delete transfer ${cur.voucher_no}? Both sides will be removed.` : "Delete this entry? This cannot be undone.")) return;
+  try {
+    if (cur.src === "contra" && !cur.needs_review) await ERP.db.accounts.deleteTransfer(cur.voucher_no);
+    else await ERP.db.accounts.remove(cur.src, cur.rid);
+    ERP.ui.toast("Deleted"); $("det").close(); partyEntriesLoaded = false; load();
+  } catch (er) { ERP.ui.toast(er.message, "err"); } };
 
-/* ---------- start ---------- */
-$("tNew").onclick = () => { $("tNew").setAttribute("aria-selected", true); $("tList").setAttribute("aria-selected", false); $("pNew").hidden = false; $("pList").hidden = true; };
-$("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("tNew").setAttribute("aria-selected", false); $("pNew").hidden = true; $("pList").hidden = false; };
-async function loadCust() { try { CUST = new Map((await ERP.db.customers.balances()).map(c => [String(c.account_no).trim(), c])); try { DUES = new Map((await ERP.db.saleDues()).map(d => [String(d.account_no).trim(), d])); } catch (e) { DUES = new Map(); } document.querySelectorAll("#rows .rrow").forEach(lookup); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); } }
 (async () => {
-  await ERP.auth.guard(); if (!ERP.auth.can("write")) { $("tNew").hidden = true; $("tList").click(); }
-  try { PM = (await ERP.db.settings()).paymentModes; }
-  catch (e) { ERP.ui.toast("Could not load payment modes from Settings: " + e.message, "err"); }
-  fillModes($("rMode"), "Cash"); fillModes($("eMode"), null); resetEntry();
-  const d = new Date(); $("fFrom").value = new Date(d.getFullYear(), d.getMonth(), 1, 12).toISOString().slice(0, 10);
-  loadCust(); loadList();
+  await ERP.auth.guard();
+  if (!ERP.auth.can("write")) $("acts").querySelectorAll("[data-k]").forEach(b => b.hidden = true);
+  try {
+    const [s, allSettings] = await Promise.all([
+      ERP.db.settings(),
+      ERP.db.sb.from("app_settings").select("*").order("sort_order", { ascending: true })
+    ]);
+    if (allSettings.error) throw allSettings.error;
+    PM = s.paymentModes;
+    SETT = allSettings.data || [];
+  } catch (e) { ERP.ui.toast("Could not load dropdown values from Settings: " + e.message, "err"); }
+  setPreset("today"); load();
 })();
 </script>
 </body>
