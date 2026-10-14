@@ -83,7 +83,7 @@ const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N
 const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1";
 sessionStorage.removeItem("erp_reconciliation_daybook_stage_v1");
 const SORT = { key: "date", dir: 1 };
-let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), BANK = [], MATCH = new Set(), cur = null, pendingImportAccount = "";
+let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), BANK_RAW = [], BANK = [], MATCH = new Set(), cur = null, pendingImportAccount = "";
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
 const sg = e => N(e.money_in) - N(e.money_out), kk = e => e.src + ":" + e.rid;
@@ -97,7 +97,7 @@ async function load() {
     const [en, op, bk, settings] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from), ERP.db.bank.listAll(), ERP.db.settings()]);
     PM = settings.paymentModes;
     if (!acct) acct = PM.bank[0] || PM.cash[0] || "";
-    EN = en; OPEN = new Map(op.map(r => [r.account || "(none)", N(r.opening)])); BANK = bk; MATCH = new Set(bk.filter(b => b.match_src).map(b => b.match_src + ":" + b.match_rid)); render();
+    EN = en; OPEN = new Map(op.map(r => [r.account || "(none)", N(r.opening)])); BANK_RAW = bk; BANK = bk; MATCH = new Set(bk.filter(b => b.match_src).map(b => b.match_src + ":" + b.match_rid)); render();
   } catch (e) { $("books").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/12_bank.sql if this mentions bank_statement.</small></div>`; $("bank").innerHTML = ""; }
 }
 const booksOf = a => EN.filter(e => acctOf(e) === a && (sg(e) !== 0 || e.needs_review));
@@ -128,9 +128,25 @@ function groupsOf(a) {
   return out;
 }
 const groupMatched = g => g.parts.some(p => MATCH.has(kk(p)));
+/* A merged receipt (e.g. 4000 + 3000 + 2000) matches only a bank line equal to its full total (9000).
+   Old matches of a bank line to just one part of a merged receipt are ignored here (in memory only),
+   so the amounts inside a merged receipt never reconcile on their own and nothing has to be deleted by hand. */
+function applyMatchRules() {
+  const info = new Map();
+  if ($("booksMerge").checked) {
+    const groups = new Map();
+    EN.filter(e => sg(e) !== 0 || e.needs_review).forEach(e => { const k = mergeKeyFor(e); if (!k) return; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); });
+    groups.forEach(parts => { if (parts.length > 1) { const g = { total: parts.reduce((t, p) => t + sg(p), 0), sum: 0 }; parts.forEach(p => info.set(kk(p), g)); } });
+  }
+  BANK_RAW.filter(b => b.match_src).forEach(b => { const g = info.get(b.match_src + ":" + b.match_rid); if (g) g.sum += N(b.amount); });
+  BANK = BANK_RAW.map(b => { const g = b.match_src && info.get(b.match_src + ":" + b.match_rid);
+    return g && Math.abs(g.sum - g.total) >= 0.005 ? { ...b, match_src: null, match_rid: null, stale: true } : b; });
+  MATCH = new Set(BANK.filter(b => b.match_src).map(b => b.match_src + ":" + b.match_rid));
+}
 const bankOf = a => BANK.filter(b => b.account === a && b.date >= $("from").value && b.date <= $("to").value);
 
 function render() {
+  applyMatchRules();
   const modes = [...new Set([...(PM.all || [...PM.bank, ...PM.cash]), ...EN.map(acctOf), ...BANK.map(b => b.account)])];
   $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = groupsOf(a).filter(g => !groupMatched(g) && sg(g) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
     return `<button class="ac" data-a="${E(a)}" aria-pressed="${a === acct}"><small>${E(a)}</small><b>Rs ${M(close)}</b><br>${bn.length || bs.length ? (um + ub ? `<span class="bd">${um + ub} unmatched</span>` : '<span class="bd ok">✓ matched</span>') : ""}</button>`; }).join("");
@@ -141,7 +157,7 @@ function render() {
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
   const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
   const bookItem = (e, m, warn) => `<div class="it ${m ? "m" : ""}${e.parts && e.parts.length > 1 ? " mg" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}${e.parts && e.parts.length > 1 ? " · " + e.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m && !warn ? "ok" : sg(e) ? "warn" : ""}">${m ? (warn ? "⚠ Matched · amount differs" : "✓ Matched") : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
-  const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
+  const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}${b.stale ? " · old partial match ignored" : ""}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
   const ph = (side, text) => `<div class="it ph" data-side="${side}"><div>${text}</div></div>`;
   const gap = side => `<div data-side="${side}"></div>`;
 
