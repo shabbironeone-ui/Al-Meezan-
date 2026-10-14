@@ -131,6 +131,9 @@ const groupMatched = g => g.parts.some(p => MATCH.has(kk(p)));
 /* A merged receipt (e.g. 4000 + 3000 + 2000) matches only a bank line equal to its full total (9000).
    Old matches of a bank line to just one part of a merged receipt are ignored here (in memory only),
    so the amounts inside a merged receipt never reconcile on their own and nothing has to be deleted by hand. */
+/* bank lines whose old partial match still holds a part of this merged receipt (they must be released before it can be re-matched) */
+const partHolders = (g, exceptId) => BANK_RAW.filter(x => String(x.id) !== String(exceptId) && x.match_src && g.parts.some(p => kk(p) === x.match_src + ":" + x.match_rid));
+const releaseParts = (g, bankId) => Promise.all(partHolders(g, bankId).map(x => ERP.db.bank.setMatch(x.id, null, null)));
 function applyMatchRules() {
   const info = new Map();
   if ($("booksMerge").checked) {
@@ -213,14 +216,14 @@ $("recon").addEventListener("click", e => { const b = e.target.closest(".sortbar
 /* ---------- auto match: same amount, dates within 3 days, closest first ---------- */
 $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
   const DATE_TOL = 3;   /* amount must be exactly the same; dates may differ by up to 3 days */
-  const used = new Set(), pairs = [];
+  const used = new Set(), pairs = [], groupsFor = [];
   const near = (g, b) => Math.min(...g.parts.map(p => days(p.date, b.date)));
   const free = groupsOf(acct).filter(g => !groupMatched(g) && sg(g) !== 0);
   bankOf(acct).filter(b => !b.match_src).sort((a, b) => a.date.localeCompare(b.date)).forEach(b => {
     const c = free.filter(g => !used.has(kk(g)) && Math.abs(sg(g) - N(b.amount)) < 0.005 && near(g, b) <= DATE_TOL).sort((x, y) => near(x, b) - near(y, b))[0];
-    if (c) { used.add(kk(c)); pairs.push([b.id, c.src, c.rid]); } });
+    if (c) { used.add(kk(c)); pairs.push([b.id, c.src, c.rid]); groupsFor.push(c); } });
   if (!pairs.length) return ERP.ui.toast("Nothing to match automatically (same amount and date within 3 days)", "err");
-  try { await Promise.all(pairs.map(p => ERP.db.bank.setMatch(...p))); ERP.ui.toast(pairs.length + " entries matched"); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
+  try { await Promise.all(pairs.map((p, i) => releaseParts(groupsFor[i], p[0]))); await Promise.all(pairs.map(p => ERP.db.bank.setMatch(...p))); ERP.ui.toast(pairs.length + " entries matched"); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
 /* ---------- match one bank entry by hand ---------- */
 $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
@@ -233,7 +236,7 @@ $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el
       + c.map(o => `<button class="cand ${o.same ? "same" : ""}" data-s="${E(o.x.src)}" data-r="${E(o.x.rid)}" ${edit ? "" : "disabled"}><span><b>${E(o.x.party || o.x.head || o.x.kind)}</b><br><small>${E(o.x.date)} · ${E(o.x.voucher_no)}${o.x.parts.length > 1 ? " · " + o.x.parts.length + " entries merged" : ""}</small></span><span class="${sg(o.x) >= 0 ? "in" : "out"}"><b>${sg(o.x) >= 0 ? "+" : "−"}${M(Math.abs(sg(o.x)))}</b>${o.same ? "<br><small>same amount ✓</small>" : ""}</span></button>`).join(""); }
   $("mDlg").showModal(); };
 $("mList").onclick = async e => { const c = e.target.closest(".cand"); if (!c || !cur) return;
-  try { await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
+  try { const g = groupsOf(cur.account).find(x => kk(x) === c.dataset.s + ":" + c.dataset.r); if (g) await releaseParts(g, cur.id); await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
 $("mDel").onclick = async () => { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([cur.id]); $("mDlg").close(); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
 
 /* ---------- add statement entries ---------- */
