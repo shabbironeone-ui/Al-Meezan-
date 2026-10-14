@@ -133,7 +133,27 @@ const groupMatched = g => g.parts.some(p => MATCH.has(kk(p)));
    so the amounts inside a merged receipt never reconcile on their own and nothing has to be deleted by hand. */
 /* bank lines whose old partial match still holds a part of this merged receipt (they must be released before it can be re-matched) */
 const partHolders = (g, exceptId) => BANK_RAW.filter(x => String(x.id) !== String(exceptId) && x.match_src && g.parts.some(p => kk(p) === x.match_src + ":" + x.match_rid));
-const releaseParts = (g, bankId) => Promise.all(partHolders(g, bankId).map(x => ERP.db.bank.setMatch(x.id, null, null)));
+async function releaseParts(g, bankId) {
+  const ids = new Map(partHolders(g, bankId).map(x => [String(x.id), x.id]));
+  try {   /* also ask the database directly: a holder may not be in the loaded list */
+    const bySrc = new Map(); g.parts.forEach(p => { if (!bySrc.has(p.src)) bySrc.set(p.src, []); bySrc.get(p.src).push(p.rid); });
+    for (const [src, rids] of bySrc) {
+      const { data, error } = await ERP.db.sb.from("bank_statement").select("id").eq("match_src", src).in("match_rid", rids);
+      if (!error && data) data.forEach(r => { if (String(r.id) !== String(bankId)) ids.set(String(r.id), r.id); });
+    }
+  } catch (e) { /* fall back to the rows already loaded */ }
+  await Promise.all([...ids.values()].map(id => ERP.db.bank.setMatch(id, null, null)));
+}
+/* match one bank line to a whole merged receipt; if the first entry's key is still taken, try the receipt's other entries */
+async function matchGroup(bankId, g) {
+  await releaseParts(g, bankId);
+  let last = null;
+  for (const p of g.parts) {
+    try { await ERP.db.bank.setMatch(bankId, p.src, p.rid); return; }
+    catch (e) { last = e; if (!/uq_bank_match|duplicate key/i.test(String(e && e.message))) throw e; }
+  }
+  throw last;
+}
 function applyMatchRules() {
   const info = new Map();
   if ($("booksMerge").checked) {
@@ -223,7 +243,13 @@ $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
     const c = free.filter(g => !used.has(kk(g)) && Math.abs(sg(g) - N(b.amount)) < 0.005 && near(g, b) <= DATE_TOL).sort((x, y) => near(x, b) - near(y, b))[0];
     if (c) { used.add(kk(c)); pairs.push([b.id, c.src, c.rid]); groupsFor.push(c); } });
   if (!pairs.length) return ERP.ui.toast("Nothing to match automatically (same amount and date within 3 days)", "err");
-  try { await Promise.all(pairs.map((p, i) => releaseParts(groupsFor[i], p[0]))); await Promise.all(pairs.map(p => ERP.db.bank.setMatch(...p))); ERP.ui.toast(pairs.length + " entries matched"); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } });
+  try {
+    const res = await Promise.allSettled(pairs.map((p, i) => matchGroup(p[0], groupsFor[i])));
+    const ok = res.filter(r => r.status === "fulfilled").length, bad = res.filter(r => r.status === "rejected");
+    if (bad.length) ERP.ui.toast(`${ok} matched, ${bad.length} could not be saved: ${bad[0].reason && bad[0].reason.message}`, "err");
+    else ERP.ui.toast(ok + " entries matched");
+    load();
+  } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
 /* ---------- match one bank entry by hand ---------- */
 $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
@@ -236,7 +262,7 @@ $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el
       + c.map(o => `<button class="cand ${o.same ? "same" : ""}" data-s="${E(o.x.src)}" data-r="${E(o.x.rid)}" ${edit ? "" : "disabled"}><span><b>${E(o.x.party || o.x.head || o.x.kind)}</b><br><small>${E(o.x.date)} · ${E(o.x.voucher_no)}${o.x.parts.length > 1 ? " · " + o.x.parts.length + " entries merged" : ""}</small></span><span class="${sg(o.x) >= 0 ? "in" : "out"}"><b>${sg(o.x) >= 0 ? "+" : "−"}${M(Math.abs(sg(o.x)))}</b>${o.same ? "<br><small>same amount ✓</small>" : ""}</span></button>`).join(""); }
   $("mDlg").showModal(); };
 $("mList").onclick = async e => { const c = e.target.closest(".cand"); if (!c || !cur) return;
-  try { const g = groupsOf(cur.account).find(x => kk(x) === c.dataset.s + ":" + c.dataset.r); if (g) await releaseParts(g, cur.id); await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
+  try { const g = groupsOf(cur.account).find(x => kk(x) === c.dataset.s + ":" + c.dataset.r); if (g) await matchGroup(cur.id, g); else await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
 $("mDel").onclick = async () => { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([cur.id]); $("mDlg").close(); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
 
 /* ---------- add statement entries ---------- */
