@@ -29,12 +29,14 @@
   .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
   .stat.in b{color:#047857}.stat.out b{color:var(--warn)}
   .ledger-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
-  .ledger-toolbar .actions{display:flex;gap:6px}
+  .ledger-toolbar .actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .merge-chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer;margin-right:6px}
   .head,.ent{display:grid;align-items:center;gap:10px;grid-template-columns:92px 90px 105px minmax(160px,2fr) minmax(130px,1fr) 95px 95px 105px}
   .head{padding:0 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .head span.r,.ent .r{text-align:right}
   .ent{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow);font-size:13px;transition:border-color .15s}
   .ent:hover{border-color:var(--brand)}.ent:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+  .ent.merged{border-left:5px solid #0f766e}
   .ent .num{font-variant-numeric:tabular-nums}.ent .in{color:#047857;font-weight:700}.ent .out{color:var(--warn);font-weight:700}.ent .bal{color:var(--muted)}
   .ent small{color:var(--muted);display:block;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
   .kd{white-space:nowrap}.open{background:#f8fafc;cursor:default;font-weight:600}.open:hover{border-color:var(--line)}
@@ -53,6 +55,7 @@
   .party-ledger th,.party-ledger td{padding:8px;text-align:left;border-bottom:1px solid var(--line)}
   .party-ledger th.num,.party-ledger td.num{text-align:right}
   .party-ledger-wrap{overflow:auto;max-height:42vh}
+  #mgRows tr{cursor:pointer}#mgRows tr:hover{background:#f1f5f9}
   @media(max-width:899px){
     .head{display:none}
     .ent{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p amt" "m bal";gap:7px 10px}
@@ -87,11 +90,21 @@
   <div class="accs" id="accs"></div>
   <section class="stats four" id="stats"></section>
   <div class="ledger-toolbar no-print"><span id="cnt" style="color:var(--muted);font-size:13px"></span>
-    <span class="actions"><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
+    <span class="actions"><label class="merge-chk" title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="mergeBank" checked> Merge same receipt no.</label><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
   <div class="head"><span>Date</span><span>Voucher</span><span>Type</span><span>Particulars</span><span>Account</span><span class="r">Money in</span><span class="r">Money out</span><span class="r">Balance</span></div>
   <section id="ledger"></section>
   <div class="card" id="loadErr" hidden role="alert"></div>
 </main>
+
+<!-- MERGED RECEIPT BREAKDOWN -->
+<dialog id="mergeDlg" class="sheet">
+  <div class="sh-head"><div><h2 id="mgTitle"></h2><p id="mgSub"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body">
+    <div class="party-ledger-wrap"><table class="party-ledger"><thead><tr><th>Customer / party</th><th>Date</th><th class="num">Amount</th></tr></thead><tbody id="mgRows"></tbody></table></div>
+    <p style="color:var(--muted);font-size:12px;margin:10px 0 0">These entries were received under one receipt no.. Tap a row to view, edit or delete that entry.</p>
+  </div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div>
+</dialog>
 
 <!-- NEW ENTRY -->
 <dialog id="dlg" class="sheet">
@@ -179,7 +192,7 @@ const escapeOption = value => `<option value="${E(value)}">${E(value)}</option>`
 function sortSettings(rows) {
   return rows.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
 }
-let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, OPEN = new Map(), ACCS = [], sel = "", SETT = [], CUST = null, cur = null, kindNow = null;
+let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, OPEN = new Map(), ACCS = [], sel = "", SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [], MERGED = null;
 const TEMP_PARTIES = { ACCOUNT_RECEIVABLE_HEAD: [], ACCOUNT_PAYABLE_HEAD: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -337,6 +350,22 @@ async function load() {
   }
 }
 const acct = e => canonicalAccount(e.account);
+
+/* Receipts that share one receipt no. (one customer paying for several accounts in a single deposit)
+   are shown as one merged row with the total. Receipt nos. that must stay separate are never merged:
+   the quick-receipt tags and anything containing "Advance processing fee" or "1st installment". */
+const NO_MERGE_RE = /advance\s*processing\s*fee|1st\s*install?ment/i;
+const TAG_SET = new Set((Array.isArray(TAGS) ? TAGS : []).map(t => String(t).replace(/[\s\u00a0]+/g, " ").trim().toLowerCase()));
+const normText = x => String(x == null ? "" : x).replace(/[\s\u00a0\u200b-\u200d\ufeff]+/g, " ").trim().toLowerCase();
+function mergeKeyFor(e) {
+  const v = normText(e.voucher_no);
+  if (normText(e.kind) !== "receipt" || !v) return null;
+  if (NO_MERGE_RE.test(v) || TAG_SET.has(v)) return null;
+  return normText(acct(e)) + "|" + v;
+}
+function mergedNames(g) {
+  return [...new Set(g.parts.map(p => String(p.party || "").trim()).filter(Boolean))];
+}
 function render() {
   const acc = {}; ACCS.forEach(a => acc[a] = { open: OPEN.get(a) || 0, in: 0, out: 0 });
   ENT.forEach(e => { const a = acc[acct(e)]; if (!a) return; a.in += Number(e.money_in) || 0; a.out += Number(e.money_out) || 0; });
@@ -349,30 +378,41 @@ function render() {
   $("accountHint").textContent = sel ? `${sel} · ${M(entryCount(sel))} entries in this period` : `${M(used.length)} cash and bank accounts`;
   $("stats").innerHTML = `<div class="stat"><small>Opening balance</small><b>Rs ${M(s.open)}</b></div><div class="stat in"><small>Money received</small><b>Rs ${M(s.in)}</b></div><div class="stat out"><small>Money paid</small><b>Rs ${M(s.out)}</b></div><div class="stat"><small>Closing balance</small><b>Rs ${M(s.open + s.in - s.out)}</b></div>`;
 
-  let bal = s.open; const scope = ENT.filter(e => !sel || acct(e) === sel).map(e => (bal += (Number(e.money_in) || 0) - (Number(e.money_out) || 0), { ...e, bal }));
+  let bal = s.open; const scope = ENT.filter(e => !sel || acct(e) === sel).map(e => (bal += (Number(e.money_in) || 0) - (Number(e.money_out) || 0), { ...e, bal, orig: e }));
   const q = $("q").value.trim().toLowerCase(), k = $("fKind").value;
-  const rows = scope.filter(e => {
-    const headLabel = historicalHeadLabel(e);
-    return (!k || e.kind === k) && (!q || [e.voucher_no, e.party, e.head, headLabel, e.remarks, e.party_no].join(" ").toLowerCase().includes(q));
+
+  /* merge receipts that share the same receipt no. (same account) into one row with the total */
+  const mergeOn = $("mergeBank").checked, groups = [], byKey = new Map();
+  scope.forEach(e => {
+    const key = mergeOn ? mergeKeyFor(e) : null, g = key && byKey.get(key);
+    if (g) { g.money_in += Number(e.money_in) || 0; g.money_out += Number(e.money_out) || 0; g.bal = e.bal; g.parts.push(e.orig); return; }
+    const ng = { ...e, money_in: Number(e.money_in) || 0, money_out: Number(e.money_out) || 0, parts: [e.orig] };
+    groups.push(ng); if (key) byKey.set(key, ng);
   });
+  const rows = groups.filter(g => (!k || g.kind === k) && (!q || g.parts.map(p =>
+    [p.voucher_no, p.party, p.head, historicalHeadLabel(p), p.remarks, p.party_no].join(" ")).join(" ").toLowerCase().includes(q)));
+  VIEW = rows;
   const note = ENT.some(e => e.needs_review) ? ' <span class="badge warn" title="Old contra rows: direction unknown, not counted in balances">some old transfers need review</span>' : "";
   $("cnt").innerHTML = `${M(rows.length)} ${rows.length === 1 ? "entry" : "entries"}${note}`;
   $("sub").textContent = `${$("from").value} to ${$("to").value}${sel ? " · " + sel : ""}`;
   $("btnClear").hidden = !(sel || k || q);
   $("ledger").innerHTML = (!k && !q ? `<div class="ent open"><span class="d">${E($("from").value)}</span><span class="v"></span><span class="k"></span><span class="p">Opening balance</span><span class="a"></span><span></span><span></span><span class="r num bal"><b>${M(s.open)}</b></span></div>` : "")
-    + rows.map(e => { const inn = Number(e.money_in) || 0, out = Number(e.money_out) || 0, amt = inn ? "+" + M(inn) : out ? "−" + M(out) : "0";
+    + rows.map((e, i) => { const inn = e.money_in, out = e.money_out, amt = inn ? "+" + M(inn) : out ? "−" + M(out) : "0";
+      const merged = e.parts.length > 1, names = merged ? mergedNames(e) : [];
       const headLabel = historicalHeadLabel(e);
-      const particulars = e.party || headLabel || "(no description)";
-      return `<article class="ent" data-i="${ENT.indexOf(ENT.find(x => x.src === e.src && x.rid === e.rid))}" tabindex="0">
+      const particulars = merged ? (names.join(" + ") || headLabel || "(no description)") : (e.party || headLabel || "(no description)");
+      const remarks = merged ? [...new Set(e.parts.map(p => String(p.remarks || "").trim()).filter(Boolean))].join(" · ") : e.remarks;
+      return `<article class="ent${merged ? " merged" : ""}" data-r="${i}" tabindex="0">
         <span class="d">${E(e.date)}</span><span class="v">${E(e.voucher_no)}</span><span class="k"><span class="badge kd ${KIND_CLS[e.kind] || ""}">${E(e.kind)}</span></span>
-        <span class="p"><b>${E(particulars)}</b><small>${E([headLabel && e.party ? headLabel : "", e.remarks].filter(Boolean).join(" · "))}${e.needs_review ? " · Needs review" : ""}</small></span>
-        <span class="mm">${E(e.date)} · ${E(e.kind)} · ${E(acct(e))}${e.voucher_no ? " · " + E(e.voucher_no) : ""}</span>
+        <span class="p"><b>${E(particulars)}</b><small>${E([headLabel && e.party ? headLabel : "", remarks, merged ? `${e.parts.length} entries merged · tap to see split` : ""].filter(Boolean).join(" · "))}${e.needs_review ? " · Needs review" : ""}</small></span>
+        <span class="mm">${E(e.date)} · ${E(e.kind)} · ${E(acct(e))}${e.voucher_no ? " · " + E(e.voucher_no) : ""}${merged ? " · " + e.parts.length + " merged" : ""}</span>
         <span class="a">${E(acct(e))}</span><span class="r num in in2">${inn ? M(inn) : ""}</span><span class="r num out out2">${out ? M(out) : ""}</span>
         <span class="amt num ${inn ? "in" : out ? "out" : ""}">${amt}<span class="kind-mobile"> · ${E(e.kind)}</span></span><span class="r num bal">${M(e.bal)}</span></article>`; }).join("")
     || `<div class="empty-state"><b>${sel || q || k ? "No matching entries" : "Nothing recorded for these dates yet"}</b>${sel || q || k ? "Try changing the account, search text or entry type." : "Use one of the buttons above to add a receipt, income, payment or transfer."}</div>`;
 }
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { sel = b.dataset.a; render(); } };
 $("fKind").onchange = render; $("q").oninput = ERP.ui.debounce(render, 200);
+$("mergeBank").onchange = render;
 $("btnApply").onclick = load;
 $("btnToday").onclick = () => { $("preset").value = "today"; setPreset("today"); load(); };
 $("btnClear").onclick = () => { sel = ""; $("fKind").value = ""; $("q").value = ""; render(); };
@@ -383,6 +423,20 @@ function navigatePage(page) {
   if (target !== window && typeof target.go === "function") { target.go(page); return; }
   location.href = page;
 }
+
+/* ---------- merged receipt breakdown ---------- */
+function openMerged(g) {
+  MERGED = g;
+  $("mgTitle").textContent = "Receipt " + (g.voucher_no || "");
+  $("mgSub").textContent = `${g.date} · ${acct(g)} · ${g.parts.length} entries · Total Rs ${M(g.money_in)}`;
+  $("mgRows").innerHTML = g.parts.map((p, i) => `<tr data-p="${i}"><td>${E(p.party || "(no name)")}<small style="display:block;color:var(--muted)">${E([p.party_no, historicalHeadLabel(p), p.remarks].filter(Boolean).join(" · "))}</small></td><td>${E(p.date)}</td><td class="num"><b>${M(Number(p.money_in) || 0)}</b></td></tr>`).join("")
+    + `<tr style="cursor:default"><td colspan="2"><b>Total</b></td><td class="num"><b>${M(g.money_in)}</b></td></tr>`;
+  $("mergeDlg").showModal();
+}
+$("mgRows").onclick = e => {
+  const tr = e.target.closest("tr[data-p]"); if (!tr || !MERGED) return;
+  const part = MERGED.parts[+tr.dataset.p]; $("mergeDlg").close(); openDetail(part);
+};
 
 /* ---------- new entry ---------- */
 const CFG = { receipt: ["New receipt", "Money received from a customer", "Account it was received in"], income: ["New income", "Money received (not from a customer sale)", "Account it was received in"],
@@ -673,8 +727,9 @@ function openDetail(e) {
   $("tNote").textContent = isAdv ? "This is the advance taken with a sale. Change it from the Sales page." : isTr ? "Transfers cannot be edited. Delete and enter it again if it is wrong (both sides are removed together)." : e.needs_review ? "Old transfer entry: its direction is not recorded." : "";
   $("det").showModal();
 }
-$("ledger").onclick = e => { const a = e.target.closest(".ent[data-i]"); if (a) openDetail(ENT[+a.dataset.i]); };
-$("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.i) openDetail(ENT[+e.target.dataset.i]); };
+const openRow = i => { const g = VIEW[+i]; if (!g) return; if (g.parts.length > 1) openMerged(g); else openDetail(g.parts[0]); };
+$("ledger").onclick = e => { const a = e.target.closest(".ent[data-r]"); if (a) openRow(a.dataset.r); };
+$("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.r !== undefined) openRow(e.target.dataset.r); };
 $("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
   const f = { date: $("eDate").value, account: $("eMode").value, party: $("eParty").value.trim(), head: $("eHead").value.trim(), amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
   if (!f.date || !(f.amount > 0)) return ERP.ui.toast("Date and amount are required", "err");
