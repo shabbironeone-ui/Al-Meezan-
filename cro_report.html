@@ -32,6 +32,7 @@
   .rep{table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:12.5px;background:#fff}
   .rep th,.rep td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:4px 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
   .rep thead th{position:sticky;top:34px;z-index:3;background:#f1f5f9;border-top:1px solid #cbd5e1;font-size:11.5px;text-align:left}
+  .rep .print-label{display:none}
   .rep .c1{position:sticky;left:0;z-index:2;background:#fff;border-left:1px solid #cbd5e1}
   .rep .c2{position:sticky;left:var(--w1,80px);z-index:2;background:#fff;box-shadow:2px 0 0 #94a3b8}
   .rep thead .c1,.rep thead .c2{z-index:5;background:#f1f5f9}
@@ -44,11 +45,17 @@
   @page{size:A4 landscape;margin:6mm}
   @media print{
     html,body{height:auto}body{background:#fff}.page{display:block;height:auto;padding:0}
-    .noprint{display:none!important}.head-print{display:block;margin:0 0 4px;font-size:11px}
+    .noprint,.head-print,.gh,.legend{display:none!important}
     #out{overflow:visible;border:0;border-radius:0}
     .grp{width:auto;break-after:page}.grp:last-of-type{break-after:auto}
-    .gh{position:static;height:auto;width:auto;background:#fff;border:1px solid #000;font-size:11px;padding:3px 6px}
-    .rep{table-layout:auto;width:100%!important;font-size:7.5pt}.rep colgroup,.rz{display:none}.rep th,.rep td{position:static!important;padding:2px 3px;box-shadow:none!important;overflow:visible;text-overflow:clip}.rep thead th{background:#eee;font-size:7pt}
+    .gh{position:static;height:auto;width:auto;background:#e8edf3;border:1px solid #172b4d;font-size:8pt;padding:3px 6px}
+    .rep{table-layout:auto;width:100%!important;border-collapse:collapse;font-size:7.5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rep colgroup,.rz,.rep .screen-label{display:none!important}.rep .print-label{display:inline}
+    .rep [data-k="aprv"],.rep [data-k="late"],.rep [data-k="overdue"],.rep [data-k="product"]{display:none!important}
+    .rep th,.rep td{position:static!important;padding:3px 4px;border:1px solid #333;box-shadow:none!important;overflow:visible;text-overflow:clip;vertical-align:middle}
+    .rep thead th{background:#17365d!important;color:#fff!important;font-size:7.5pt;font-weight:700;line-height:1.15;text-align:center;white-space:normal;overflow-wrap:anywhere;border-color:#172b4d}
+    .rep tbody tr:nth-child(even) td{background:#f1f5f9}
+    .rep tr.tot td{background:#dbe5f1!important;font-weight:700}
     .rep thead{display:table-header-group}.rep tr{break-inside:avoid}.legend{position:static;font-size:7pt}
   }
 </style>
@@ -84,7 +91,8 @@
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = n => String(Math.round(Number(n) || 0)), N = v => Number(v) || 0, digits = s => String(s || "").replace(/\D/g, "");
 /* ----- column widths: drag the edge of a heading; the size is remembered until you drag again ----- */
-const COLS = [["acc","Acct Num",80],["title","Acct Title",190],["aprv","Aprv by",110],["cro","CRO",90],["mobile","Mobile Nu",105],["minst","M Inst",80],["remarks","Remarks",160],["cmd","CMD",85],["late","Late",55],["overdue","Overdue",85],["plan","Plan",50],["sale","Total Sale",90],["paid","Total Paid",90],["bal","T Balance",90],["lpd","LPD",80],["lpa","L.Pamount",85],["deliv","Deliv Date",80],["end","End",70],["product","Product",220]];
+const COLS = [["acc","Acct Num",80],["title","Acct Title",190],["aprv","Aprv by",110],["cro","CRO",90],["mobile","Mobile Nu",105],["minst","M Inst",80],["remarks","Remarks",160],["cmd","CMD",85],["late","Late",55],["overdue","Overdue",85],["plan","Plan",50],["sale","Total Sale",90],["paid","Total Paid",90],["bal","T Balance",90],["deliv","Deliv Date",80],["end","End",70],["lpa","L.Pamount",85],["lpd","LPD",80],["product","Product",220]];
+const PRINT_LABELS = {acc:"Account",title:"Account Title",mobile:"Mobile NO",minst:"M Inst",cmd:"CMD",plan:"Plan(M)",sale:"Total Sale",paid:"Total Paid",bal:"T Balance",lpd:"L pay date",lpa:"L Paid amnt",deliv:"Delivery Date",end:"End Date"};
 const LSK = "cro_report_cols_v1"; let CW = {}; try { CW = JSON.parse(localStorage.getItem(LSK) || "{}") || {}; } catch (e) {}
 const defW = k => /^m\d+$/.test(k) ? 85 : (COLS.find(c => c[0] === k) || [0, 0, 100])[2], wOf = k => CW[k] || defW(k);
 let BASE = [], REC = new Map(), DUE = new Map(), MONTHS = [], VIEW = [], CRO_NAMES = [], APPROVED_NAMES = [], CROS = [], SEL = null;
@@ -166,20 +174,20 @@ function render() {
   VIEW = rows; const g = new Map(); rows.forEach(r => { const k = sep ? (r.cro || "(no CRO)") : (allCro ? "All customers" : "Selected CROs"); (g.get(k) || g.set(k, []).get(k)).push(r); });
   const today = new Date().toLocaleDateString("en-GB"), noteTxt = note.length ? " · " + note.join(" · ") : "";
   $("sub").textContent = `${M(rows.length)} of ${M(BASE.length)} customers${noteTxt}`; $("fCnt").hidden = !note.length; $("fCnt").textContent = note.length;
-  const NUM = new Set(["minst", "cmd", "late", "overdue", "plan", "sale", "paid", "bal", "lpa"]), th = (k, label, cls) => `<th class="${cls}" data-k="${k}">${E(label)}<span class="rz" data-k="${k}" title="Drag to resize · double-click to reset"></span></th>`;
+  const NUM = new Set(["minst", "cmd", "late", "overdue", "plan", "sale", "paid", "bal", "lpa"]), th = (k, label, cls) => `<th class="${cls}" data-k="${k}"><span class="screen-label">${E(label)}</span><span class="print-label">${E(PRINT_LABELS[k] || label)}</span><span class="rz" data-k="${k}" title="Drag to resize · double-click to reset"></span></th>`;
   const head = "<tr>" + COLS.map(([k, label]) => th(k, label, k === "acc" ? "c1" : k === "title" ? "c2" : NUM.has(k) ? "n" : "")).join("") + MONTHS.map((m, i) => th("m" + i, m.label, "n")).join("") + "</tr>",
     cg = "<colgroup>" + keys().map(k => `<col data-k="${k}" style="width:${wOf(k)}px">`).join("") + "</colgroup>";
   const sum = (a, f) => a.reduce((t, r) => t + f(r), 0), cmdOf = r => N(r.overdue_amt) + N(r.due_this_month);
   $("out").innerHTML = ([...g].sort((x, y) => sep ? x[0].localeCompare(y[0]) : 0).map(([name, rs]) => {
     const mt = MONTHS.map(m => sum(rs, r => REC.get(String(r.account_no).trim() + "|" + m.key) || 0));
-    return `<section class="grp"><div class="head-print"><b>Al Meezan · CRO Follow-up Report</b> · printed ${today}${E(noteTxt)}</div>
-      <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Total sale</small> Rs ${M(sum(rs, r => N(r.total_sale)))}</span><span><small>Total balance</small> Rs ${M(sum(rs, r => N(r.balance)))}</span><span><small>Total CMD</small> Rs ${M(sum(rs, cmdOf))}</span></div>
+    return `<section class="grp"><div class="head-print">Al-Meezan Electronics - CRO Follow-up Report · printed ${today}${E(noteTxt)}</div>
+      <div class="gh"><span>${sep ? "CRO: " : ""}${E(name)} <small>· ${M(rs.length)} customers</small></span><span><small>Total amount</small> Rs ${M(sum(rs, r => N(r.total_sale)))}</span><span><small>Total balance</small> Rs ${M(sum(rs, r => N(r.balance)))}</span><span><small>Total CMD</small> Rs ${M(sum(rs, cmdOf))}</span></div>
       <table class="rep" style="width:${totalW()}px">${cg}<thead>${head}</thead><tbody>${rs.map(r => { const acc = String(r.account_no).trim(), cmd = cmdOf(r);
-        return `<tr><td class="c1">${E(acc)}</td><td class="c2"><b>${E(r.account_title)}</b></td><td>${E(r.approved_by)}</td><td>${E(r.cro)}</td><td>${E(r.mobile_number)}</td>
-          <td class="n">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm"></td><td class="n ${cmd > 0 ? "bad" : ""}">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
-          <td class="n">${N(r.plan) || ""}</td><td class="n">${M(r.total_sale)}</td><td class="n">${M(r.total_paid)}</td><td class="n"><b>${M(r.balance)}</b></td><td>${d2(r.lpd)}</td><td class="n">${r.lpa ? M(r.lpa) : ""}</td><td>${d2(r.sale_date)}</td><td>${r.end_month ? mlabel(r.end_month) : ""}</td><td>${E(r.products)}</td>
-          ${MONTHS.map(m => `<td class="mc">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
-        <tr class="tot"><td class="c1"></td><td class="c2">Total · ${M(rs.length)}</td><td></td><td></td><td></td><td class="n">${M(sum(rs, r => N(r.installment)))}</td><td></td><td class="n">${M(sum(rs, cmdOf))}</td><td></td><td class="n">${M(sum(rs, r => N(r.overdue_amt)))}</td><td></td><td class="n">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n">${M(sum(rs, r => N(r.balance)))}</td><td></td><td></td><td></td><td></td><td></td>${mt.map(v => `<td class="mc">${M(v)}</td>`).join("")}</tr></tbody></table></section>`; }).join("")
+        return `<tr><td class="c1" data-k="acc">${E(acc)}</td><td class="c2" data-k="title"><b>${E(r.account_title)}</b></td><td data-k="aprv">${E(r.approved_by)}</td><td data-k="cro">${E(r.cro)}</td><td data-k="mobile">${E(r.mobile_number)}</td>
+          <td class="n" data-k="minst">${N(r.installment) ? M(r.installment) : ""}</td><td class="rm" data-k="remarks"></td><td class="n ${cmd > 0 ? "bad" : ""}" data-k="cmd">${r.has_plan ? (cmd > 0 ? M(cmd) : "0") : "-"}</td><td class="n ${N(r.overdue_months) ? "bad" : ""}" data-k="late">${r.has_plan && N(r.overdue_months) ? N(r.overdue_months) : ""}</td><td class="n" data-k="overdue">${N(r.overdue_amt) ? M(r.overdue_amt) : ""}</td>
+          <td class="n" data-k="plan">${N(r.plan) || ""}</td><td class="n" data-k="sale">${M(r.total_sale)}</td><td class="n" data-k="paid">${M(r.total_paid)}</td><td class="n" data-k="bal"><b>${M(r.balance)}</b></td><td data-k="deliv">${d2(r.sale_date)}</td><td data-k="end">${r.end_month ? mlabel(r.end_month) : ""}</td><td class="n" data-k="lpa">${r.lpa ? M(r.lpa) : ""}</td><td data-k="lpd">${d2(r.lpd)}</td><td data-k="product">${E(r.products)}</td>
+          ${MONTHS.map((m, i) => `<td class="mc" data-k="m${i}">${cell(REC.get(acc + "|" + m.key) || 0, DUE.get(acc + "|" + m.key) || 0)}</td>`).join("")}</tr>`; }).join("")}
+        <tr class="tot"><td class="c1" data-k="acc"></td><td class="c2" data-k="title">Total · ${M(rs.length)}</td><td data-k="aprv"></td><td data-k="cro"></td><td data-k="mobile"></td><td class="n" data-k="minst">${M(sum(rs, r => N(r.installment)))}</td><td data-k="remarks"></td><td class="n" data-k="cmd">${M(sum(rs, cmdOf))}</td><td data-k="late"></td><td class="n" data-k="overdue">${M(sum(rs, r => N(r.overdue_amt)))}</td><td data-k="plan"></td><td class="n" data-k="sale">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n" data-k="paid">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n" data-k="bal">${M(sum(rs, r => N(r.balance)))}</td><td data-k="deliv"></td><td data-k="end"></td><td data-k="lpa"></td><td data-k="lpd"></td><td data-k="product"></td>${mt.map((v, i) => `<td class="mc" data-k="m${i}">${M(v)}</td>`).join("")}</tr></tbody></table></section>`; }).join("")
     + (rows.length ? '<p class="legend">Month columns: amount received that month · — nothing received although an installment was due · * less than the installment due · advance and processing fee not counted · CMD = overdue + this month</p>' : "")) || '<div class="empty">No customers match these filters.</div>';
   applyW();
 }
@@ -197,7 +205,7 @@ $("out").addEventListener("dblclick", e => { const h = e.target.closest(".rz"); 
 ["fQ", "fStart", "fBalVal"].forEach(i => $(i).oninput = ERP.ui.debounce(render, 250));
 $("bClear").onclick = () => { ["fQ", "fStart", "fFrom", "fTo", "fBalVal"].forEach(i => $(i).value = ""); $("fBalOp").value = ""; $("fDue").checked = false; $("fSep").checked = false; $("fAp").value = ""; $("fSort").value = "acc"; SEL = new Set(CROS); croList(); render(); };
 $("bPrint").onclick = () => window.print();
-$("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Acct Num": acc, "Acct Title": r.account_title, "Aprv by": r.approved_by, CRO: r.cro, "Mobile Nu": r.mobile_number, "M Inst": r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), Late: r.overdue_months, Overdue: r.overdue_amt, Plan: r.plan, "Total Sale": r.total_sale, "Total Paid": r.total_paid, "T Balance": r.balance, LPD: r.lpd, "L.Pamount": r.lpa, "Deliv Date": r.sale_date, End: r.end_month, Product: r.products };
+$("bCsv").onclick = () => ERP.ui.downloadCSV("cro_report_" + ERP.ui.today() + ".csv", VIEW.map(r => { const acc = String(r.account_no).trim(), o = { "Account No": acc, "Account Title": r.account_title, "Approved By": r.approved_by, CRO: r.cro, "Mobile No": r.mobile_number, Installment: r.installment, CMD: N(r.overdue_amt) + N(r.due_this_month), "Late Months": r.overdue_months, "Overdue Amount": r.overdue_amt, Plan: r.plan, "Total Amount": r.total_sale, "Total Paid": r.total_paid, "Total Balance": r.balance, "Last Payment Date": r.lpd, "Last Paid Amount": r.lpa, "Delivery Date": r.sale_date, End: r.end_month, Product: r.products };
   MONTHS.forEach(m => o[m.label] = REC.get(acc + "|" + m.key) || 0); return o; }));
 (async () => { await ERP.auth.guard(); load(); })();
 </script>
