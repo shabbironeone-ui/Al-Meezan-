@@ -10,6 +10,13 @@
   .acts{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:14px 0}
   .acts .btn{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;text-align:left;padding:10px 14px}
   .acts .btn span{display:block}.acts .btn small{display:block;font-size:11px;font-weight:400;opacity:.82}
+  body.receipts-page .acts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .receipt-range-stat{min-width:0;min-height:64px;display:flex;flex-direction:column;justify-content:center;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--shadow)}
+  .receipt-range-stat small{color:var(--muted);font-size:11px;font-weight:600}
+  .receipt-range-stat b{margin-top:3px;color:var(--ink);font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .receipt-merge{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+  .receipt-merge input{width:16px;height:16px;margin:0;accent-color:var(--brand)}
+  @media(min-width:900px){body.receipts-page .acts{grid-template-columns:minmax(210px,1.3fr) repeat(3,minmax(145px,1fr)) auto;align-items:stretch}.receipt-merge{justify-self:end}}
   .btn.in{background:#047857}.btn.out{background:#b45309}.btn.xfer{background:#1d4ed8}
   .range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
   .range .wide{grid-column:1/-1}
@@ -70,6 +77,7 @@
     .ent .kind-mobile,.ent .amount-mobile{display:inline}
   }
   @media(max-width:520px){.acts{grid-template-columns:1fr 1fr;gap:7px}.acts .btn{min-width:0;padding:8px;font-size:13px}.acts .btn small{font-size:10px}.accs{grid-template-columns:repeat(2,minmax(0,1fr))}.ac{padding:10px}.range{gap:8px}}
+  @media(max-width:520px){body.receipts-page .acts{grid-template-columns:1fr 1fr}.receipt-range-stat{min-height:56px;padding:8px 10px}.receipt-range-stat b{font-size:18px}.receipt-merge{grid-column:1/-1}}
   @media(max-width:899px){
     body.receipts-page .ent{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p amt" "m m"}
     body.receipts-page .ent .mm{display:block;grid-area:m}
@@ -100,6 +108,10 @@
   <header class="appbar"><div><h1>Receipts</h1><p class="intro" id="sub">Customer receipts for the selected period.</p></div></header>
   <div class="acts no-print" id="acts">
     <button class="btn in" data-k="receipt"><span>＋ Receipt<small>Record money received from a customer</small></span></button>
+    <div class="receipt-range-stat"><small>Unique receipts · selected range</small><b id="uniqueReceiptCount">0</b></div>
+    <div class="receipt-range-stat"><small>Total entries · selected range</small><b id="totalReceiptEntries">0</b></div>
+    <div class="receipt-range-stat"><small>Total amount · selected range</small><b id="totalReceiptAmount">Rs 0</b></div>
+    <label class="receipt-merge"><input type="checkbox" id="mergeReceipts" checked> Merge same receipt number</label>
   </div>
 
   <section class="card range" style="margin-top:12px">
@@ -121,6 +133,14 @@
     </table>
     <div id="printTotals"></div>
   </section>
+  <dialog id="mergeDlg" class="sheet">
+    <div class="sh-head"><div><h2 id="mergeTitle">Receipt details</h2><p id="mergeSubtitle"></p></div><button class="x" data-merge-close>✕</button></div>
+    <div class="sh-body"><div class="party-ledger-wrap"><table class="party-ledger">
+      <thead><tr><th>Customer</th><th>Account No</th><th>Date</th><th class="num">Amount</th></tr></thead>
+      <tbody id="mergeRows"></tbody>
+    </table></div></div>
+    <div class="sh-foot"><button class="btn ghost" data-merge-close>Close</button></div>
+  </dialog>
   <div class="card" id="loadErr" hidden role="alert"></div>
 </main>
 
@@ -210,7 +230,7 @@ const escapeOption = value => `<option value="${E(value)}">${E(value)}</option>`
 function sortSettings(rows) {
   return rows.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
 }
-let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [];
+let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [], MERGED = null;
 const TEMP_PARTIES = { ACCOUNT_RECEIVABLE_HEAD: [], ACCOUNT_PAYABLE_HEAD: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -325,14 +345,19 @@ function setPreset(p) {
   if (p === "yday") { d.setDate(t.getDate() - 1); a = b = d; }
   else if (p === "week") { d.setDate(t.getDate() - ((t.getDay() + 6) % 7)); a = d; }
   else if (p === "month") a = new Date(t.getFullYear(), t.getMonth(), 1);
-  if (p !== "custom") { $("from").value = iso(a); $("to").value = iso(b); }
+  if (p !== "custom") {
+    $("from").value = iso(a);
+    $("to").value = p === "today" || p === "yday" ? "" : iso(b);
+  }
 }
 $("preset").onchange = () => { setPreset($("preset").value); load(); };
 ["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; load(); });
 
 /* ---------- load + compute ---------- */
 async function load() {
-  const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
+  const from = $("from").value || $("to").value;
+  const to = $("to").value || $("from").value;
+  if (!from || !to || from > to) return ERP.ui.toast("Choose a valid date range", "err");
   $("loadErr").hidden = true;
   $("ledger").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div><br><div class="skeleton"></div></div>';
   try {
@@ -351,24 +376,67 @@ const acct = e => canonicalAccount(e.account);
 
 function render() {
   const q = $("q").value.trim().toLowerCase();
-  const rows = ENT.filter(entry => entry.kind === "Receipt" && (!q || [
+  const entries = ENT.filter(entry => entry.kind === "Receipt" && (!q || [
     entry.voucher_no, entry.party, entry.party_no, entry.remarks, acct(entry)
-  ].join(" ").toLowerCase().includes(q))).map(entry => ({ ...entry, parts: [entry] }));
+  ].join(" ").toLowerCase().includes(q)));
+  const rows = [];
+  const byKey = new Map();
+  entries.forEach(entry => {
+    const key = $("mergeReceipts").checked ? receiptMergeKey_(entry) : null;
+    const group = key && byKey.get(key);
+    if (group) {
+      group.money_in += Number(entry.money_in) || 0;
+      group.parts.push(entry);
+      return;
+    }
+    const next = { ...entry, money_in: Number(entry.money_in) || 0, parts: [entry] };
+    rows.push(next);
+    if (key) byKey.set(key, next);
+  });
   VIEW = rows;
+  updateReceiptCounts_();
   renderPrintReport_(rows);
-  $("cnt").textContent = `${M(rows.length)} ${rows.length === 1 ? "receipt" : "receipts"}`;
-  $("sub").textContent = `${$("from").value} to ${$("to").value}`;
+  $("cnt").textContent = $("mergeReceipts").checked && entries.length !== rows.length
+    ? `${M(entries.length)} entries · ${M(rows.length)} rows shown`
+    : `${M(entries.length)} ${entries.length === 1 ? "entry" : "entries"}`;
+  $("sub").textContent = selectedRangeLabel_();
   $("btnClear").hidden = !q;
   $("ledger").innerHTML = rows.map((entry, index) => `<article class="ent" data-r="${index}" tabindex="0">
     <span class="d">${E(entry.date)}</span>
     <span class="v">${E(entry.voucher_no || "")}</span>
-    <span class="a">${E(entry.party_no || "")}</span>
-    <span class="p"><b>${E(entry.party || "(no customer name)")}</b></span>
+    <span class="a">${E(mergedValues_(entry, "party_no"))}</span>
+    <span class="p"><b>${E(mergedValues_(entry, "party") || "(no customer name)")}</b>${entry.parts.length > 1 ? `<small>${M(entry.parts.length)} entries merged · select to view details</small>` : ""}</span>
     <span class="paymode">${E(acct(entry))}</span>
     <span class="amt num in">${M(Number(entry.money_in) || 0)}</span>
     <span class="mm">${E(entry.date)} · ${E(entry.voucher_no || "")} · ${E(acct(entry))}</span>
   </article>`).join("")
     || `<div class="empty-state"><b>${q ? "No matching receipts" : "No receipts for these dates"}</b>${q ? "Try changing the search text." : "Use the Receipt button above to record a customer receipt."}</div>`;
+}
+function receiptMergeKey_(entry) {
+  const voucher = String(entry.voucher_no || "").trim();
+  if (!voucher || /advance\s*processing\s*fee|1st\s*install?ment/i.test(voucher)) return null;
+  if ((Array.isArray(TAGS) ? TAGS : []).some(tag => String(tag).trim().toLowerCase() === voucher.toLowerCase())) return null;
+  return `${acct(entry)}|${voucher.toLowerCase()}`;
+}
+function mergedValues_(entry, field) {
+  return [...new Set(entry.parts.map(part => String(part[field] || "").trim()).filter(Boolean))].join(", ");
+}
+function updateReceiptCounts_() {
+  const seen = new Set();
+  let withoutReceiptNo = 0;
+  ENT.forEach(entry => {
+    const voucher = String(entry.voucher_no || "").trim().toLowerCase();
+    if (voucher) seen.add(voucher);
+    else withoutReceiptNo += 1;
+  });
+  $("uniqueReceiptCount").textContent = M(seen.size + withoutReceiptNo);
+  $("totalReceiptEntries").textContent = M(ENT.length);
+  $("totalReceiptAmount").textContent = `Rs ${M(ENT.reduce((total, entry) => total + (Number(entry.money_in) || 0), 0))}`;
+}
+function selectedRangeLabel_() {
+  const from = $("from").value || $("to").value;
+  const to = $("to").value || $("from").value;
+  return from === to ? from : `${from} to ${to}`;
 }
 function printDate_(value) {
   const date = String(value || "").slice(0, 10);
@@ -378,23 +446,24 @@ function printDate_(value) {
 function renderPrintReport_(rows) {
   const receiptRows = rows.flatMap(row => row.parts || [row])
     .filter(row => row.kind === "Receipt");
-  const receiptIds = new Set(receiptRows
-    .map(row => String(row.voucher_no || "").trim().toLowerCase())
-    .filter(Boolean));
+  const receiptIds = new Set(receiptRows.map(row => String(row.voucher_no || "").trim().toLowerCase()).filter(Boolean));
+  const receiptNoCount = receiptIds.size + receiptRows.filter(row => !String(row.voucher_no || "").trim()).length;
   const totalAmount = receiptRows.reduce((sum, row) => sum + (Number(row.money_in) || 0), 0);
-  const from = printDate_($("from").value), to = printDate_($("to").value);
+  const [rangeFrom, rangeTo] = selectedRangeLabel_().split(" to ");
+  const from = printDate_(rangeFrom), to = printDate_(rangeTo);
   $("printSub").textContent = from === to ? from : `${from} to ${to}`;
   $("printRows").innerHTML = receiptRows.map(row =>
     `<tr><td>${E(printDate_(row.date))}</td><td>${E(row.voucher_no || "")}</td><td>${E(row.party_no || "")}</td><td>${E(row.party || "")}</td><td>${E(acct(row))}</td><td class="num">${M(Number(row.money_in) || 0)}</td></tr>`
   ).join("");
-  $("printTotals").innerHTML = `<span>Unique Receipt Qty: ${M(receiptIds.size)}</span><span>Total Records: ${M(receiptRows.length)}</span><span>Total Amount: Rs ${M(totalAmount)}</span>`;
+  $("printTotals").innerHTML = `<span>Unique Receipt Qty: ${M(receiptNoCount)}</span><span>Total Records: ${M(receiptRows.length)}</span><span>Total Amount: Rs ${M(totalAmount)}</span>`;
 }
 $("q").oninput = ERP.ui.debounce(render, 200);
+$("mergeReceipts").onchange = render;
 $("btnApply").onclick = load;
 $("btnToday").onclick = () => { $("preset").value = "today"; setPreset("today"); load(); };
 $("btnClear").onclick = () => { $("q").value = ""; render(); };
 $("btnPrint").onclick = () => window.print();
-$("btnCsv").onclick = () => ERP.ui.downloadCSV(`receipts_${$("from").value}_${$("to").value}.csv`, VIEW.map(e => ({
+$("btnCsv").onclick = () => ERP.ui.downloadCSV(`receipts_${$("from").value}_${$("to").value}.csv`, VIEW.flatMap(row => row.parts || [row]).map(e => ({
   date: e.date, receipt_no: e.voucher_no, account_no: e.party_no, customer_name: e.party,
   pay_mode: acct(e), amount: e.money_in
 })));
@@ -693,7 +762,32 @@ function openDetail(e) {
   $("tNote").textContent = isAdv ? "This is the advance taken with a sale. Change it from the Sales page." : isTr ? "Transfers cannot be edited. Delete and enter it again if it is wrong (both sides are removed together)." : e.needs_review ? "Old transfer entry: its direction is not recorded." : "";
   $("det").showModal();
 }
-const openRow = i => { const entry = VIEW[+i]; if (entry) openDetail(entry.parts[0]); };
+function openMergedReceipt(entry) {
+  MERGED = entry;
+  $("mergeTitle").textContent = `Receipt ${entry.voucher_no || ""}`;
+  $("mergeSubtitle").textContent = `${entry.parts.length} entries · Total Rs ${M(entry.money_in)} · ${acct(entry)}`;
+  $("mergeRows").innerHTML = entry.parts.map((part, index) => `<tr data-part="${index}" style="cursor:pointer">
+    <td><b>${E(part.party || "(no customer name)")}</b></td><td>${E(part.party_no || "")}</td>
+    <td>${E(part.date || "")}</td><td class="num">${M(Number(part.money_in) || 0)}</td>
+  </tr>`).join("");
+  $("mergeDlg").showModal();
+}
+$("mergeDlg").addEventListener("click", event => {
+  if (event.target.closest("[data-merge-close]")) $("mergeDlg").close();
+});
+$("mergeRows").onclick = event => {
+  const row = event.target.closest("tr[data-part]");
+  if (!row || !MERGED) return;
+  const part = MERGED.parts[Number(row.dataset.part)];
+  $("mergeDlg").close();
+  if (part) openDetail(part);
+};
+const openRow = i => {
+  const entry = VIEW[+i];
+  if (!entry) return;
+  if (entry.parts.length > 1) openMergedReceipt(entry);
+  else openDetail(entry.parts[0]);
+};
 $("ledger").onclick = e => { const a = e.target.closest(".ent[data-r]"); if (a) openRow(a.dataset.r); };
 $("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.r !== undefined) openRow(e.target.dataset.r); };
 $("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
