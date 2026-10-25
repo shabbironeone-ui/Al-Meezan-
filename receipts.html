@@ -58,6 +58,18 @@
   .head-select{display:flex;gap:6px;align-items:center}
   .head-select select{flex:1;min-width:0}
   .quick-add{width:38px;height:38px;flex:0 0 38px;padding:0;font-size:20px;line-height:1}
+  .receipt-batch{margin-top:12px}
+  .receipt-batch-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .receipt-batch-total{color:var(--brand-dark);font-size:16px;font-weight:700;white-space:nowrap}
+  .receipt-batch-list{display:grid;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .receipt-batch-row{display:grid;gap:8px;grid-template-columns:76px minmax(145px,1.2fr) minmax(120px,1fr) minmax(145px,1.2fr) minmax(100px,.8fr) minmax(145px,1.3fr) 30px;align-items:start;min-width:900px;padding:9px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+  .receipt-batch-row .fld{min-width:0}
+  .receipt-batch-row .fld label{font-size:11px}
+  .receipt-batch-row .row-top{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;padding-top:19px}
+  .receipt-batch-row .row-top b{font-size:12px;white-space:nowrap}
+  .receipt-batch-row .row-remove{width:28px;min-width:28px;height:28px;min-height:28px;padding:0;align-self:center;border:1px solid #fecaca;border-radius:50%;background:#fff1f2;color:#b42318;font-size:18px;font-weight:700;line-height:1}
+  .receipt-batch-row .row-remove:hover{background:#b42318;color:#fff}
+  .receipt-batch-row [data-customer-hint]{display:block;min-height:16px;margin-top:2px;font-size:10px}
   #partyDialog .sh-body{padding-top:4px}
   .party-balance{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
   .party-balance .stat{margin:0}
@@ -158,10 +170,15 @@
     <div class="fld" id="gRct"><label>Receipt no</label><input id="fRct" list="dTags" autocomplete="off"></div>
     <div class="fld" id="gName"><label id="lName">Subhead</label><div class="head-select"><select id="fName"></select><button type="button" class="btn ghost quick-add" id="btnQuickParty" aria-label="Quick add person" title="Add a person for this entry" hidden>＋</button></div><small id="partyHint" style="color:var(--muted)" hidden>This name is saved with the transaction only; it is not added to Settings.</small></div>
     <div class="fld" id="gContra"><label>Contra head</label><select id="fContra"></select></div>
-    <div class="fld"><label id="lMode">Account</label><select id="fMode"></select></div>
+    <div class="fld" id="gMode"><label id="lMode">Account</label><select id="fMode"></select></div>
     <div class="fld" id="gTo"><label>To account</label><select id="fTo"></select></div>
-    <div class="fld"><label>Amount (Rs)</label><input id="fAmt" type="number" inputmode="decimal" min="0"></div>
-    <div class="fld wide"><label>Remarks</label><div class="inp"><input id="fRem" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div></div>
+    <div class="fld" id="gAmt"><label>Amount (Rs)</label><input id="fAmt" type="number" inputmode="decimal" min="0"></div>
+    <div class="fld wide" id="gRem"><label>Remarks</label><div class="inp"><input id="fRem" autocomplete="off"><button type="button" class="mic" tabindex="-1" aria-label="Voice">🎤</button></div></div></div>
+    <section class="receipt-batch" id="receiptBatch" hidden>
+      <div class="receipt-batch-head"><div><b>Receipt entries</b><div style="font-size:12px;color:var(--muted)">All entries use the date selected above.</div></div><div class="receipt-batch-total">Total: Rs <span id="receiptBatchTotal">0</span></div></div>
+      <div class="receipt-batch-list" id="receiptBatchRows"></div>
+      <button type="button" class="btn ghost" id="addReceiptRow" style="margin-top:10px">＋ Add another receipt</button>
+    </section>
     <small class="err" id="fErr"></small></div></form>
   <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn soft" id="btnAgain">Save &amp; add another</button><button class="btn" id="btnSave">Save</button></div>
   <datalist id="dTags"></datalist>
@@ -656,6 +673,34 @@ function setContraAccountOptions() {
     ? "This Contra head has no matching accounts. Check its account subheads in Settings."
     : "";
 }
+function refreshReceiptBatchTotal_() {
+  const total = [...$("receiptBatchRows").querySelectorAll("[data-receipt-amount]")]
+    .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+  $("receiptBatchTotal").textContent = M(total);
+  const rows = $("receiptBatchRows").querySelectorAll(".receipt-batch-row");
+  rows.forEach((row, index) => {
+    row.querySelector(".row-top b").textContent = `Receipt ${index + 1}`;
+    row.querySelector(".row-remove").setAttribute("aria-label", `Remove receipt ${index + 1}`);
+  });
+}
+function addReceiptBatchRow_() {
+  const rows = $("receiptBatchRows");
+  const index = rows.querySelectorAll(".receipt-batch-row").length + 1;
+  const modes = configuredModes();
+  const options = modes.map(account => `<option value="${E(account)}">${E(canonicalAccount(account))}</option>`).join("");
+  const row = document.createElement("div");
+  row.className = "receipt-batch-row";
+  row.innerHTML = `  <div class="row-top"><b>Receipt ${index}</b></div>
+    <div class="fld"><label>Customer account no</label><input data-receipt-account inputmode="numeric" value="786" autocomplete="off"><small data-customer-hint style="color:var(--muted)"></small></div>
+    <div class="fld"><label>Receipt no</label><input data-receipt-voucher list="dTags" autocomplete="off"></div>
+    <div class="fld"><label>Account received in</label><select data-receipt-mode>${options}</select></div>
+    <div class="fld"><label>Amount (Rs)</label><input data-receipt-amount type="number" inputmode="decimal" min="0"></div>
+  <div class="fld"><label>Remarks</label><input data-receipt-remarks autocomplete="off"></div>
+  <button type="button" class="btn row-remove" aria-label="Remove receipt ${index}" title="Remove this receipt">×</button>`;
+  rows.insertBefore(row, rows.firstChild);
+  row.querySelector("[data-receipt-mode]").value = PM.cash[0] || modes[0] || "";
+  refreshReceiptBatchTotal_();
+}
 async function openNew(k) {
   kindNow = k; const c = CFG[k]; $("dTitle").textContent = c[0]; $("dSub").textContent = c[1]; $("lMode").textContent = c[2]; $("fErr").textContent = "";
   const modes = configuredModes();
@@ -663,9 +708,12 @@ async function openNew(k) {
   const opts = modes.map(a => `<option value="${E(a)}">${E(canonicalAccount(a))}</option>`).join(""); $("fMode").innerHTML = opts; $("fTo").innerHTML = opts;
   $("fMode").value = PM.cash[0] || modes[0];
   if (k === "transfer") $("fTo").value = PM.bank[0] || modes.find(a => a !== $("fMode").value) || modes[0];
-  show("gSub", k === "income" || k === "pay"); show("gAcc", k === "receipt"); show("gRct", k === "receipt");
+  show("gSub", k === "income" || k === "pay"); show("gAcc", false); show("gRct", false);
   show("gName", k === "income" || k === "pay"); show("gTo", k === "transfer"); show("gContra", k === "transfer");
+  show("gMode", k !== "receipt"); show("gAmt", k !== "receipt"); show("gRem", k !== "receipt"); show("receiptBatch", k === "receipt");
   $("fDate").value = ERP.ui.today(); $("fAmt").value = ""; $("fRem").value = ""; $("fName").value = ""; $("fRct").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = "";
+  $("receiptBatchRows").innerHTML = "";
+  if (k === "receipt") addReceiptBatchRow_();
   $("btnQuickParty").hidden = true; $("partyHint").hidden = true; $("lName").textContent = "Head / subhead";
   if (k === "income" || k === "pay") {
     $("lSub").textContent = k === "income" ? "Amount In category" : "Payment type";
@@ -680,12 +728,82 @@ async function openNew(k) {
   }
   if (k === "transfer") { populateContraHeads(); setContraAccountOptions(); }
   $("dTags").innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); ERP.voice.wire($("dlg"));
-  if (k === "receipt" && !CUST) ERP.db.customers.balances().then(r => { CUST = new Map(r.map(c => [String(c.account_no).trim(), c])); lookup(); }).catch(() => {});
-  $("dlg").showModal(); setTimeout(() => ($(k === "receipt" ? "fAcc" : k === "transfer" ? "fAmt" : "fName")).focus(), 50);
+  if (k === "receipt" && !CUST) ERP.db.customers.balances().then(r => {
+    CUST = new Map(r.map(c => [String(c.account_no).trim(), c]));
+    $("receiptBatchRows").querySelectorAll(".receipt-batch-row").forEach(updateReceiptCustomerHint_);
+  }).catch(e => ERP.ui.toast("Could not load customer accounts: " + e.message, "err"));
+  $("dlg").showModal();
+  setTimeout(() => {
+    const input = k === "receipt" ? $("receiptBatchRows").querySelector("[data-receipt-account]") : $(k === "transfer" ? "fAmt" : "fName");
+    input.focus();
+    if (k === "receipt") input.setSelectionRange(input.value.length, input.value.length);
+  }, 50);
 }
-function lookup() { const a = $("fAcc").value.trim(), i = $("fAccInfo"); if (!CUST || a.length < 5 || a === "786") { i.textContent = ""; return; } const c = CUST.get(a);
-  i.style.color = c ? "var(--brand-dark)" : "var(--danger)"; i.textContent = c ? `${c.account_title} · ${Number(c.balance) > 0 ? "Balance Rs " + M(c.balance) : "Clear"}` : "Account not found"; }
-$("fAcc").oninput = lookup;
+function updateReceiptCustomerHint_(row) {
+  const account = row.querySelector("[data-receipt-account]").value.trim();
+  const hint = row.querySelector("[data-customer-hint]");
+  if (!CUST || account.length < 5 || account === "786") { hint.textContent = ""; return; }
+  const customer = CUST.get(account);
+  hint.style.color = customer ? "var(--brand-dark)" : "var(--danger)";
+  hint.textContent = customer
+    ? `${customer.account_title} · ${Number(customer.balance) > 0 ? "Balance Rs " + M(customer.balance) : "Clear"}`
+    : "Account not found";
+}
+$("receiptBatchRows").addEventListener("input", event => {
+  const row = event.target.closest(".receipt-batch-row");
+  if (!row) return;
+  if (event.target.matches("[data-receipt-account]")) updateReceiptCustomerHint_(row);
+  if (event.target.matches("[data-receipt-amount]")) refreshReceiptBatchTotal_();
+});
+$("receiptBatchRows").addEventListener("click", event => {
+  const remove = event.target.closest(".row-remove");
+  if (remove) { remove.closest(".receipt-batch-row").remove(); refreshReceiptBatchTotal_(); }
+});
+const receiptRowFields_ = row => [
+  row.querySelector("[data-receipt-account]"),
+  row.querySelector("[data-receipt-voucher]"),
+  row.querySelector("[data-receipt-mode]"),
+  row.querySelector("[data-receipt-amount]"),
+  row.querySelector("[data-receipt-remarks]")
+];
+$("receiptBatchRows").addEventListener("focusin", event => {
+  if (!event.target.matches("[data-receipt-account]")) return;
+  if (event.target.value === "786") event.target.setSelectionRange(3, 3);
+});
+$("receiptBatchRows").onkeydown = event => {
+  if (!event.target.closest(".receipt-batch-row")) return;
+  const row = event.target.closest(".receipt-batch-row");
+  const fields = receiptRowFields_(row);
+  const index = fields.indexOf(event.target);
+  if (index < 0) return;
+  if (event.key === "Backspace") {
+    const field = event.target;
+    const isSelect = field.tagName === "SELECT";
+    const atStart = typeof field.selectionStart === "number"
+      && field.selectionStart === 0 && field.selectionEnd === 0;
+    if (!isSelect && field.value && !atStart) return;
+    event.preventDefault();
+    const previousRowFields = row.previousElementSibling ? receiptRowFields_(row.previousElementSibling) : null;
+    const previous = index > 0 ? fields[index - 1]
+      : previousRowFields && previousRowFields[previousRowFields.length - 1];
+    if (previous) {
+      previous.focus();
+      if (previous.setSelectionRange) previous.setSelectionRange(previous.value.length, previous.value.length);
+    }
+    return;
+  }
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  if (index < fields.length - 1) {
+    fields[index + 1].focus();
+    return;
+  }
+  addReceiptBatchRow_();
+  const firstAccount = $("receiptBatchRows").querySelector(".receipt-batch-row [data-receipt-account]");
+  firstAccount.focus();
+  firstAccount.setSelectionRange(firstAccount.value.length, firstAccount.value.length);
+};
+$("addReceiptRow").onclick = addReceiptBatchRow_;
 $("fSub").onchange = () => {
   const category = paymentCategoryFor($("fSub").value);
   populateSubheads(category);
@@ -737,16 +855,43 @@ $("acts").onclick = e => {
 async function save(again) {
   const bad = m => { $("fErr").textContent = m; return null; }; $("fErr").textContent = "";
   const date = $("fDate").value, amt = +$("fAmt").value, mode = $("fMode").value, rem = $("fRem").value.trim(), name = $("fName").value.trim();
-  if (!date) return bad("Select the date"); if (!(amt > 0)) return bad("Enter the amount");
-  if (kindNow === "transfer" && (!mode || !$("fTo").value)) return bad("The selected Contra head has no matching accounts. Check its account subheads in Settings.");
-  if (!mode) return bad("Select the account");
+  if (!date) return bad("Select the date");
   try {
     if (kindNow === "receipt") {
-      const acc = $("fAcc").value.trim(), rct = $("fRct").value.trim(), c = CUST && CUST.get(acc);
-      if (!c) return bad("Account not found"); if (!rct) return bad("Enter the receipt number");
-      if (!TAGS.some(t => t.toLowerCase() === rct.toLowerCase()) && (await ERP.db.receipts.existing([rct])).length) return bad("This receipt number is already saved");
-      await ERP.db.receipts.add([{ voucher_no: rct, date, account_no: acc, account_title: c.account_title, account_head: "Recovery", pay_mode: mode, amount: amt, remarks: rem }]); ERP.ui.toast("Receipt saved");
+      if (!CUST) {
+        const customers = await ERP.db.customers.balances();
+        CUST = new Map(customers.map(customer => [String(customer.account_no).trim(), customer]));
+      }
+      const rowElements = [...$("receiptBatchRows").querySelectorAll(".receipt-batch-row")];
+      if (!rowElements.length) return bad("Add at least one receipt");
+      const entries = [];
+      const receiptNumbers = new Set();
+      for (let index = 0; index < rowElements.length; index++) {
+        const row = rowElements[index], rowNo = index + 1;
+        const acc = row.querySelector("[data-receipt-account]").value.trim();
+        const rct = row.querySelector("[data-receipt-voucher]").value.trim();
+        const rowMode = row.querySelector("[data-receipt-mode]").value;
+        const rowAmount = Number(row.querySelector("[data-receipt-amount]").value);
+        const rowRemarks = row.querySelector("[data-receipt-remarks]").value.trim();
+        const customer = CUST.get(acc);
+        if (!customer) return bad(`Receipt ${rowNo}: customer account ${acc || "number"} was not found`);
+        if (!rct) return bad(`Receipt ${rowNo}: enter the receipt number`);
+        if (!rowMode) return bad(`Receipt ${rowNo}: select the account received in`);
+        if (!(rowAmount > 0)) return bad(`Receipt ${rowNo}: enter an amount greater than zero`);
+        const receiptKey = rct.toLowerCase();
+        receiptNumbers.add(receiptKey);
+        entries.push({
+          voucher_no: rct, date, account_no: acc, account_title: customer.account_title,
+          account_head: "Recovery", pay_mode: rowMode, amount: rowAmount, remarks: rowRemarks
+        });
+      }
+      const existing = receiptNumbers.size ? await ERP.db.receipts.existing([...receiptNumbers]) : [];
+      if (existing.length) return bad(`Receipt number ${existing[0]} is already saved`);
+      await ERP.db.receipts.add(entries);
+      ERP.ui.toast(`${entries.length} receipt${entries.length === 1 ? "" : "s"} saved · Total Rs ${M(entries.reduce((sum, entry) => sum + entry.amount, 0))}`);
     } else if (kindNow === "transfer") {
+      if (!(amt > 0)) return bad("Enter the amount");
+      if (!mode || !$("fTo").value) return bad("The selected Contra head has no matching accounts. Check its account subheads in Settings.");
       const contraOption = $("fContra").selectedOptions[0];
       const head = $("fContra").value.startsWith("setting:")
         ? (SETT.find(row => String(row.id) === $("fContra").value.slice(8)) || {}).display_name
@@ -765,9 +910,19 @@ async function save(again) {
       const savedName = PARTY_CATEGORIES.has(category)
         ? `${PARTY_CATEGORY_LABELS[category]}: ${partyName !== undefined ? partyName : name}`
         : name;
+      if (!(amt > 0)) return bad("Enter the amount");
+      if (!mode) return bad("Select the account");
       const r = await ERP.db.accounts.create({ kind, date, amount: amt, pay_mode: mode, name: savedName, remarks: rem }); ERP.ui.toast("Saved. Voucher " + r.voucher_no);
     }
-    if (again) { $("fAmt").value = ""; $("fRem").value = ""; $("fRct").value = ""; $("fName").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = ""; $("fAmt").focus(); } else $("dlg").close();
+    if (again) {
+      if (kindNow === "receipt") {
+        $("receiptBatchRows").innerHTML = "";
+        addReceiptBatchRow_();
+        $("receiptBatchRows").querySelector("[data-receipt-account]").focus();
+      } else {
+        $("fAmt").value = ""; $("fRem").value = ""; $("fRct").value = ""; $("fName").value = ""; $("fAcc").value = "786"; $("fAccInfo").textContent = ""; $("fAmt").focus();
+      }
+    } else $("dlg").close();
     partyEntriesLoaded = false;
     load();
   } catch (e) { bad(e.message); }
