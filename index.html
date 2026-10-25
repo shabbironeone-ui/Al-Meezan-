@@ -15,6 +15,12 @@
   .menu button{display:flex;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:8px 16px;background:none;border:0;border-left:4px solid transparent;color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
   .menu button:hover{background:var(--nav-hover)}
   .menu button[aria-current="page"]{background:var(--nav-hover);border-left-color:#5eead4}
+  .menu button[draggable="true"]{cursor:grab;touch-action:none}
+  .menu button[draggable="true"]::after{content:"⋮⋮";margin-left:auto;color:#94a3b8;font-size:13px;letter-spacing:-3px;opacity:.75}
+  .menu button[draggable="true"]:hover::after{color:#5eead4;opacity:1}
+  .menu button.dragging{opacity:.4;cursor:grabbing}
+  .menu button.drop-before{box-shadow:inset 0 3px #5eead4}
+  .menu button.drop-after{box-shadow:inset 0 -3px #5eead4}
   .main{flex:1;display:flex;flex-direction:column;min-width:0}
   .topbar{height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0}
   .topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -81,16 +87,73 @@ const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
 const $ = id => document.getElementById(id);
 const mk = (cls, html, fn, key) => { const b = document.createElement("button"); b.className = cls || ""; b.innerHTML = html; b.dataset.p = key; b.onclick = fn; return b; };
 
+const SIDEBAR_ORDER_KEY = "erp_sidebar_order";
+function readSidebarOrder_() {
+  try {
+    const value = JSON.parse(localStorage.getItem(SIDEBAR_ORDER_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch (e) { return {}; }
+}
+function orderedPages_(name, pages) {
+  const saved = readSidebarOrder_()[name];
+  if (!Array.isArray(saved)) return pages;
+  const positions = new Map(saved.map((key, index) => [key, index]));
+  return [...pages].sort((a, b) =>
+    (positions.get(a[0]) ?? Number.MAX_SAFE_INTEGER) - (positions.get(b[0]) ?? Number.MAX_SAFE_INTEGER));
+}
+function saveSidebarOrder_(group) {
+  const order = readSidebarOrder_();
+  order[group] = [...$("menu").querySelectorAll(`button[data-group="${CSS.escape(group)}"]`)].map(button => button.dataset.p);
+  try { localStorage.setItem(SIDEBAR_ORDER_KEY, JSON.stringify(order)); }
+  catch (e) { ERP.ui.toast("Could not save sidebar order: " + e.message, "err"); }
+}
+
 /* sidebar */
 $("menu").appendChild(mk("", "🏠  Home", () => go(null), ""));
 GROUPS.forEach(([name, pages]) => {
   const h = document.createElement("h4"); h.textContent = name; $("menu").appendChild(h);
-  pages.forEach(p => $("menu").appendChild(mk("", p[1] + "  " + p[2], () => go(p[0]), p[0])));
+  orderedPages_(name, pages).forEach(p => {
+    const button = mk("", p[1] + "  " + p[2], () => go(p[0]), p[0]);
+    button.dataset.group = name;
+    button.draggable = true;
+    button.title = "Drag to reorder within " + name;
+    $("menu").appendChild(button);
+  });
 });
 { const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h);
   const bk = mk("", "💾  Backup all data (CSV)", () => ERP.ui.busy(bk, async () => { try { await ERP.db.backupAll(t => ERP.ui.toast("Exporting " + t + "...")); ERP.ui.toast("Backup done"); } catch (e) { ERP.ui.toast(e.message, "err"); } }), "backup");
   $("menu").appendChild(bk); }
 { const c = mk("", "🩺  Connection check", () => window.open("status.html", "_blank"), "status"); $("menu").appendChild(c); }
+$("menu").addEventListener("dragstart", event => {
+  const button = event.target.closest('button[draggable="true"]');
+  if (!button) return;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", button.dataset.p);
+  button.classList.add("dragging");
+});
+$("menu").addEventListener("dragover", event => {
+  const target = event.target.closest('button[draggable="true"]');
+  const dragged = $("menu").querySelector("button.dragging");
+  if (!target || !dragged || target === dragged || target.dataset.group !== dragged.dataset.group) return;
+  event.preventDefault();
+  const rect = target.getBoundingClientRect();
+  const before = event.clientY < rect.top + rect.height / 2;
+  $("menu").querySelectorAll(".drop-before,.drop-after").forEach(button => button.classList.remove("drop-before", "drop-after"));
+  target.classList.add(before ? "drop-before" : "drop-after");
+});
+$("menu").addEventListener("drop", event => {
+  const target = event.target.closest('button[draggable="true"]');
+  const dragged = $("menu").querySelector("button.dragging");
+  if (!target || !dragged || target === dragged || target.dataset.group !== dragged.dataset.group) return;
+  event.preventDefault();
+  const rect = target.getBoundingClientRect();
+  $("menu").insertBefore(dragged, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+  saveSidebarOrder_(dragged.dataset.group);
+});
+$("menu").addEventListener("dragend", () => {
+  $("menu").querySelectorAll(".dragging,.drop-before,.drop-after").forEach(button =>
+    button.classList.remove("dragging", "drop-before", "drop-after"));
+});
 /* bottom bar (phones) */
 $("bar").appendChild(mk("", "<b>🏠</b>Home", () => go(null), ""));
 QUICK.forEach(k => $("bar").appendChild(mk("", "<b>" + ALL[k][1] + "</b>" + ALL[k][2].split(" ")[0], () => go(k), k)));
