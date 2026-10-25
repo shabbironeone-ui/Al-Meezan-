@@ -56,6 +56,7 @@
   .party-ledger th.num,.party-ledger td.num{text-align:right}
   .party-ledger-wrap{overflow:auto;max-height:42vh}
   #mgRows tr{cursor:pointer}#mgRows tr:hover{background:#f1f5f9}
+  #printReport{display:none}
   @media(max-width:899px){
     .head{display:none}
     .ent{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p amt" "m bal";gap:7px 10px}
@@ -65,7 +66,21 @@
     .ent .kind-mobile,.ent .amount-mobile{display:inline}
   }
   @media(max-width:520px){.acts{grid-template-columns:1fr 1fr;gap:7px}.acts .btn{min-width:0;padding:8px;font-size:13px}.acts .btn small{font-size:10px}.accs{grid-template-columns:repeat(2,minmax(0,1fr))}.ac{padding:10px}.range{gap:8px}}
-  @media print{.page>*:not(#ledger):not(.stats):not(.appbar){display:none!important}.acts,.accs,.ledger-toolbar{display:none!important}.ent{box-shadow:none;break-inside:avoid}}
+  @media print{
+    @page{size:A4 landscape;margin:10mm}
+    body{background:#fff!important;color:#111!important}
+    .page>*:not(#printReport){display:none!important}
+    #printReport{display:block!important;width:100%;font:9pt Arial,sans-serif}
+    #printReport header{text-align:center;border-bottom:1px solid #555;margin-bottom:8px;padding-bottom:6px}
+    #printReport h1{font-size:15pt;margin:0 0 4px}
+    #printReport p{font-size:9pt;margin:0}
+    #printTable{width:100%;border-collapse:collapse;table-layout:fixed}
+    #printTable th,#printTable td{border:1px solid #555;padding:4px 5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+    #printTable th{font-weight:700;background:#f1f1f1!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #printTable .num{text-align:right;white-space:nowrap}
+    #printTable tbody tr{break-inside:avoid}
+    #printTotals{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:7px;padding-top:5px;border-top:1px solid #555;font-weight:700}
+  }
 </style>
 </head>
 <body>
@@ -93,6 +108,14 @@
     <span class="actions"><label class="merge-chk" title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="mergeBank" checked> Merge same receipt no.</label><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
   <div class="head"><span>Date</span><span>Voucher</span><span>Type</span><span>Particulars</span><span>Account</span><span class="r">Money in</span><span class="r">Money out</span><span class="r">Balance</span></div>
   <section id="ledger"></section>
+  <section id="printReport" aria-hidden="true">
+    <header><h1>Al Meezan ERP - Accounts &amp; Day Book</h1><p id="printSub"></p></header>
+    <table id="printTable">
+      <thead><tr><th>Date</th><th>Voucher No</th><th>Type</th><th>Account</th><th>Particulars</th><th class="num">Money In</th><th class="num">Money Out</th><th class="num">Balance</th></tr></thead>
+      <tbody id="printRows"></tbody>
+    </table>
+    <div id="printTotals"></div>
+  </section>
   <div class="card" id="loadErr" hidden role="alert"></div>
 </main>
 
@@ -391,6 +414,7 @@ function render() {
   const rows = groups.filter(g => (!k || g.kind === k) && (!q || g.parts.map(p =>
     [p.voucher_no, p.party, p.head, historicalHeadLabel(p), p.remarks, p.party_no].join(" ")).join(" ").toLowerCase().includes(q)));
   VIEW = rows;
+  renderPrintReport_(rows, s, !k && !q);
   const note = ENT.some(e => e.needs_review) ? ' <span class="badge warn" title="Old contra rows: direction unknown, not counted in balances">some old transfers need review</span>' : "";
   $("cnt").innerHTML = `${M(rows.length)} ${rows.length === 1 ? "entry" : "entries"}${note}`;
   $("sub").textContent = `${$("from").value} to ${$("to").value}${sel ? " · " + sel : ""}`;
@@ -408,6 +432,34 @@ function render() {
         <span class="a">${E(acct(e))}</span><span class="r num in in2">${inn ? M(inn) : ""}</span><span class="r num out out2">${out ? M(out) : ""}</span>
         <span class="amt num ${inn ? "in" : out ? "out" : ""}">${amt}<span class="kind-mobile"> · ${E(e.kind)}</span></span><span class="r num bal">${M(e.bal)}</span></article>`; }).join("")
     || `<div class="empty-state"><b>${sel || q || k ? "No matching entries" : "Nothing recorded for these dates yet"}</b>${sel || q || k ? "Try changing the account, search text or entry type." : "Use one of the buttons above to add a receipt, income, payment or transfer."}</div>`;
+}
+function printDate_(value) {
+  const date = String(value || "").slice(0, 10);
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : date;
+}
+function renderPrintReport_(rows, summary, includeOpening) {
+  const sourceRows = rows.flatMap(row => row.parts || [row]);
+  const receiptIds = new Set(sourceRows
+    .filter(row => ["Receipt", "Sale advance"].includes(row.kind) && String(row.voucher_no || "").trim())
+    .map(row => String(row.voucher_no).trim().toLowerCase()));
+  const received = sourceRows.reduce((sum, row) => sum + (Number(row.money_in) || 0), 0);
+  const paid = sourceRows.reduce((sum, row) => sum + (Number(row.money_out) || 0), 0);
+  $("printSub").textContent = `${$("from").value} to ${$("to").value}${sel ? " · " + sel : ""}`;
+  const openingRow = includeOpening
+    ? `<tr><td>${E(printDate_($("from").value))}</td><td></td><td>Opening balance</td><td>${E(sel || "All accounts")}</td><td>Opening balance</td><td class="num"></td><td class="num"></td><td class="num">${M(summary.open)}</td></tr>`
+    : "";
+  $("printRows").innerHTML = openingRow + rows.map(row => {
+    const head = historicalHeadLabel(row);
+    const particulars = row.parts && row.parts.length > 1
+      ? mergedNames(row).join(" + ") || head || "(no description)"
+      : row.party || head || "(no description)";
+    const notes = [head && row.party ? head : "", row.remarks,
+      row.parts && row.parts.length > 1 ? `${row.parts.length} entries merged` : ""].filter(Boolean).join(" · ");
+    return `<tr><td>${E(printDate_(row.date))}</td><td>${E(row.voucher_no || "")}</td><td>${E(row.kind || "")}</td><td>${E(acct(row))}</td><td>${E(particulars)}${notes ? `<br><small>${E(notes)}</small>` : ""}</td><td class="num">${row.money_in ? M(row.money_in) : ""}</td><td class="num">${row.money_out ? M(row.money_out) : ""}</td><td class="num">${M(row.bal)}</td></tr>`;
+  }).join("");
+  const net = received - paid;
+  $("printTotals").innerHTML = `<span>Unique Receipt Qty: ${M(receiptIds.size)}</span><span>Total Entries: ${M(sourceRows.length)}</span><span>Total Received: Rs ${M(received)}</span><span>Total Paid: Rs ${M(paid)}</span><span>Net Total: Rs ${M(net)}</span>`;
 }
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { sel = b.dataset.a; render(); } };
 $("fKind").onchange = render; $("q").oninput = ERP.ui.debounce(render, 200);
