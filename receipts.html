@@ -20,8 +20,11 @@
   .btn.in{background:#047857}.btn.out{background:#b45309}.btn.xfer{background:#1d4ed8}
   .range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
   .range .wide{grid-column:1/-1}
+  .bank-filter{display:flex;align-items:center;gap:9px;min-width:0;grid-column:1/-1}
+  .bank-filter label{display:block;white-space:nowrap;color:var(--muted);font-size:12px;font-weight:600}
+  .bank-filter select{min-width:0;flex:1}
   @media(min-width:900px){.range{grid-template-columns:150px 140px 140px minmax(220px,1.4fr) 170px auto}.range .wide{grid-column:auto}}
-  @media(min-width:900px){body.receipts-page .range{grid-template-columns:150px 140px 140px minmax(220px,1.4fr) auto}}
+  @media(min-width:900px){body.receipts-page .range{grid-template-columns:150px 140px 140px minmax(220px,1.4fr) minmax(220px,auto) auto}.range .bank-filter{grid-column:auto}}
   .range-actions{display:flex;gap:6px}
   .range-actions .btn{min-width:44px;padding-inline:10px}
   .section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:18px 0 8px}
@@ -108,9 +111,9 @@
   <header class="appbar"><div><h1>Receipts</h1><p class="intro" id="sub">Customer receipts for the selected period.</p></div></header>
   <div class="acts no-print" id="acts">
     <button class="btn in" data-k="receipt"><span>＋ Receipt<small>Record money received from a customer</small></span></button>
-    <div class="receipt-range-stat"><small>Unique receipts · selected range</small><b id="uniqueReceiptCount">0</b></div>
-    <div class="receipt-range-stat"><small>Total entries · selected range</small><b id="totalReceiptEntries">0</b></div>
-    <div class="receipt-range-stat"><small>Total amount · selected range</small><b id="totalReceiptAmount">Rs 0</b></div>
+    <div class="receipt-range-stat"><small>Unique receipts · selected filters</small><b id="uniqueReceiptCount">0</b></div>
+    <div class="receipt-range-stat"><small>Total entries · selected filters</small><b id="totalReceiptEntries">0</b></div>
+    <div class="receipt-range-stat"><small>Total amount · selected filters</small><b id="totalReceiptAmount">Rs 0</b></div>
     <label class="receipt-merge"><input type="checkbox" id="mergeReceipts" checked> Merge same receipt number</label>
   </div>
 
@@ -118,6 +121,7 @@
     <div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
     <div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div>
     <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Receipt no, customer, account no or pay mode"></div>
+    <div class="bank-filter"><div><label for="entryTypeFilter">Entry type</label><select id="entryTypeFilter"><option value="cash_bank">Cash + bank</option><option value="cash_only">Cash only</option><option value="bank_only">Bank only</option></select></div><div style="flex:1;min-width:0"><label for="bankFilter">Bank account</label><select id="bankFilter" aria-label="Filter by bank"><option value="">All banks</option></select></div></div>
     <div class="range-actions"><button class="btn ghost" id="btnApply" type="button">Apply</button><button class="btn ghost" id="btnToday" type="button" title="Show today">Today</button></div>
   </section>
 
@@ -238,6 +242,15 @@ const configuredModes = () => PM.all || [...new Set([...PM.cash, ...PM.bank])];
 const isCashAccount = account => /^(?:daybook(?:\s*\(\s*cash\s*\))?|cash)$/i.test(String(account || "").trim());
 const bankAccounts = () => [...new Set([...PM.bank, ...configuredModes().filter(account => !isCashAccount(account))])];
 const canonicalAccount = account => /^(?:daybook(?:\s*\(\s*cash\s*\))?|cash)$/i.test(String(account || "").trim()) ? "Daybook (Cash)" : String(account || "").trim() || "(none)";
+const sameAccount_ = (left, right) => canonicalAccount(left).toLowerCase() === canonicalAccount(right).toLowerCase();
+function populateBankFilter_() {
+  const select = $("bankFilter");
+  const selected = select.value;
+  const banks = bankAccounts().sort((a, b) => String(a).localeCompare(String(b)));
+  select.innerHTML = '<option value="">All banks</option>' + banks.map(escapeOption).join("");
+  select.value = banks.some(bank => bank === selected) ? selected : "";
+  select.disabled = $("entryTypeFilter").value === "cash_only" || banks.length === 0;
+}
 function headGroupsForEntry(entry) {
   if (entry.src === "expenses") return [{ parent: "EXPENSE_HEAD", child: "EXPENSE_SUBHEAD" }];
   if (entry.src === "payments") return [
@@ -376,9 +389,17 @@ const acct = e => canonicalAccount(e.account);
 
 function render() {
   const q = $("q").value.trim().toLowerCase();
-  const entries = ENT.filter(entry => entry.kind === "Receipt" && (!q || [
+  const entryType = $("entryTypeFilter").value;
+  const selectedBank = $("bankFilter").value;
+  const rangeEntries = ENT.filter(entry => {
+    const isCash = isCashAccount(entry.account);
+    if (entryType === "cash_only") return isCash;
+    if (entryType === "bank_only") return !isCash && (!selectedBank || sameAccount_(entry.account, selectedBank));
+    return isCash || (!selectedBank || sameAccount_(entry.account, selectedBank));
+  });
+  const entries = rangeEntries.filter(entry => !q || [
     entry.voucher_no, entry.party, entry.party_no, entry.remarks, acct(entry)
-  ].join(" ").toLowerCase().includes(q)));
+  ].join(" ").toLowerCase().includes(q));
   const rows = [];
   const byKey = new Map();
   entries.forEach(entry => {
@@ -394,7 +415,7 @@ function render() {
     if (key) byKey.set(key, next);
   });
   VIEW = rows;
-  updateReceiptCounts_();
+  updateReceiptCounts_(rangeEntries);
   renderPrintReport_(rows);
   $("cnt").textContent = $("mergeReceipts").checked && entries.length !== rows.length
     ? `${M(entries.length)} entries · ${M(rows.length)} rows shown`
@@ -421,17 +442,17 @@ function receiptMergeKey_(entry) {
 function mergedValues_(entry, field) {
   return [...new Set(entry.parts.map(part => String(part[field] || "").trim()).filter(Boolean))].join(", ");
 }
-function updateReceiptCounts_() {
+function updateReceiptCounts_(entries) {
   const seen = new Set();
   let withoutReceiptNo = 0;
-  ENT.forEach(entry => {
+  entries.forEach(entry => {
     const voucher = String(entry.voucher_no || "").trim().toLowerCase();
     if (voucher) seen.add(voucher);
     else withoutReceiptNo += 1;
   });
   $("uniqueReceiptCount").textContent = M(seen.size + withoutReceiptNo);
-  $("totalReceiptEntries").textContent = M(ENT.length);
-  $("totalReceiptAmount").textContent = `Rs ${M(ENT.reduce((total, entry) => total + (Number(entry.money_in) || 0), 0))}`;
+  $("totalReceiptEntries").textContent = M(entries.length);
+  $("totalReceiptAmount").textContent = `Rs ${M(entries.reduce((total, entry) => total + (Number(entry.money_in) || 0), 0))}`;
 }
 function selectedRangeLabel_() {
   const from = $("from").value || $("to").value;
@@ -459,6 +480,11 @@ function renderPrintReport_(rows) {
 }
 $("q").oninput = ERP.ui.debounce(render, 200);
 $("mergeReceipts").onchange = render;
+$("entryTypeFilter").onchange = () => {
+  $("bankFilter").disabled = $("entryTypeFilter").value === "cash_only" || bankAccounts().length === 0;
+  render();
+};
+$("bankFilter").onchange = render;
 $("btnApply").onclick = load;
 $("btnToday").onclick = () => { $("preset").value = "today"; setPreset("today"); load(); };
 $("btnClear").onclick = () => { $("q").value = ""; render(); };
@@ -816,6 +842,8 @@ $("eDel").onclick = async () => {
     if (allSettings.error) throw allSettings.error;
     PM = s.paymentModes;
     SETT = allSettings.data || [];
+    populateBankFilter_();
+    $("entryTypeFilter").onchange();
   } catch (e) { ERP.ui.toast("Could not load dropdown values from Settings: " + e.message, "err"); }
   setPreset("today"); load();
 })();
