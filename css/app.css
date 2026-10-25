@@ -37,7 +37,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 #toasts{position:fixed;left:12px;right:12px;bottom:76px;z-index:999;display:grid;gap:8px;pointer-events:none}
 @media(min-width:900px){#toasts{left:auto;right:20px;bottom:20px;width:340px}}
 #toasts .toast{padding:12px 14px;border:1px solid transparent;border-radius:8px;color:#fff!important;background:#067647;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:14px;font-weight:600;line-height:1.45}
-#toasts .toast.err{color:#fff!important;background:#b42318;border-color:#912018}
+#toasts .toast.err{color:#422006!important;background:#fef08a;border:2px solid #ca8a04;border-left:7px solid #b45309;box-shadow:0 6px 20px rgba(120,53,15,.3);font-weight:700}
 #toasts .toast.ok{color:#fff!important;background:#067647;border-color:#05603a}
 
 .skeleton{height:14px;border-radius:6px;background:linear-gradient(90deg,#e2e8f0,#f1f5f9,#e2e8f0);background-size:200% 100%;animation:sk 1.2s infinite}
