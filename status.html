@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connection check</title>
+<link rel="stylesheet" href="css/app.css">
+<style>.row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.ok{color:#047857;font-weight:700}.no{color:var(--danger);font-weight:700}.msg{padding:12px 14px;border-radius:10px;margin-bottom:12px;background:#fffbeb;border:1px solid #f59e0b}code{background:#eef2f7;padding:1px 6px;border-radius:6px}</style>
+</head>
+<body>
+<main class="page" style="max-width:760px">
+  <header class="appbar"><div><h1>Connection check</h1><p>Shows exactly why data may not appear</p></div><div class="bar-actions"><a class="btn ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="index.html">🏠 Home</a><button class="btn" id="re">Check again</button></div></header>
+  <div id="diag"></div>
+  <section class="card" id="out"></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const row = (a, b, ok) => `<div class="row"><span>${a}</span><span class="${ok === true ? "ok" : ok === false ? "no" : ""}">${b}</span></div>`;
+async function run() {
+  $("out").innerHTML = "Checking..."; $("diag").innerHTML = ""; let h = "", problem = "";
+  const sb = window.supabase.createClient(ERP_CONFIG.SUPABASE_URL, ERP_CONFIG.SUPABASE_KEY);
+  h += row("Supabase address", E(ERP_CONFIG.SUPABASE_URL));
+  h += row("Config: OPEN_ACCESS", String(ERP_CONFIG.OPEN_ACCESS === true) + (ERP_CONFIG.AUTH_REQUIRED === false ? " (old AUTH_REQUIRED=false is ignored now)" : ""));
+  const { data: { session } } = await sb.auth.getSession();
+  const open = ERP_CONFIG.OPEN_ACCESS === true;
+  h += row("Logged in", session ? E(session.user.email) : open ? "not needed (open mode)" : "NO", session ? true : open ? null : false);
+  let role = null;
+  if (session) { const r = await sb.from("profiles").select("full_name, role").eq("id", session.user.id).maybeSingle();
+    role = r.data && r.data.role; h += row("Role (profiles table)", r.error ? E(r.error.message) : role ? E(role) + (r.data.full_name ? " · " + E(r.data.full_name) : "") : "NONE", !!role); }
+  if (!session && !open) problem = 'You are <b>not logged in</b>. The database is locked, so it shows nothing to visitors. <a href="login.html">Log in here</a>. If login.html gives "404", the file login.html is missing from your GitHub repo.';
+  else if (session && !role && !open) problem = `This account has <b>no role</b>. Open Supabase SQL Editor and run <code>sql/02_add_users.sql</code> after putting <b>${E(session.user.email)}</b> in it.`;
+  let allZero = true, anyErr = false;
+  for (const t of ["customers", "sales", "receipts", "product_master", "app_settings", "stock_ledger", "v_customer_balance", "v_installment_schedule", "v_customer_aging", "v_daybook", "v_dashboard_kpis"]) {
+    const { count, error } = await sb.from(t).select("*", { count: "exact", head: true });
+    if (error) { anyErr = true; h += row(t, "ERROR: " + E(error.message), false); } else { if (count) allZero = false; h += row(t, count + " rows", count > 0 ? true : null); } }
+  if (!problem && (open || (session && role)) && allZero && !anyErr) problem = "You are logged in with a role, but every table shows 0 rows. The tables may really be empty, or the database lock policy (sql/99) was not applied correctly.";
+  if (!problem && anyErr) problem = "Some tables or views gave an error. If a name starting with <code>v_</code> failed, run the SQL files again in order: 01, 03, 04, 05, 06, 07, 08.";
+  if (open && !problem) problem = "";
+  $("diag").innerHTML = problem ? `<div class="msg">${problem}</div>` : '<div class="msg" style="background:#ecfdf5;border-color:#10b981">Everything looks connected. 👍</div>';
+  $("out").innerHTML = h + (session ? '<p style="margin:12px 0 0"><button class="btn ghost" id="lo">Log out</button></p>' : "");
+  const lo = $("lo"); if (lo) lo.onclick = async () => { await sb.auth.signOut(); run(); };
+}
+$("re").onclick = run; run();
+</script>
+</body>
+</html>

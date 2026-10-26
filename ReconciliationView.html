@@ -548,58 +548,15 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
     importFileKey_("bank_statement", "manual-" + Date.now(), saveAccount);
   if (!confirm(`Save/update ${rows.length} bank entries for ${saveAccount}? Rows from the same account, statement period, and CSV position will update. Removed rows will remain in the database.`)) return;
   try {
-    const links = await ERP.db.reconciliationImports.list(fileKey);
-    const linkByRow = new Map(links.map(link => [String(link.row_key), link]));
-    const insertAndLink = async row => {
-      const inserted = await ERP.db.bank.add([{
+    for (const row of rows) {
+      await ERP.db.bank.upsertImported({
         account: row.account,
         date: row.date,
         amount: row.amount,
-        remarks: row.remarks
-      }]);
-      const link = {
-        file_key: fileKey,
-        row_key: row.row_key,
-        source_kind: "bank_statement",
-        source_table: "bank_statement",
-        source_id: String(inserted[0].id)
-      };
-      await ERP.db.reconciliationImports.save(link);
-      linkByRow.set(row.row_key, link);
-    };
-    for (const row of rows) {
-      const prior = linkByRow.get(row.row_key);
-      if (prior) {
-        if (prior.source_kind !== "bank_statement" || prior.source_table !== "bank_statement") {
-          throw new Error(`CSV row ${row.row_key} is linked to an unexpected record type.`);
-        }
-        const old = BANK.find(item => String(item.id) === String(prior.source_id));
-        const changed = !old || String(old.account) !== String(row.account) ||
-          String(old.date) !== String(row.date) || Number(old.amount) !== Number(row.amount) ||
-          String(old.remarks || "") !== String(row.remarks || "");
-        const update = {
-          account: row.account,
-          date: row.date,
-          amount: row.amount,
-          remarks: row.remarks
-        };
-        if (changed) {
-          update.match_src = null;
-          update.match_rid = null;
-        }
-        try {
-          await ERP.db.bank.update(prior.source_id, update);
-        } catch (err) {
-          // Linked bank row was deleted (stale link) -> recreate it and re-link
-          if (/not updated|not found|permission/i.test(String(err && err.message))) {
-            await insertAndLink(row);
-          } else {
-            throw err;
-          }
-        }
-      } else {
-        await insertAndLink(row);
-      }
+        remarks: row.remarks,
+        import_file_key: fileKey,
+        import_row_key: row.row_key
+      });
     }
     sessionStorage.removeItem(BANK_STAGE_KEY);
     $("clearBankStage").hidden = true;
