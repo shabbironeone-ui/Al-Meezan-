@@ -78,7 +78,7 @@
 const GROUPS = [
   ["Daily work", [["receipts.html","💵","Receipts"],["SalesForm.html","🛒","Sales"],["customer.html","👤","Customers"],["LedgerView.html","📒","Customer Ledger"]]],
   ["Accounts", [["Accounts.html","📖","Accounts & Day Book"],["voucher_entry.html","🧾","Voucher Entry"],["ReconciliationView.html","🔄","Reconciliation"]]],
-  ["System", [["Settings.html","⚙️","Settings"]]],
+  ["System", [["Settings.html","⚙️","Settings"],["UserAccess.html","🔐","User Roles"]]],
   ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
   ["Reports", [["DashboardView.html","📈","Dashboard"],["BusinessReports.html","📊","Business Reports"],["AgingReport2.html","💰","Recovery & Aging"],["cro_report.html","🖨️","CRO Report"]]]
 ];
@@ -170,12 +170,20 @@ function mark(file) { document.querySelectorAll("[data-p]").forEach(b => (b.data
 function show(file, target) {
   document.body.classList.remove("open"); const p = ALL[file];
   if (!p) { $("frame").hidden = true; $("frame").removeAttribute("src"); $("home").hidden = false; $("homeBtn").hidden = true; $("title").textContent = "Home"; mark(null); return; }
+  if (!ERP.auth.can("read", ERP.auth.pageKey(file))) {
+    ERP.ui.toast("You do not have permission to open this page.", "err");
+    return;
+  }
   $("home").hidden = true; $("frame").hidden = false; $("homeBtn").hidden = false; $("title").textContent = p[1] + " " + p[2]; mark(file);
   if ($("frame").getAttribute("src") !== target) $("frame").src = target;
   try { localStorage.setItem("erp_last", target); } catch (e) {}
 }
 function go(target, push = true) {
   target = target || ""; const file = target.split("?")[0];
+  if (file && ALL[file] && !ERP.auth.can("read", ERP.auth.pageKey(file))) {
+    ERP.ui.toast("You do not have permission to open this page.", "err");
+    return;
+  }
   if (push && location.hash.slice(1) !== target) history.pushState(null, "", "#" + target);
   show(file, target);
 }
@@ -192,6 +200,22 @@ $("logout").onclick = () => ERP.auth.signOut();
   if (!(ERP_CONFIG.OPEN_ACCESS === true) && !(await ERP.auth.session())) { location.replace("login.html"); return; }
   const p = await ERP.auth.guard();
   if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
+  document.querySelectorAll("[data-p]").forEach(button => {
+    const key = ERP.auth.pageKey(button.dataset.p);
+    if (key && !ERP.auth.can("read", key)) button.remove();
+  });
+  document.querySelectorAll("#menu h4").forEach(heading => {
+    if (!heading.nextElementSibling || heading.nextElementSibling.tagName === "H4") heading.remove();
+  });
+  document.querySelectorAll("#home .tiles").forEach(group => {
+    if (!group.children.length) {
+      const heading = group.previousElementSibling;
+      if (heading && heading.tagName === "H3") heading.remove();
+      group.remove();
+    }
+  });
+  $("logout").hidden = !!p.open;
+  $("who").textContent = p.open ? "Open access · roles inactive" : (p.full_name || p.email) + " (" + p.role + ")";
   const t = location.hash.slice(1); show(t.split("?")[0], t);
 })();
 </script>

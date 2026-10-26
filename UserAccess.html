@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Roles | Al Meezan ERP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .note{margin:12px 0;color:var(--muted)}
+    .toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+    .toolbar .fld{min-width:220px}
+    .user-meta{color:var(--muted);font-size:13px}
+    .table-wrap{margin-top:12px}
+    .perm-check{width:18px;height:18px}
+    .perm-name{min-width:190px}
+    .warning{padding:14px;border:1px solid #f59e0b;background:#fffbeb;border-radius:var(--radius)}
+    @media(max-width:650px){.table-wrap{overflow-x:auto}.perm-name{min-width:150px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="appbar">
+      <div>
+        <h1>User roles and permissions</h1>
+        <p>Choose a role, then enable or disable available actions for each page.</p>
+      </div>
+      <div class="bar-actions">
+        <button class="btn ghost" id="refreshBtn" type="button">Refresh users</button>
+        <button class="btn" id="saveBtn" type="button" disabled>Save permissions</button>
+      </div>
+    </header>
+
+    <div id="message" class="note" role="status"></div>
+    <div id="openWarning" class="warning" hidden>
+      <strong>Role management is not active yet.</strong>
+      <p>This app is currently in open-access mode. Apply <code>sql/14_user_permissions.sql</code>, verify that Supabase Auth users and profile rows are ready, then set <code>OPEN_ACCESS</code> to <code>false</code> in <code>js/config.js</code>. The access setting was left unchanged so nobody is locked out.</p>
+    </div>
+
+    <section id="manager" hidden>
+      <section class="card toolbar">
+        <div class="fld">
+          <label for="userSelect">User</label>
+          <select id="userSelect"></select>
+        </div>
+        <div class="fld">
+          <label for="roleSelect">Role</label>
+          <select id="roleSelect">
+            <option value="viewer">Viewer</option>
+            <option value="cro">CRO</option>
+            <option value="accountant">Accountant</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div id="userMeta" class="user-meta"></div>
+      </section>
+
+      <p class="note">Actions unavailable to the selected role stay disabled. Page settings can reduce that role's access; they cannot grant actions beyond the role's existing limits. Admin accounts retain full access. These controls restrict the app interface; Supabase RLS policies remain the server-side data security boundary.</p>
+      <section class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Page</th><th>View</th><th>Add</th><th>Edit</th><th>Delete</th><th>Export</th></tr></thead>
+            <tbody id="permissionsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const actionLabels = { read: "View", write: "Add", edit: "Edit", delete: "Delete", export: "Export" };
+    let users = [];
+    let selectedId = "";
+
+    function setMessage(text, error = false) {
+      $("message").textContent = text;
+      $("message").style.color = error ? "var(--danger, #b91c1c)" : "";
+    }
+    function roleActions(role) { return ERP.auth.roleRules[role] || []; }
+    function renderPermissions(user) {
+      const role = $("roleSelect").value;
+      const isAdmin = role === "admin";
+      const base = roleActions(role);
+      const overrides = user && user.permissions && typeof user.permissions === "object" ? user.permissions : {};
+      $("permissionsBody").replaceChildren();
+
+      ERP.auth.pages.forEach(page => {
+        const row = document.createElement("tr");
+        const name = document.createElement("td");
+        name.className = "perm-name";
+        name.textContent = page.label;
+        row.appendChild(name);
+        ERP.auth.actions.forEach(action => {
+          const cell = document.createElement("td");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.className = "perm-check";
+          input.dataset.page = page.key;
+          input.dataset.action = action;
+          input.checked = base.includes(action) && !(overrides[page.key] && overrides[page.key][action] === false);
+          input.disabled = isAdmin || !base.includes(action);
+          input.setAttribute("aria-label", page.label + " " + actionLabels[action]);
+          cell.appendChild(input);
+          row.appendChild(cell);
+        });
+        $("permissionsBody").appendChild(row);
+      });
+      $("userMeta").textContent = user ? (user.email || user.full_name || user.user_id) : "";
+      $("saveBtn").disabled = !user || isAdmin;
+    }
+    function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
+
+    async function loadUsers() {
+      setMessage("Loading users…");
+      const { data, error } = await ERP.db.sb.rpc("admin_list_user_access");
+      if (error) throw new Error("Could not load users: " + error.message);
+      users = data || [];
+      const select = $("userSelect");
+      const previous = selectedId;
+      select.replaceChildren();
+      users.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.user_id;
+        option.textContent = (user.full_name || user.email || user.user_id) + (user.email && user.full_name ? " · " + user.email : "");
+        select.appendChild(option);
+      });
+      selectedId = users.some(user => user.user_id === previous) ? previous : (users[0] && users[0].user_id) || "";
+      select.value = selectedId;
+      const user = currentUser();
+      $("roleSelect").value = user ? user.role : "viewer";
+      renderPermissions(user);
+      setMessage(users.length ? users.length + " user profile(s) loaded." : "No user profiles found. Add users through Supabase Auth and ensure each has a profiles row.");
+    }
+    function collectPermissions() {
+      const result = {};
+      $("permissionsBody").querySelectorAll("input[data-page]").forEach(input => {
+        if (!result[input.dataset.page]) result[input.dataset.page] = {};
+        result[input.dataset.page][input.dataset.action] = input.checked;
+      });
+      return result;
+    }
+    $("userSelect").addEventListener("change", () => {
+      selectedId = $("userSelect").value;
+      const user = currentUser();
+      $("roleSelect").value = user ? user.role : "viewer";
+      renderPermissions(user);
+    });
+    $("roleSelect").addEventListener("change", () => renderPermissions(currentUser()));
+    $("refreshBtn").addEventListener("click", async () => {
+      try { await loadUsers(); } catch (error) { setMessage(error.message, true); }
+    });
+    $("saveBtn").addEventListener("click", async () => {
+      const user = currentUser();
+      if (!user || $("roleSelect").value === "admin") return;
+      $("saveBtn").disabled = true;
+      try {
+        const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
+          p_user_id: user.user_id,
+          p_role: $("roleSelect").value,
+          p_permissions: collectPermissions()
+        });
+        if (error) throw new Error("Could not save permissions: " + error.message);
+        await loadUsers();
+        setMessage("Permissions saved.");
+      } catch (error) {
+        setMessage(error.message, true);
+      } finally {
+        $("saveBtn").disabled = $("roleSelect").value === "admin" || !currentUser();
+      }
+    });
+
+    (async () => {
+      try {
+        const profile = await ERP.auth.guard();
+        if (profile.open) {
+          $("openWarning").hidden = false;
+          return;
+        }
+        if (profile.role !== "admin") {
+          setMessage("Only an admin can manage user roles.", true);
+          return;
+        }
+        $("manager").hidden = false;
+        await loadUsers();
+      } catch (error) {
+        setMessage(error.message, true);
+      }
+    })();
+  </script>
+</body>
+</html>
