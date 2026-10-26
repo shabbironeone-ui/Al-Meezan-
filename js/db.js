@@ -208,6 +208,28 @@ ERP.db = (function () {
     bank: {
       listAll: () => fetchAll("bank_statement", { order: "id" }),
       async add(rows) { return must(await sb.from("bank_statement").insert(rows).select()); },
+      async upsertImported(row) {
+        const previous = must(await sb.from("bank_statement")
+          .select("id,account,date,amount,remarks,match_src,match_rid")
+          .eq("import_file_key", row.import_file_key)
+          .eq("import_row_key", row.import_row_key)
+          .maybeSingle());
+        const changed = previous && (
+          String(previous.account) !== String(row.account) ||
+          String(previous.date) !== String(row.date) ||
+          Number(previous.amount) !== Number(row.amount) ||
+          String(previous.remarks || "") !== String(row.remarks || "")
+        );
+        const record = {
+          ...row,
+          match_src: changed ? null : previous && previous.match_src || null,
+          match_rid: changed ? null : previous && previous.match_rid || null
+        };
+        return must(await sb.from("bank_statement")
+          .upsert(record, { onConflict: "import_file_key,import_row_key" })
+          .select()
+          .single());
+      },
       async update(id, fields) {
         const r = must(await sb.from("bank_statement").update(fields).eq("id", id).select("id"));
         if (!r.length) throw new Error("Not updated: bank statement entry not found or you do not have permission");
