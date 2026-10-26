@@ -6,15 +6,52 @@
   <title>User Roles | Al Meezan ERP</title>
   <link rel="stylesheet" href="css/app.css">
   <style>
-    .note{margin:12px 0;color:var(--muted)}
-    .toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
-    .toolbar .fld{min-width:220px}
-    .user-meta{color:var(--muted);font-size:13px}
-    .table-wrap{margin-top:12px}
-    .perm-check{width:18px;height:18px}
-    .perm-name{min-width:190px}
-    .warning{padding:14px;border:1px solid #f59e0b;background:#fffbeb;border-radius:var(--radius)}
-    @media(max-width:650px){.table-wrap{overflow-x:auto}.perm-name{min-width:150px}}
+    .page{max-width:1440px}
+    .appbar{margin:8px 0 18px}
+    .appbar h1{font-size:clamp(22px,3vw,29px)}
+    .appbar p,.muted{color:var(--muted)}
+    .bar-actions{flex-wrap:wrap}
+    .intro{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:var(--radius);margin-bottom:14px;color:#065f46}
+    .intro strong{display:block;margin-bottom:2px}
+    .intro p{margin:0;font-size:13px}
+    .warning{padding:16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius)}
+    .warning p{margin:6px 0 0}
+    .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .stat small{display:block}
+    .filters{display:grid;gap:12px;grid-template-columns:1fr}
+    @media(min-width:700px){.filters{grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto;align-items:end}}
+    .filters .fld{min-width:0}
+    .user-meta{align-self:center;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+    .user-meta strong{color:var(--ink)}
+    .toolbar-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+    .toolbar-actions .btn{min-height:36px;padding:5px 11px;font-size:13px}
+    .table-wrap{max-height:calc(100dvh - 390px);min-height:260px}
+    .permissions-table{min-width:740px}
+    .permissions-table th:first-child,.permissions-table td:first-child{position:sticky;left:0;background:#fff;z-index:2}
+    .permissions-table th:first-child{background:#f8fafc;z-index:3}
+    .permissions-table td:not(:first-child),.permissions-table th:not(:first-child){text-align:center;width:112px}
+    .permissions-table tbody tr:hover{background:#f8fafc}
+    .permissions-table tbody tr:hover td:first-child{background:#f8fafc}
+    .perm-check{width:19px;height:19px;min-height:19px;vertical-align:middle;accent-color:var(--brand);cursor:pointer}
+    .perm-check:disabled{cursor:not-allowed;opacity:.45}
+    .perm-name{min-width:230px;font-weight:600}
+    .action-label{display:block}
+    .unavailable{font-size:10px;font-weight:500;color:var(--muted)}
+    .table-empty{padding:28px;text-align:center;color:var(--muted)}
+    .statusline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin:0 2px 10px;color:var(--muted);font-size:13px}
+    .dirty{color:#92400e;font-weight:700}
+    .error{color:var(--danger);font-weight:600}
+    .role-pill{display:inline-block;padding:2px 9px;border-radius:99px;background:#e0f2fe;color:#075985;font-size:12px;font-weight:700;text-transform:capitalize}
+    .role-pill.admin{background:#d1fae5;color:#065f46}
+    .help{margin:12px 2px 0;color:var(--muted);font-size:13px;line-height:1.55}
+    .empty{padding:32px 16px}
+    @media(max-width:600px){
+      .page{padding:10px}
+      .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .table-wrap{max-height:none}
+      .bar-actions{width:100%}
+      .bar-actions .btn{flex:1}
+    }
   </style>
 </head>
 <body>
@@ -22,24 +59,43 @@
     <header class="appbar">
       <div>
         <h1>User roles and permissions</h1>
-        <p>Choose a role, then enable or disable available actions for each page.</p>
+        <p>Manage who can view or change each part of Al Meezan ERP.</p>
       </div>
       <div class="bar-actions">
+        <a class="btn ghost" href="https://supabase.com/dashboard/project/ofplfqawiupcmqvzkhfp/auth/users" target="_blank" rel="noopener">Add user in Supabase</a>
         <button class="btn ghost" id="refreshBtn" type="button">Refresh users</button>
-        <button class="btn" id="saveBtn" type="button" disabled>Save permissions</button>
+        <button class="btn" id="saveBtn" type="button" disabled>Save changes</button>
       </div>
     </header>
 
-    <div id="message" class="note" role="status"></div>
-    <div id="openWarning" class="warning" hidden>
-      <strong>Role management is not active yet.</strong>
-      <p>This app is currently in open-access mode. Apply <code>sql/14_user_permissions.sql</code>, verify that Supabase Auth users and profile rows are ready, then set <code>OPEN_ACCESS</code> to <code>false</code> in <code>js/config.js</code>. The access setting was left unchanged so nobody is locked out.</p>
+    <div class="intro">
+      <div aria-hidden="true">🔐</div>
+      <div>
+        <strong>Roles set the maximum access. Page permissions can only reduce it.</strong>
+        <p>Users must first be created in Supabase Authentication and have a matching profile. Changes here control the ERP interface; Supabase Row Level Security remains the database security boundary.</p>
+      </div>
     </div>
 
-    <section id="manager" hidden>
-      <section class="card toolbar">
+    <div id="message" class="statusline" role="status" aria-live="polite"></div>
+    <div id="openWarning" class="warning" hidden>
+      <strong>Role management is not active.</strong>
+      <p>This app is in open-access mode. Verify your Supabase Auth admin profile and the permission migration before enabling authentication in <code>js/config.js</code>.</p>
+    </div>
+    <div id="manager" hidden>
+      <section class="stats" aria-label="User summary">
+        <div class="stat"><small>Profiles</small><b id="statUsers">0</b></div>
+        <div class="stat"><small>Admins</small><b id="statAdmins">0</b></div>
+        <div class="stat"><small>Accountants</small><b id="statAccountants">0</b></div>
+        <div class="stat"><small>CRO / Viewers</small><b id="statOther">0</b></div>
+      </section>
+
+      <section class="card filters" aria-label="User and role selection">
         <div class="fld">
-          <label for="userSelect">User</label>
+          <label for="userSearch">Find user</label>
+          <input id="userSearch" type="search" placeholder="Search name or email" autocomplete="off">
+        </div>
+        <div class="fld">
+          <label for="userSelect">Selected user</label>
           <select id="userSelect"></select>
         </div>
         <div class="fld">
@@ -54,16 +110,32 @@
         <div id="userMeta" class="user-meta"></div>
       </section>
 
-      <p class="note">Actions unavailable to the selected role stay disabled. Page settings can reduce that role's access; they cannot grant actions beyond the role's existing limits. Admin accounts retain full access. These controls restrict the app interface; Supabase RLS policies remain the server-side data security boundary.</p>
-      <section class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Page</th><th>View</th><th>Add</th><th>Edit</th><th>Delete</th><th>Export</th></tr></thead>
-            <tbody id="permissionsBody"></tbody>
-          </table>
+      <section class="card toolbar" aria-label="Find pages and bulk permissions">
+        <div class="search">
+          <input id="pageSearch" type="search" placeholder="Filter pages…" autocomplete="off" aria-label="Filter pages">
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn ghost" id="defaultsBtn" type="button">Reset to role defaults</button>
+          <button class="btn ghost" id="allowAllBtn" type="button">Enable all available</button>
+          <button class="btn ghost" id="clearAllBtn" type="button">Clear available</button>
         </div>
       </section>
-    </section>
+
+      <div class="statusline">
+        <span id="accessSummary"></span>
+        <span id="changeStatus"></span>
+      </div>
+      <section class="card">
+        <div class="table-wrap">
+          <table class="permissions-table">
+            <thead><tr><th scope="col">Page</th><th scope="col">View</th><th scope="col">Add</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th></tr></thead>
+            <tbody id="permissionsBody"></tbody>
+          </table>
+          <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
+        </div>
+      </section>
+      <p class="help">To add another employee, first create their account in Supabase → Authentication → Users and create the matching <code>public.profiles</code> row. This screen manages role and page access for existing profiles.</p>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -76,21 +148,84 @@
     const actionLabels = { read: "View", write: "Add", edit: "Edit", delete: "Delete", export: "Export" };
     let users = [];
     let selectedId = "";
+    let currentUserId = "";
+    let savedState = "";
+    let draftPermissions = {};
+    let loading = false;
 
-    function setMessage(text, error = false) {
+    function setMessage(text, type) {
       $("message").textContent = text;
-      $("message").style.color = error ? "var(--danger, #b91c1c)" : "";
+      $("message").className = "statusline" + (type === "error" ? " error" : "");
     }
     function roleActions(role) { return ERP.auth.roleRules[role] || []; }
+    function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
+    function collectPermissions() {
+      return JSON.parse(JSON.stringify(draftPermissions));
+    }
+    function snapshot() {
+      return JSON.stringify({ role: $("roleSelect").value, permissions: draftPermissions });
+    }
+    function hasChanges() { return !!savedState && snapshot() !== savedState; }
+    function confirmDiscard() {
+      if (!hasChanges()) return true;
+      return window.confirm("You have unsaved permission changes. Discard them?");
+    }
+    function updateChangeStatus() {
+      const changed = hasChanges();
+      $("changeStatus").textContent = changed ? "Unsaved changes" : "All changes saved";
+      $("changeStatus").className = changed ? "dirty" : "";
+      $("saveBtn").disabled = loading || !changed || !currentUser();
+      return changed;
+    }
+    function updateSummary() {
+      const counts = users.reduce((total, user) => {
+        total[user.role] = (total[user.role] || 0) + 1;
+        return total;
+      }, {});
+      $("statUsers").textContent = String(users.length);
+      $("statAdmins").textContent = String(counts.admin || 0);
+      $("statAccountants").textContent = String(counts.accountant || 0);
+      $("statOther").textContent = String((counts.cro || 0) + (counts.viewer || 0));
+    }
+    function renderUserOptions(filter) {
+      const select = $("userSelect");
+      const query = String(filter || "").trim().toLowerCase();
+      const matches = users.filter(user => [user.full_name, user.email, user.user_id]
+        .some(value => String(value || "").toLowerCase().includes(query)));
+      select.replaceChildren();
+      const selected = currentUser();
+      if (selected && !matches.some(user => user.user_id === selectedId)) {
+        const option = document.createElement("option");
+        option.value = selected.user_id;
+        option.textContent = "Current selection · " + (selected.full_name || selected.email || selected.user_id);
+        select.appendChild(option);
+      }
+      matches.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.user_id;
+        const label = user.full_name || user.email || user.user_id;
+        option.textContent = (label + (user.email && user.full_name ? " · " + user.email : "") + (user.user_id === currentUserId ? " · You" : ""));
+        select.appendChild(option);
+      });
+      if (!selectedId && matches.length) selectedId = matches[0].user_id;
+      select.value = selectedId;
+      select.disabled = !selected && !matches.length;
+      return matches.length;
+    }
     function renderPermissions(user) {
       const role = $("roleSelect").value;
       const isAdmin = role === "admin";
       const base = roleActions(role);
-      const overrides = user && user.permissions && typeof user.permissions === "object" ? user.permissions : {};
-      $("permissionsBody").replaceChildren();
+      const body = $("permissionsBody");
+      const query = $("pageSearch").value.trim().toLowerCase();
+      let shown = 0;
+      body.replaceChildren();
 
       ERP.auth.pages.forEach(page => {
+        if (query && !page.label.toLowerCase().includes(query)) return;
+        shown += 1;
         const row = document.createElement("tr");
+        row.dataset.page = page.key;
         const name = document.createElement("td");
         name.className = "perm-name";
         name.textContent = page.label;
@@ -102,76 +237,174 @@
           input.className = "perm-check";
           input.dataset.page = page.key;
           input.dataset.action = action;
-          input.checked = base.includes(action) && !(overrides[page.key] && overrides[page.key][action] === false);
-          input.disabled = isAdmin || !base.includes(action);
+          input.checked = !!(draftPermissions[page.key] && draftPermissions[page.key][action]);
+          input.disabled = isAdmin || !base.includes(action) || action !== "read" && !draftPermissions[page.key].read;
           input.setAttribute("aria-label", page.label + " " + actionLabels[action]);
-          cell.appendChild(input);
+          if (!base.includes(action)) {
+            const unavailable = document.createElement("span");
+            unavailable.className = "unavailable";
+            unavailable.textContent = "Role limit";
+            unavailable.title = "This action is not available to the selected role.";
+            cell.appendChild(unavailable);
+          } else {
+            cell.appendChild(input);
+          }
           row.appendChild(cell);
         });
-        $("permissionsBody").appendChild(row);
+        body.appendChild(row);
       });
-      $("userMeta").textContent = user ? (user.email || user.full_name || user.user_id) : "";
-      $("saveBtn").disabled = !user || isAdmin;
-    }
-    function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
 
+      $("noPages").hidden = shown !== 0;
+      $("userMeta").replaceChildren();
+      if (user) {
+        const roleBadge = document.createElement("span");
+        roleBadge.className = "role-pill" + (user.role === "admin" ? " admin" : "");
+        roleBadge.textContent = role;
+        const details = document.createElement("span");
+        details.textContent = (user.email || user.full_name || user.user_id) + (user.user_id === currentUserId ? " · Your account" : "");
+        $("userMeta").append(roleBadge, document.createTextNode(" "), details);
+      }
+      const selfAdmin = !!user && user.user_id === currentUserId && user.role === "admin";
+      $("roleSelect").disabled = !user || selfAdmin;
+      $("defaultsBtn").disabled = !user || isAdmin || selfAdmin;
+      $("allowAllBtn").disabled = !user || isAdmin || selfAdmin;
+      $("clearAllBtn").disabled = !user || isAdmin || selfAdmin;
+      $("accessSummary").textContent = user
+        ? (isAdmin ? "Admin has full access to every page and action." : "Available actions for " + role + ": " + base.map(action => actionLabels[action]).join(", ") + ".")
+        : "No matching user profile.";
+      updateChangeStatus();
+    }
+    function renderSelectedUser() {
+      const user = currentUser();
+      $("roleSelect").value = user ? user.role : "viewer";
+      const base = roleActions($("roleSelect").value);
+      draftPermissions = {};
+      ERP.auth.pages.forEach(page => {
+        draftPermissions[page.key] = {};
+        ERP.auth.actions.forEach(action => {
+          const override = user && user.permissions && user.permissions[page.key];
+          draftPermissions[page.key][action] = base.includes(action) && !(override && override[action] === false);
+        });
+      });
+      renderPermissions(user);
+      savedState = snapshot();
+      updateChangeStatus();
+    }
+    function useRoleDefaults(role) {
+      const base = roleActions(role);
+      ERP.auth.pages.forEach(page => {
+        if (!draftPermissions[page.key]) draftPermissions[page.key] = {};
+        ERP.auth.actions.forEach(action => { draftPermissions[page.key][action] = base.includes(action); });
+      });
+    }
+    function applyBulk(value) {
+      const available = roleActions($("roleSelect").value);
+      ERP.auth.pages.forEach(page => available.forEach(action => { draftPermissions[page.key][action] = value; }));
+      renderPermissions(currentUser());
+      updateChangeStatus();
+    }
+    function resetToDefaults() {
+      if (!$("roleSelect").value || $("roleSelect").value === "admin") return;
+      useRoleDefaults($("roleSelect").value);
+      renderPermissions(currentUser());
+      updateChangeStatus();
+    }
     async function loadUsers() {
-      setMessage("Loading users…");
-      const { data, error } = await ERP.db.sb.rpc("admin_list_user_access");
-      if (error) throw new Error("Could not load users: " + error.message);
-      users = data || [];
-      const select = $("userSelect");
-      const previous = selectedId;
-      select.replaceChildren();
-      users.forEach(user => {
-        const option = document.createElement("option");
-        option.value = user.user_id;
-        option.textContent = (user.full_name || user.email || user.user_id) + (user.email && user.full_name ? " · " + user.email : "");
-        select.appendChild(option);
-      });
-      selectedId = users.some(user => user.user_id === previous) ? previous : (users[0] && users[0].user_id) || "";
-      select.value = selectedId;
-      const user = currentUser();
-      $("roleSelect").value = user ? user.role : "viewer";
-      renderPermissions(user);
-      setMessage(users.length ? users.length + " user profile(s) loaded." : "No user profiles found. Add users through Supabase Auth and ensure each has a profiles row.");
+      loading = true;
+      $("refreshBtn").disabled = true;
+      updateChangeStatus();
+      setMessage("Loading user profiles…");
+      try {
+        const { data, error } = await ERP.db.sb.rpc("admin_list_user_access");
+        if (error) throw new Error("Could not load users: " + error.message);
+        users = data || [];
+        if (!users.some(user => user.user_id === selectedId)) selectedId = "";
+        updateSummary();
+        if (!renderUserOptions($("userSearch").value)) {
+          $("permissionsBody").replaceChildren();
+          $("userMeta").textContent = "";
+          $("accessSummary").textContent = "No users match your search.";
+          $("noPages").hidden = true;
+          savedState = "";
+          updateChangeStatus();
+          setMessage("No matching profiles found.");
+          return;
+        }
+        renderSelectedUser();
+        setMessage(users.length + " user profile" + (users.length === 1 ? "" : "s") + " loaded.");
+      } finally {
+        loading = false;
+        $("refreshBtn").disabled = false;
+        updateChangeStatus();
+      }
     }
-    function collectPermissions() {
-      const result = {};
-      $("permissionsBody").querySelectorAll("input[data-page]").forEach(input => {
-        if (!result[input.dataset.page]) result[input.dataset.page] = {};
-        result[input.dataset.page][input.dataset.action] = input.checked;
-      });
-      return result;
-    }
-    $("userSelect").addEventListener("change", () => {
-      selectedId = $("userSelect").value;
-      const user = currentUser();
-      $("roleSelect").value = user ? user.role : "viewer";
-      renderPermissions(user);
+
+    $("userSearch").addEventListener("input", () => {
+      renderUserOptions($("userSearch").value);
     });
-    $("roleSelect").addEventListener("change", () => renderPermissions(currentUser()));
+    $("userSelect").addEventListener("change", () => {
+      if (!confirmDiscard()) {
+        $("userSelect").value = selectedId;
+        return;
+      }
+      selectedId = $("userSelect").value;
+      renderUserOptions($("userSearch").value);
+      renderSelectedUser();
+    });
+    $("roleSelect").addEventListener("change", () => {
+      useRoleDefaults($("roleSelect").value);
+      renderPermissions(currentUser());
+      updateChangeStatus();
+    });
+    $("pageSearch").addEventListener("input", () => renderPermissions(currentUser()));
+    $("permissionsBody").addEventListener("change", event => {
+      const input = event.target.closest("input[data-page]");
+      if (input) {
+        draftPermissions[input.dataset.page][input.dataset.action] = input.checked;
+        if (input.dataset.action === "read" && !input.checked) {
+          ERP.auth.actions.filter(action => action !== "read").forEach(action => {
+            draftPermissions[input.dataset.page][action] = false;
+          });
+          renderPermissions(currentUser());
+        }
+        updateChangeStatus();
+      }
+    });
+    $("defaultsBtn").addEventListener("click", resetToDefaults);
+    $("allowAllBtn").addEventListener("click", () => applyBulk(true));
+    $("clearAllBtn").addEventListener("click", () => applyBulk(false));
     $("refreshBtn").addEventListener("click", async () => {
-      try { await loadUsers(); } catch (error) { setMessage(error.message, true); }
+      if (!confirmDiscard()) return;
+      try { await loadUsers(); } catch (error) { setMessage(error.message, "error"); }
     });
     $("saveBtn").addEventListener("click", async () => {
       const user = currentUser();
-      if (!user || $("roleSelect").value === "admin") return;
-      $("saveBtn").disabled = true;
+      const role = $("roleSelect").value;
+      if (!user || !hasChanges()) return;
+      if (!window.confirm("Save " + role + " access for " + (user.email || user.full_name || "this user") + "?")) return;
+      loading = true;
+      updateChangeStatus();
+      setMessage("Saving permissions…");
       try {
         const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
           p_user_id: user.user_id,
-          p_role: $("roleSelect").value,
+          p_role: role,
           p_permissions: collectPermissions()
         });
         if (error) throw new Error("Could not save permissions: " + error.message);
         await loadUsers();
-        setMessage("Permissions saved.");
+        setMessage("Permissions saved successfully.");
       } catch (error) {
-        setMessage(error.message, true);
+        setMessage(error.message, "error");
       } finally {
-        $("saveBtn").disabled = $("roleSelect").value === "admin" || !currentUser();
+        loading = false;
+        updateChangeStatus();
       }
+    });
+    window.addEventListener("beforeunload", event => {
+      if (!hasChanges()) return;
+      event.preventDefault();
+      event.returnValue = "";
     });
 
     (async () => {
@@ -182,13 +415,15 @@
           return;
         }
         if (profile.role !== "admin") {
-          setMessage("Only an admin can manage user roles.", true);
+          setMessage("Only an admin can manage user roles.", "error");
           return;
         }
+        const activeSession = await ERP.auth.session();
+        currentUserId = activeSession && activeSession.user ? activeSession.user.id : "";
         $("manager").hidden = false;
         await loadUsers();
       } catch (error) {
-        setMessage(error.message, true);
+        setMessage(error.message, "error");
       }
     })();
   </script>
