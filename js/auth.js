@@ -3,6 +3,34 @@ window.ERP = window.ERP || {};
 ERP.auth = (function () {
   const sb = () => ERP.db.sb;
   let profile = null;
+  const PAGES = [
+    ["receipts.html", "receipts", "Receipts"],
+    ["SalesForm.html", "sales", "Sales"],
+    ["customer.html", "customers", "Customers"],
+    ["LedgerView.html", "ledger", "Customer Ledger"],
+    ["Accounts.html", "accounts", "Accounts & Day Book"],
+    ["voucher_entry.html", "vouchers", "Voucher Entry"],
+    ["ReconciliationView.html", "reconciliation", "Reconciliation"],
+    ["Settings.html", "settings", "Settings"],
+    ["ProductForm.html", "products", "Products"],
+    ["PurchaseForm.html", "purchases", "Purchases"],
+    ["StockLedger.html", "stock", "Stock Ledger"],
+    ["VenderLedger.html", "vendors", "Vendor Ledger"],
+    ["DashboardView.html", "dashboard", "Dashboard"],
+    ["BusinessReports.html", "business_reports", "Business Reports"],
+    ["recovery.html", "aging", "Recovery"],
+    ["AgingReport2.html", "aging_report", "Recovery & Aging"],
+    ["cro_report.html", "cro_report", "CRO Report"],
+    ["UserAccess.html", "user_access", "User Roles"]
+  ];
+  const ACTIONS = ["read", "write", "edit", "delete", "export"];
+  const ROLE_RULES = {
+    admin: ACTIONS,
+    accountant: ["read", "write", "edit", "export"],
+    cro: ["read", "write"],
+    viewer: ["read"]
+  };
+  const pageByFile = new Map(PAGES.map(([file, key]) => [file.toLowerCase(), key]));
 
   async function session() { return (await sb().auth.getSession()).data.session; }
 
@@ -20,22 +48,56 @@ ERP.auth = (function () {
     /* a page opened directly (not inside the menu shell) is sent into the shell, so Home and the menu are always there */
     const file = location.pathname.split("/").pop();
     if (self === top && file && file !== "index.html" && file !== "login.html") { location.replace("index.html#" + file + location.search); return new Promise(() => {}); }
-    if (ERP_CONFIG.OPEN_ACCESS === true) return { full_name: "", role: "admin", open: true };   // only if the database lock (sql/99) was removed
+    if (ERP_CONFIG.OPEN_ACCESS === true) return { full_name: "", role: "admin", permissions: {}, open: true };   // only if the database lock (sql/99) was removed
     const s = await session();
     if (!s) { toLogin(); return new Promise(() => {}); }
-    const { data } = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
+    let result = await sb().from("profiles").select("full_name, role, permissions").eq("id", s.user.id).maybeSingle();
+    if (result.error && /permissions|column/i.test(result.error.message || "")) {
+      result = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
+    }
+    if (result.error) throw new Error("Could not load your user profile: " + result.error.message);
+    const data = result.data;
     if (!data || !data.role) {
       alert("Your account has no role yet. Ask the admin to give you access.");
       await signOut(); return new Promise(() => {});
     }
-    profile = { ...data, email: s.user.email };
+    profile = { ...data, permissions: data.permissions || {}, email: s.user.email };
     sb().auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") toLogin(); });
+    if (!can("export")) {
+      document.querySelectorAll("#btnCsv, #btnExport, #bCsv, [onclick*='exportToCSV'], [onclick*='exportToPDF']").forEach(button => { button.hidden = true; });
+      document.querySelectorAll("#menu [data-p='backup']").forEach(button => { button.hidden = true; });
+    }
+    const fileName = location.pathname.split("/").pop().toLowerCase();
+    const page = pageByFile.get(fileName);
+    if (page && !can("read", page)) {
+      alert("You do not have permission to open this page.");
+      (self !== top ? top : window).location.replace("index.html");
+      return new Promise(() => {});
+    }
     return profile;
   }
 
-  /* Simple permission check for buttons: ERP.auth.can("delete") */
-  const RULES = { admin: ["read", "write", "edit", "delete"], accountant: ["read", "write", "edit"], cro: ["read", "write"], viewer: ["read"] };
-  const can = action => ERP_CONFIG.OPEN_ACCESS === true || !!(profile && (RULES[profile.role] || []).includes(action));
+  function pageKey(file) {
+    return pageByFile.get(String(file || "").split("?")[0].split("/").pop().toLowerCase()) || null;
+  }
+  function can(action, page) {
+    if (ERP_CONFIG.OPEN_ACCESS === true) return true;
+    if (!profile) return false;
+    const key = page || pageKey(location.pathname);
+    if (key === "user_access" && profile.role !== "admin") return false;
+    const base = ROLE_RULES[profile.role] || [];
+    if (!base.includes(action)) return false;
+    if (profile.role === "admin") return true;
+    const override = key && profile.permissions && profile.permissions[key];
+    return !(override && override[action] === false);
+  }
 
-  return { session, signIn, signOut, guard, can, get profile() { return profile; } };
+  return {
+    session, signIn, signOut, guard, can, pageKey,
+    pages: PAGES.map(([file, key, label]) => ({ file, key, label })),
+    actions: ACTIONS.slice(),
+    roles: Object.keys(ROLE_RULES),
+    roleRules: ROLE_RULES,
+    get profile() { return profile; }
+  };
 })();
