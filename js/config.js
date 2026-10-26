@@ -6,5 +6,5 @@ window.ERP_CONFIG = {
   SPECIAL_RECEIPT_NOS: ["Advance", "Processing Fee", "1st Installment"],  // receipt numbers that may repeat (old data)
   QUICK_RECEIPT_TAGS: ["Advance", "Processing Fee", "1st Installment"],  // quick buttons on the Receipts page
   PAGE_SIZE: 1000,        // Supabase returns max 1000 rows per request
-  OPEN_ACCESS: false       // temporary: public access for development. Turn false before final deployment.
+  OPEN_ACCESS: false      // Supabase Auth and profile-based roles are enabled.
 };
