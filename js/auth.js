@@ -53,6 +53,40 @@ ERP.auth = (function () {
     if (error) throw new Error("Could not send password reset email: " + error.message);
   }
 
+  /* Admin tools used by UserAccess.html.
+     create_user  : creates a Supabase login with a temporary client, so the admin stays signed in.
+     set_password : uses the Supabase Edge Function named below if it is deployed (it can set any
+                    user's password). If it is not deployed, a password reset email is sent instead. */
+  const ADMIN_FUNCTION = "admin-manage-user";
+  async function adminManageUser(payload) {
+    const action = payload && payload.action;
+    if (action === "create_user") {
+      const client = window.supabase.createClient(sb().supabaseUrl, sb().supabaseKey, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      });
+      const { data, error } = await client.auth.signUp({
+        email: String(payload.email || "").trim(),
+        password: payload.password,
+        options: { data: { full_name: payload.full_name } }
+      });
+      if (error) throw new Error(error.message);
+      if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
+        throw new Error("This email already has an account. Close this window and press Refresh; it will be in the list.");
+      }
+      return { user: data.user };
+    }
+    if (action === "set_password") {
+      try {
+        const { data, error } = await sb().functions.invoke(ADMIN_FUNCTION, { body: payload });
+        if (!error && data && !data.error) return data;
+      } catch (ignored) { /* function not deployed: fall back below */ }
+      if (!payload.email) throw new Error("Could not change the password: this user has no email address.");
+      await sendPasswordReset(payload.email);
+      return { message: "A password reset link was emailed to " + payload.email + ". The user sets the new password from that email." };
+    }
+    throw new Error("Unknown admin action: " + action);
+  }
+
   const toLogin = () => (self !== top ? top : window).location.replace("login.html");   // never show the login page inside the frame
   async function signOut() { await sb().auth.signOut(); toLogin(); }
 
@@ -128,7 +162,7 @@ ERP.auth = (function () {
   }
 
   return {
-    session, signIn, signOut, changePassword, sendPasswordReset, guard, can, pageKey,
+    session, signIn, signOut, changePassword, sendPasswordReset, adminManageUser, guard, can, pageKey,
     pages: PAGES.map(([file, key, label]) => ({ file, key, label })),
     actions: ACTIONS.slice(),
     roles: Object.keys(ROLE_RULES),
