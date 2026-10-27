@@ -69,6 +69,39 @@
       .bar-actions{width:100%}
       .bar-actions .btn{flex:1}
     }
+
+    /* Layout: 1) user + role  2) page permissions  3) advanced tools */
+    #manager{display:flex;flex-direction:column;gap:14px}
+    #manager>*{margin-top:0;margin-bottom:0}
+    #manager>.stats{order:1}
+    #manager>.filters{order:2}
+    #manager>.toolbar{order:3}
+    #manager>.statusline{order:4}
+    #manager>.perm-card{order:5}
+    #manager>.help{order:6}
+    #manager>.users-card{order:7}
+    #manager>.roles-card{order:8}
+    #manager>.apply-bar{order:9}
+    .step-head{grid-column:1/-1}
+    .step-head h2{margin:0 0 2px;font-size:17px}
+    .step-head p{margin:0;color:var(--muted);font-size:13px}
+    .fold>h2{cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin:0;user-select:none}
+    .fold>h2::after{content:"Show";font-size:12px;font-weight:600;color:var(--brand)}
+    .fold:not(.collapsed)>h2::after{content:"Hide"}
+    .fold:not(.collapsed)>h2{margin-bottom:6px}
+    .fold.collapsed>:not(h2){display:none}
+    .fold>h2:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+    #saveBtn{display:none}
+    .apply-bar{position:sticky;bottom:8px;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;background:#fff;border:1px solid #cbd5e1;border-radius:var(--radius);box-shadow:0 -4px 18px rgba(15,23,42,.10)}
+    .apply-bar.dirty{background:#fffbeb;border-color:#f59e0b}
+    .apply-bar.done{background:#ecfdf5;border-color:#34d399}
+    .apply-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .apply-info strong{overflow-wrap:anywhere}
+    .apply-info span{font-size:13px;color:var(--muted)}
+    .apply-bar.dirty .apply-info span{color:#92400e;font-weight:600}
+    .apply-bar.done .apply-info span{color:#065f46;font-weight:600}
+    #applyRoleBtn{min-height:44px;padding:8px 20px;font-weight:700}
+    @media(max-width:600px){#applyRoleBtn{width:100%}}
   </style>
 </head>
 <body>
@@ -205,7 +238,7 @@
           <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
         </div>
       </section>
-      <p class="help">Create the account and initial password here. Then select the new user, assign a role, configure page permissions, and press <strong>Save changes</strong> to create their ERP profile.</p>
+      <p class="help">Create the account and initial password under <strong>Users and passwords</strong> or with <strong>Create new account</strong>. Then select the new user, assign a role, configure page permissions, and press <strong>Apply role to user</strong> to create their ERP profile.</p>
     </div>
   </main>
 
@@ -937,6 +970,72 @@
         setMessage(error.message, "error");
       }
     })();
+  </script>
+  <script>
+  /* Apply-role bar + layout helpers */
+  (function () {
+    const mgr = $("manager"), save = $("saveBtn");
+    if (!mgr || !save) return;
+
+    $("permissionsBody").closest("section").classList.add("perm-card");
+    const rolesCard = $("customRoleHeading").closest("section");
+    const usersCard = $("userListHeading").closest("section");
+    rolesCard.classList.add("roles-card", "fold", "collapsed");
+    usersCard.classList.add("users-card", "fold", "collapsed");
+
+    [rolesCard, usersCard].forEach(card => {
+      const h = card.querySelector("h2");
+      h.tabIndex = 0;
+      h.setAttribute("role", "button");
+      h.setAttribute("aria-expanded", "false");
+      const toggle = () => {
+        const closed = card.classList.toggle("collapsed");
+        h.setAttribute("aria-expanded", String(!closed));
+      };
+      h.addEventListener("click", toggle);
+      h.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+    });
+
+    const head = document.createElement("div");
+    head.className = "step-head";
+    head.innerHTML = "<h2>Select a user and assign a role</h2><p>Pick the user, choose a role, adjust page permissions below, then press Apply role to user.</p>";
+    mgr.querySelector(".filters").prepend(head);
+
+    const bar = document.createElement("div");
+    bar.className = "apply-bar";
+    bar.innerHTML = '<div class="apply-info"><strong id="applyWho">No user selected</strong><span id="applyState"></span></div>' +
+      '<button class="btn" id="applyRoleBtn" type="button" disabled>Apply role to user</button>';
+    mgr.appendChild(bar);
+    const btn = $("applyRoleBtn");
+
+    function sync() {
+      const opt = $("userSelect").selectedOptions[0];
+      const role = $("roleSelect").selectedOptions[0];
+      $("applyWho").textContent = opt ? opt.textContent + (role ? "  →  " + role.textContent : "") : "No user selected";
+      const status = ($("changeStatus").textContent || "").trim();
+      const needsCro = !$("croAssign").hidden && !$("croSelect").value;
+      const busy = save.dataset.saving === "true";
+      const justSaved = /saved successfully/i.test($("message").textContent) && /All changes saved/i.test(status);
+      let text = status;
+      if (needsCro) text = "Choose the assigned CRO name to continue";
+      else if (justSaved) text = "✓ Role applied and profile saved";
+      $("applyState").textContent = text;
+      bar.classList.toggle("dirty", !justSaved && /Unsaved|Profile setup|Choose/.test(text));
+      bar.classList.toggle("done", justSaved);
+      btn.disabled = save.disabled;
+      btn.textContent = busy ? "Saving…" : "Apply role to user";
+    }
+
+    btn.addEventListener("click", () => { if (!save.disabled) save.click(); });
+    const mo = new MutationObserver(sync);
+    mo.observe(save, { attributes: true, childList: true, characterData: true, subtree: true });
+    [$("changeStatus"), $("message"), $("userMeta"), $("userSelect"), $("croAssign")].forEach(el =>
+      mo.observe(el, { attributes: true, childList: true, characterData: true, subtree: true }));
+    ["userSelect", "roleSelect", "croSelect"].forEach(id => $(id).addEventListener("change", sync));
+    sync();
+  })();
   </script>
 </body>
 </html>
