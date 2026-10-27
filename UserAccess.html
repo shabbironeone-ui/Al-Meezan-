@@ -100,6 +100,9 @@
     .apply-info span{font-size:13px;color:var(--muted)}
     .apply-bar.dirty .apply-info span{color:#92400e;font-weight:600}
     .apply-bar.done .apply-info span{color:#065f46;font-weight:600}
+    .danger-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px dashed #cbd5e1}
+    .danger-row small{color:var(--muted);margin-right:auto;min-width:200px}
+    .danger-row .btn{min-height:36px;padding:5px 12px;font-size:13px}
     #applyRoleBtn{min-height:44px;padding:8px 20px;font-weight:700}
     @media(max-width:600px){#applyRoleBtn{width:100%}}
   </style>
@@ -199,6 +202,11 @@
           <select id="croSelect"></select>
         </div>
         <div id="userMeta" class="user-meta"></div>
+        <div class="danger-row">
+          <small>Remove access keeps the login but clears the role and page permissions. Delete account removes the login permanently.</small>
+          <button class="btn ghost danger" id="removeAccessBtn" type="button" disabled>Remove ERP access</button>
+          <button class="btn ghost danger" id="deleteAccountBtn" type="button" disabled>Delete account</button>
+        </div>
       </section>
 
       <section class="card" aria-labelledby="userListHeading">
@@ -1035,6 +1043,59 @@
       mo.observe(el, { attributes: true, childList: true, characterData: true, subtree: true }));
     ["userSelect", "roleSelect", "croSelect"].forEach(id => $(id).addEventListener("change", sync));
     sync();
+
+    /* Remove ERP access / delete account */
+    const rmBtn = $("removeAccessBtn"), delBtn = $("deleteAccountBtn");
+    function syncDanger() {
+      const u = currentUser();
+      const self = !!u && u.user_id === currentUserId;
+      rmBtn.disabled = !u || self || u.profile_exists === false || loading;
+      delBtn.disabled = !u || self || loading;
+      rmBtn.title = delBtn.title = self ? "You cannot remove your own account." : "";
+    }
+    async function dangerAction(kind) {
+      const u = currentUser();
+      if (!u || !confirmDiscard()) return;
+      const name = u.email || u.full_name || "this user";
+      if (kind === "remove") {
+        if (!window.confirm("Remove ERP access for " + name + "? The login stays, but the role and page permissions are cleared.")) return;
+      } else if (u.email) {
+        const typed = window.prompt("This permanently deletes the login account for " + name + ".\nType the email address to confirm:");
+        if (typed === null) return;
+        if (typed.trim().toLowerCase() !== u.email.toLowerCase()) {
+          setMessage("The email did not match. Nothing was deleted.", "error");
+          return;
+        }
+      } else if (!window.confirm("Permanently delete the login account for " + name + "?")) return;
+
+      loading = true;
+      syncDanger();
+      updateChangeStatus();
+      setMessage(kind === "remove" ? "Removing ERP access…" : "Deleting account…");
+      try {
+        if (kind === "remove") {
+          const { error } = await ERP.db.sb.rpc("admin_remove_user_access", { p_user_id: u.user_id });
+          if (error) throw new Error(error.message);
+        } else {
+          await ERP.auth.adminManageUser({ action: "delete_user", user_id: u.user_id });
+        }
+        selectedId = "";
+        loading = false;
+        await loadUsers();
+        setMessage(kind === "remove" ? "ERP access removed for " + name + "." : "Account deleted: " + name + ".");
+      } catch (error) {
+        setMessage("Could not " + (kind === "remove" ? "remove access" : "delete the account") + ": " + error.message + ". If this mentions a missing function or action, the backend part is not installed yet.", "error");
+      } finally {
+        loading = false;
+        updateChangeStatus();
+        syncDanger();
+      }
+    }
+    rmBtn.addEventListener("click", () => dangerAction("remove"));
+    delBtn.addEventListener("click", () => dangerAction("delete"));
+    const mo2 = new MutationObserver(syncDanger);
+    [$("userMeta"), $("userSelect"), $("message")].forEach(el => mo2.observe(el, { childList: true, characterData: true, subtree: true }));
+    syncDanger();
   })();
   </script>
 </body>
