@@ -632,6 +632,26 @@
       $("setPasswordDialog").showModal();
       $("adminNewPassword").focus();
     }
+    async function adminManageUser(payload) {
+      if (typeof ERP.auth.adminManageUser === "function") return ERP.auth.adminManageUser(payload);
+      if (payload.action === "create_user") {
+        const sb = ERP.db.sb;
+        const client = window.supabase.createClient(sb.supabaseUrl, sb.supabaseKey, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        });
+        const { data, error } = await client.auth.signUp({
+          email: payload.email,
+          password: payload.password,
+          options: { data: { full_name: payload.full_name } }
+        });
+        if (error) throw new Error(error.message);
+        if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
+          throw new Error("This email already has an account. Close this window and press Refresh; it will be in the list.");
+        }
+        return { user: data.user };
+      }
+      throw new Error("Changing passwords needs an admin function that this project's js/auth.js does not have yet. For now, change it in Supabase: Authentication, then Users.");
+    }
     async function createAccount(event) {
       event.preventDefault();
       const fullName = $("newUserName").value.trim();
@@ -646,7 +666,7 @@
       button.textContent = "Creating…";
       showAccountMessage($("createAccountMessage"), "Creating the Supabase account…");
       try {
-        const result = await ERP.auth.adminManageUser({
+        const result = await adminManageUser({
           action: "create_user",
           full_name: fullName,
           email,
@@ -681,14 +701,15 @@
       button.textContent = "Changing…";
       showAccountMessage($("setPasswordMessage"), "Updating password securely…");
       try {
-        const result = await ERP.auth.adminManageUser({
+        const result = await adminManageUser({
           action: "set_password",
           user_id: passwordUserId,
+          email: (users.find(item => item.user_id === passwordUserId) || {}).email || "",
           password
         });
         showAccountMessage($("setPasswordMessage"), result.message || "Password changed successfully.");
         $("setPasswordForm").reset();
-        setMessage("Password changed for " + ($("setPasswordUser").textContent || "the selected user") + ".");
+        setMessage(result.message || "Password changed for " + ($("setPasswordUser").textContent || "the selected user") + ".");
         window.setTimeout(() => $("setPasswordDialog").close(), 1100);
       } catch (error) {
         showAccountMessage($("setPasswordMessage"), error.message, true);
