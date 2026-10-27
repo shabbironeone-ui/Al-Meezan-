@@ -5,6 +5,31 @@ ERP.db = (function () {
   const sb = window.supabase.createClient(C.SUPABASE_URL, C.SUPABASE_KEY);
 
   const must = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
+  const saleTotalAmount = row => {
+    const salesAmount = Number(row && row.sales_amt);
+    if (row && row.sales_amt != null && Number.isFinite(salesAmount)) {
+      return salesAmount + (Number(row.processing_fee) || 0);
+    }
+    const totalAmount = Number(row && row.total_amt);
+    return row && row.total_amt != null && Number.isFinite(totalAmount) ? totalAmount : 0;
+  };
+  const saleContractTotal = (rows, includeAdvances = false) => {
+    const originals = rows.filter(row => !row.return_of_id);
+    const returns = rows.filter(row => row.return_of_id);
+    const itemTotal = originals.reduce((sum, row) => sum + saleTotalAmount(row), 0);
+    const storedTotals = originals.map(row => Number(row.total_amt));
+    const allTotalsPresent = storedTotals.length > 0 && storedTotals.every(Number.isFinite);
+    const repeatedContractTotal = allTotalsPresent
+      && storedTotals.length > 1
+      && storedTotals.every(amount => amount === storedTotals[0])
+      ? storedTotals[0]
+      : storedTotals.reduce((sum, amount) => sum + (Number.isFinite(amount) ? amount : 0), 0);
+    const gross = allTotalsPresent ? Math.max(itemTotal, repeatedContractTotal) : itemTotal;
+    const advances = includeAdvances
+      ? originals.reduce((sum, row) => sum + (Number(row.advance) || 0), 0)
+      : 0;
+    return gross + advances + returns.reduce((sum, row) => sum + saleTotalAmount(row), 0);
+  };
 
   /* Reads ALL rows page by page (fixes the silent 1000-row limit). `build` may add filters; ALWAYS pass a stable `order`. */
   async function fetchAll(table, { select = "*", order, ascending = true, build } = {}) {
@@ -61,7 +86,48 @@ ERP.db = (function () {
         if (!r.length) throw new Error("Not deleted: you do not have permission"); return r;
       },
       async peekNextNo() { return must(await sb.rpc("peek_next_customer_no")); },
-      balances: () => fetchAll("v_customer_balance", { order: "account_no" }),
+      async balances(customerRows) {
+        const [customers, sales, summary] = await Promise.all([
+          customerRows ? Promise.resolve(customerRows) : fetchAll("customers", { order: "account_no" }),
+          fetchAll("sales", {
+            select: "account_no,sales_amt,processing_fee,total_amt,advance,return_of_id",
+            order: "id"
+          }),
+          fetchAll("v_customer_balance", { select: "account_no,received", order: "account_no" })
+        ]);
+        const receivedByAccount = new Map(summary.map(row => [
+          String(row.account_no || "").trim(),
+          Number(row.received) || 0
+        ]));
+        const balances = new Map();
+        const getBalance = accountNo => {
+          const key = String(accountNo || "").trim();
+          if (!balances.has(key)) balances.set(key, { account_no: key, total_sale: 0, balance: 0 });
+          return balances.get(key);
+        };
+        const salesByAccount = new Map();
+        sales.forEach(row => {
+          if (!row.account_no) return;
+          const account = String(row.account_no).trim();
+          if (!salesByAccount.has(account)) salesByAccount.set(account, []);
+          salesByAccount.get(account).push(row);
+        });
+        salesByAccount.forEach((rows, account) => {
+          getBalance(account).total_sale = saleContractTotal(rows, true);
+        });
+        return customers.map(customer => {
+          const account = String(customer.account_no || "").trim();
+          const balance = balances.get(account);
+          const totalSale = balance ? balance.total_sale : 0;
+          const received = receivedByAccount.get(account) || 0;
+          return {
+            ...customer,
+            total_sale: totalSale,
+            received,
+            balance: totalSale - received
+          };
+        });
+      },
       sowdowoOf: c => c[SOWDOWO]
     },
 
@@ -110,6 +176,8 @@ ERP.db = (function () {
     },
 
     sales: {
+      totalAmount: saleTotalAmount,
+      contractTotal: saleContractTotal,
       list: ({ accNo } = {}) => fetchAll("sales", { order: "id", build: q => accNo ? q.eq("account_no", String(accNo).trim()) : q }),
       async recent({ from, to } = {}) {
         let q = sb.from("sales").select("*").order("date", { ascending: false }).order("id", { ascending: false });
