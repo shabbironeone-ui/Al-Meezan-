@@ -24,7 +24,8 @@
   .main{flex:1;display:flex;flex-direction:column;min-width:0}
   .topbar{height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0}
   .topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .burger{display:none;min-width:var(--tap)}
+  .burger{display:inline-flex;align-items:center;justify-content:center;min-width:36px;width:36px;height:36px;padding:0;font-size:18px}
+  @media(min-width:900px){body.sidebar-hidden .shell-nav{display:none}}
   .who{font-size:12px;color:var(--muted);white-space:nowrap}
   iframe{flex:1;width:100%;border:0;background:var(--bg)}
   .home{padding:16px;overflow:auto;flex:1}
@@ -33,13 +34,17 @@
   .tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);min-height:88px;padding:12px;font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
   .tile:hover{border-color:var(--brand)} .tile b{display:block;font-size:24px;margin-bottom:2px}
+  .password-form{display:grid;gap:12px}
+  .password-form .actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .password-status{min-height:20px;margin:0;font-size:13px}
+  .password-status.error{color:var(--danger);font-weight:600}
   .bottom-bar{display:none}
   .scrim{display:none}
   @media(max-width:899px){
     .shell-nav{position:fixed;inset:0 auto 0 0;transform:translateX(-100%);transition:transform .2s}
     body.open .shell-nav{transform:none}
     body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
-    .burger{display:inline-block}.who,#newtab
+    .burger{display:inline-flex}
     .bottom-bar{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
     .bottom-bar button{flex:1;min-height:58px;background:none;border:0;border-top:3px solid transparent;font:inherit;font-size:11px;color:var(--muted);cursor:pointer}
     .bottom-bar button[aria-current="page"]{border-top-color:var(--brand);color:var(--brand-dark);font-weight:700}
@@ -56,10 +61,11 @@
 
 <div class="main">
   <header class="topbar">
-    <button class="btn ghost burger" id="burger" aria-label="Open menu">☰</button>
+    <button class="btn ghost burger" id="burger" type="button" aria-label="Hide sidebar" aria-expanded="true" title="Hide sidebar">◀</button>
     <button class="btn ghost" id="homeBtn" hidden title="Back to Home">🏠 Home</button>
     <h1 id="title">Home</h1>
     <span class="who no-print" id="who"></span>
+    <button class="btn ghost" id="passwordBtn" type="button" hidden>Change password</button>
     <button class="btn ghost" id="logout" hidden>Logout</button>
     <button class="btn ghost" id="newtab" title="Open this page in a new tab">Open in tab</button>
   </header>
@@ -67,6 +73,19 @@
   <iframe id="frame" title="Page" hidden></iframe>
   <div class="bottom-bar" id="bar"></div>
 </div>
+
+<dialog id="passwordDialog" class="sheet">
+  <div class="sh-head">
+    <div><h2>Change password</h2><p>Choose a new password for your account.</p></div>
+    <button class="x" id="passwordClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <form id="passwordForm" class="sh-body password-form">
+    <div class="fld"><label for="newPassword">New password</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" required></div>
+    <div class="fld"><label for="confirmPassword">Confirm new password</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></div>
+    <div id="passwordMessage" class="password-status" role="status" aria-live="polite"></div>
+    <div class="actions"><button class="btn ghost" id="passwordCancel" type="button">Cancel</button><button class="btn" id="passwordSave" type="submit">Update password</button></div>
+  </form>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
@@ -86,6 +105,34 @@ const QUICK = ["receipts.html","SalesForm.html","customer.html","Accounts.html",
 const ALL = Object.fromEntries(GROUPS.flatMap(g => g[1]).map(p => [p[0], p]));
 const $ = id => document.getElementById(id);
 const mk = (cls, html, fn, key) => { const b = document.createElement("button"); b.className = cls || ""; b.innerHTML = html; b.dataset.p = key; b.onclick = fn; return b; };
+function openPasswordDialog_() {
+  $("passwordMessage").textContent = "";
+  $("passwordMessage").className = "password-status";
+  $("passwordForm").reset();
+  $("passwordDialog").showModal();
+  $("newPassword").focus();
+}
+ERP.db.sb.auth.onAuthStateChange(event => {
+  if (event === "PASSWORD_RECOVERY") openPasswordDialog_();
+});
+const SIDEBAR_HIDDEN_KEY = "erp_sidebar_hidden";
+function isMobileNav_() { return window.matchMedia("(max-width: 899px)").matches; }
+function updateSidebarToggle_() {
+  const isOpen = isMobileNav_() ? document.body.classList.contains("open") : !document.body.classList.contains("sidebar-hidden");
+  const label = isMobileNav_()
+    ? (isOpen ? "Close menu" : "Open menu")
+    : (isOpen ? "Hide sidebar" : "Show sidebar");
+  $("burger").textContent = isMobileNav_() ? (isOpen ? "✕" : "☰") : (isOpen ? "◀" : "☰");
+  $("burger").setAttribute("aria-label", label);
+  $("burger").setAttribute("title", label);
+  $("burger").setAttribute("aria-expanded", String(isOpen));
+}
+try {
+  document.body.classList.toggle("sidebar-hidden", localStorage.getItem(SIDEBAR_HIDDEN_KEY) === "true");
+} catch (error) {
+  ERP.ui.toast("Could not restore sidebar preference: " + error.message, "err");
+}
+updateSidebarToggle_();
 
 const SIDEBAR_ORDER_KEY = "erp_sidebar_order";
 function readSidebarOrder_() {
@@ -168,7 +215,7 @@ GROUPS.forEach(([name, pages]) => {
 /* routing: target may carry a query, e.g. LedgerView.html?accNo=786001 */
 function mark(file) { document.querySelectorAll("[data-p]").forEach(b => (b.dataset.p === (file || "") && b.dataset.p !== "backup" && b.dataset.p !== "status") ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
 function show(file, target) {
-  document.body.classList.remove("open"); const p = ALL[file];
+  document.body.classList.remove("open"); updateSidebarToggle_(); const p = ALL[file];
   if (!p) { $("frame").hidden = true; $("frame").removeAttribute("src"); $("home").hidden = false; $("homeBtn").hidden = true; $("title").textContent = "Home"; mark(null); return; }
   if (!ERP.auth.can("read", ERP.auth.pageKey(file))) {
     ERP.ui.toast("You do not have permission to open this page.", "err");
@@ -191,15 +238,61 @@ window.addEventListener("popstate", () => { const t = location.hash.slice(1); sh
 /* a link clicked INSIDE a page (e.g. Ledger button) keeps the title and menu in step */
 $("frame").onload = () => { try { const w = $("frame").contentWindow, f = w.location.pathname.split("/").pop(); if (ALL[f]) { const t = f + w.location.search; if (location.hash.slice(1) !== t) history.replaceState(null, "", "#" + t); $("title").textContent = ALL[f][1] + " " + ALL[f][2]; mark(f); } } catch (e) {} };
 
-$("burger").onclick = () => document.body.classList.add("open");
-$("scrim").onclick = () => document.body.classList.remove("open");
+$("burger").onclick = () => {
+  if (isMobileNav_()) {
+    document.body.classList.toggle("open");
+  } else {
+    const hidden = document.body.classList.toggle("sidebar-hidden");
+    try { localStorage.setItem(SIDEBAR_HIDDEN_KEY, String(hidden)); }
+    catch (error) { ERP.ui.toast("Could not save sidebar preference: " + error.message, "err"); }
+  }
+  updateSidebarToggle_();
+};
+$("scrim").onclick = () => { document.body.classList.remove("open"); updateSidebarToggle_(); };
+window.addEventListener("resize", () => {
+  if (!isMobileNav_()) document.body.classList.remove("open");
+  updateSidebarToggle_();
+});
 $("homeBtn").onclick = () => go(null); $("brand").onclick = () => go(null);
 $("newtab").onclick = () => { const t = location.hash.slice(1); if (ALL[t.split("?")[0]]) window.open(t, "_blank"); };
 $("logout").onclick = () => ERP.auth.signOut();
+$("passwordBtn").onclick = openPasswordDialog_;
+$("passwordClose").onclick = () => $("passwordDialog").close();
+$("passwordCancel").onclick = () => $("passwordDialog").close();
+$("passwordForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const password = $("newPassword").value;
+  if (password.length < 8) {
+    $("passwordMessage").textContent = "Password must be at least 8 characters.";
+    $("passwordMessage").className = "password-status error";
+    return;
+  }
+  if (password !== $("confirmPassword").value) {
+    $("passwordMessage").textContent = "The passwords do not match.";
+    $("passwordMessage").className = "password-status error";
+    return;
+  }
+  const button = $("passwordSave");
+  button.disabled = true;
+  button.textContent = "Updating…";
+  try {
+    await ERP.auth.changePassword(password);
+    $("passwordMessage").textContent = "Password updated successfully.";
+    $("passwordMessage").className = "password-status";
+    $("passwordForm").reset();
+    window.setTimeout(() => $("passwordDialog").close(), 900);
+  } catch (error) {
+    $("passwordMessage").textContent = error.message;
+    $("passwordMessage").className = "password-status error";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Update password";
+  }
+});
 (async () => {
   if (!(ERP_CONFIG.OPEN_ACCESS === true) && !(await ERP.auth.session())) { location.replace("login.html"); return; }
   const p = await ERP.auth.guard();
-  if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
+  if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + (p.roleDefinition ? p.roleDefinition.role_name : p.role) + ")"; $("logout").hidden = false; }
   if (p.role !== "admin") document.querySelectorAll('[data-p="backup"]').forEach(button => button.remove());
   document.querySelectorAll("[data-p]").forEach(button => {
     const key = ERP.auth.pageKey(button.dataset.p);
@@ -216,7 +309,8 @@ $("logout").onclick = () => ERP.auth.signOut();
     }
   });
   $("logout").hidden = !!p.open;
-  $("who").textContent = p.open ? "Open access · roles inactive" : (p.full_name || p.email) + " (" + p.role + ")";
+  $("passwordBtn").hidden = !!p.open;
+  $("who").textContent = p.open ? "Open access · roles inactive" : (p.full_name || p.email) + " (" + (p.roleDefinition ? p.roleDefinition.role_name : p.role) + ")";
   const t = location.hash.slice(1); show(t.split("?")[0], t);
 })();
 </script>
