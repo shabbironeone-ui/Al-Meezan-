@@ -57,6 +57,10 @@
     .user-list td:last-child,.user-list th:last-child{text-align:right}
     .user-list .btn{min-height:36px;padding:5px 10px;font-size:12px}
     .user-reset-status{min-height:20px;margin:6px 0 0;color:var(--muted);font-size:13px}
+    .account-form{display:grid;gap:12px}
+    .account-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+    .account-message{min-height:20px;color:var(--muted);font-size:13px}
+    .account-message.error{color:var(--danger);font-weight:600}
     @media(min-width:850px){.role-builder{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr) auto}}
     @media(max-width:600px){
       .page{padding:10px}
@@ -75,7 +79,7 @@
         <p>Manage who can view or change each part of Al Meezan ERP.</p>
       </div>
       <div class="bar-actions">
-        <a class="btn ghost" href="https://supabase.com/dashboard/project/ofplfqawiupcmqvzkhfp/auth/users" target="_blank" rel="noopener">Add user in Supabase</a>
+        <button class="btn ghost" id="createAccountBtn" type="button">Create new account</button>
         <button class="btn ghost" id="refreshBtn" type="button">Refresh users</button>
         <button class="btn" id="saveBtn" type="button" disabled>Save changes</button>
       </div>
@@ -165,8 +169,8 @@
       </section>
 
       <section class="card" aria-labelledby="userListHeading">
-        <h2 id="userListHeading">Users and password resets</h2>
-        <p class="muted">Send a secure password-reset link to a user's email. You cannot view or set another user's password here.</p>
+        <h2 id="userListHeading">Users and passwords</h2>
+        <p class="muted">Create accounts here and set a new password for any listed user. Passwords are never displayed after they are saved.</p>
         <div class="table-wrap">
           <table class="user-list">
             <thead><tr><th scope="col">User</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Account</th><th scope="col">Password</th></tr></thead>
@@ -174,7 +178,7 @@
           </table>
           <div id="userDirectoryEmpty" class="table-empty" hidden>No users match this search.</div>
         </div>
-        <div id="resetStatus" class="user-reset-status" role="status" aria-live="polite"></div>
+        <div id="accountStatus" class="user-reset-status" role="status" aria-live="polite"></div>
       </section>
 
       <section class="card toolbar" aria-label="Find pages and bulk permissions">
@@ -201,9 +205,37 @@
           <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
         </div>
       </section>
-      <p class="help">To add an employee, create their account using <strong>Add user in Supabase</strong>, then press <strong>Refresh users</strong>. Select the new account, choose its role and permissions, and save. Saving provisions the matching <code>public.profiles</code> record when needed.</p>
+      <p class="help">Create the account and initial password here. Then select the new user, assign a role, configure page permissions, and press <strong>Save changes</strong> to create their ERP profile.</p>
     </div>
   </main>
+
+  <dialog id="createAccountDialog" class="sheet">
+    <div class="sh-head">
+      <div><h2>Create new account</h2><p>Create a Supabase login with an initial password.</p></div>
+      <button class="x" type="button" data-account-close aria-label="Close">✕</button>
+    </div>
+    <form id="createAccountForm" class="sh-body account-form">
+      <div class="fld"><label for="newUserName">Full name</label><input id="newUserName" type="text" minlength="2" maxlength="100" autocomplete="name" required></div>
+      <div class="fld"><label for="newUserEmail">Email</label><input id="newUserEmail" type="email" maxlength="254" autocomplete="email" required></div>
+      <div class="fld"><label for="newUserPassword">Initial password</label><input id="newUserPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+      <div class="fld"><label for="confirmNewUserPassword">Confirm initial password</label><input id="confirmNewUserPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+      <div id="createAccountMessage" class="account-message" role="status" aria-live="polite"></div>
+      <div class="account-actions"><button class="btn ghost" type="button" data-account-close>Cancel</button><button class="btn" id="createAccountSave" type="submit">Create account</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="setPasswordDialog" class="sheet">
+    <div class="sh-head">
+      <div><h2>Change user password</h2><p id="setPasswordUser"></p></div>
+      <button class="x" type="button" data-account-close aria-label="Close">✕</button>
+    </div>
+    <form id="setPasswordForm" class="sh-body account-form">
+      <div class="fld"><label for="adminNewPassword">New password</label><input id="adminNewPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+      <div class="fld"><label for="adminConfirmPassword">Confirm new password</label><input id="adminConfirmPassword" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+      <div id="setPasswordMessage" class="account-message" role="status" aria-live="polite"></div>
+      <div class="account-actions"><button class="btn ghost" type="button" data-account-close>Cancel</button><button class="btn" id="setPasswordSave" type="submit">Change password</button></div>
+    </form>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
@@ -217,6 +249,7 @@
     let users = [];
     let customRoles = [];
     let selectedId = "";
+    let passwordUserId = "";
     let selectedCustomRoleKey = "";
     let currentUserId = "";
     let croNames = [];
@@ -517,36 +550,93 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "btn ghost";
-        button.dataset.resetUser = user.user_id;
-        button.textContent = "Send reset link";
-        button.disabled = !user.email;
-        button.title = user.email ? "Send a password reset email to " + user.email : "This Auth user has no email address";
+        button.dataset.setPasswordUser = user.user_id;
+        button.textContent = "Change password";
+        button.title = "Set a new password for " + (user.email || user.full_name || "this user");
         action.appendChild(button);
         row.append(name, email, role, account, action);
         body.appendChild(row);
       });
       $("userDirectoryEmpty").hidden = matches.length > 0;
     }
-    async function sendUserPasswordReset(button) {
-      const user = users.find(item => item.user_id === button.dataset.resetUser);
-      if (!user || !user.email) {
-        $("resetStatus").textContent = "This user does not have an email address for password recovery.";
+    function showAccountMessage(element, text, isError = false) {
+      element.textContent = text;
+      element.className = "account-message" + (isError ? " error" : "");
+    }
+    function openSetPassword(userId) {
+      const user = users.find(item => item.user_id === userId);
+      if (!user) return;
+      passwordUserId = user.user_id;
+      $("setPasswordUser").textContent = (user.full_name || "User") + (user.email ? " · " + user.email : "");
+      $("setPasswordForm").reset();
+      showAccountMessage($("setPasswordMessage"), "");
+      $("setPasswordDialog").showModal();
+      $("adminNewPassword").focus();
+    }
+    async function createAccount(event) {
+      event.preventDefault();
+      const fullName = $("newUserName").value.trim();
+      const email = $("newUserEmail").value.trim();
+      const password = $("newUserPassword").value;
+      if (password !== $("confirmNewUserPassword").value) {
+        showAccountMessage($("createAccountMessage"), "The passwords do not match.", true);
         return;
       }
-      if (!window.confirm("Send a password reset link to " + user.email + "?")) return;
+      const button = $("createAccountSave");
       button.disabled = true;
-      button.textContent = "Sending…";
-      $("resetStatus").textContent = "";
-      $("resetStatus").className = "user-reset-status";
+      button.textContent = "Creating…";
+      showAccountMessage($("createAccountMessage"), "Creating the Supabase account…");
       try {
-        await ERP.auth.sendPasswordReset(user.email);
-        $("resetStatus").textContent = "Password reset email sent to " + user.email + ". The user must open the link and choose a new password.";
+        const result = await ERP.auth.adminManageUser({
+          action: "create_user",
+          full_name: fullName,
+          email,
+          password
+        });
+        if (!result || !result.user || !result.user.id) {
+          throw new Error("Supabase did not return the new user account.");
+        }
+        selectedId = result.user.id;
+        $("userSearch").value = "";
+        $("createAccountForm").reset();
+        $("createAccountDialog").close();
+        await loadUsers();
+        $("accountStatus").className = "user-reset-status";
+        $("accountStatus").textContent = "Account created. Select the user, assign a role, and save permissions to finish ERP setup.";
       } catch (error) {
-        $("resetStatus").textContent = error.message;
-        $("resetStatus").className = "user-reset-status error";
+        showAccountMessage($("createAccountMessage"), error.message, true);
       } finally {
         button.disabled = false;
-        button.textContent = "Send reset link";
+        button.textContent = "Create account";
+      }
+    }
+    async function setUserPassword(event) {
+      event.preventDefault();
+      const password = $("adminNewPassword").value;
+      if (password !== $("adminConfirmPassword").value) {
+        showAccountMessage($("setPasswordMessage"), "The passwords do not match.", true);
+        return;
+      }
+      const button = $("setPasswordSave");
+      button.disabled = true;
+      button.textContent = "Changing…";
+      showAccountMessage($("setPasswordMessage"), "Updating password securely…");
+      try {
+        const result = await ERP.auth.adminManageUser({
+          action: "set_password",
+          user_id: passwordUserId,
+          password
+        });
+        showAccountMessage($("setPasswordMessage"), result.message || "Password changed successfully.");
+        $("setPasswordForm").reset();
+        $("accountStatus").className = "user-reset-status";
+        $("accountStatus").textContent = "Password changed for " + ($("setPasswordUser").textContent || "the selected user") + ".";
+        window.setTimeout(() => $("setPasswordDialog").close(), 1100);
+      } catch (error) {
+        showAccountMessage($("setPasswordMessage"), error.message, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Change password";
       }
     }
     function renderPermissions(user) {
@@ -700,9 +790,22 @@
       renderUserDirectory($("userSearch").value);
     });
     $("userDirectory").addEventListener("click", event => {
-      const button = event.target.closest("button[data-reset-user]");
-      if (button) sendUserPasswordReset(button);
+      const button = event.target.closest("button[data-set-password-user]");
+      if (button) openSetPassword(button.dataset.setPasswordUser);
     });
+    $("createAccountBtn").addEventListener("click", () => {
+      $("createAccountForm").reset();
+      showAccountMessage($("createAccountMessage"), "");
+      $("createAccountDialog").showModal();
+      $("newUserName").focus();
+    });
+    document.addEventListener("click", event => {
+      const close = event.target.closest("[data-account-close]");
+      const dialog = event.target.closest("dialog");
+      if (close && dialog) dialog.close();
+    });
+    $("createAccountForm").addEventListener("submit", createAccount);
+    $("setPasswordForm").addEventListener("submit", setUserPassword);
     $("userSelect").addEventListener("change", () => {
       if (!confirmDiscard()) {
         $("userSelect").value = selectedId;
