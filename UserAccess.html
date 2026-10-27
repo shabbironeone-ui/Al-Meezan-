@@ -787,6 +787,10 @@
         });
         if (error) throw new Error("Could not save permissions: " + error.message);
         await loadUsers();
+        const updatedUser = users.find(item => item.user_id === user.user_id);
+        if (!updatedUser || updatedUser.profile_exists !== true || updatedUser.role !== role) {
+          throw new Error("The save request finished, but the refreshed user record is still missing or unchanged. Run the latest sql/14_user_permissions.sql in Supabase, then press Refresh users and try again.");
+        }
         setMessage("Permissions saved successfully.");
       } catch (error) {
         setMessage(error.message, "error");
