@@ -105,6 +105,26 @@
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, up = s => String(s || "").trim().toUpperCase(), N = v => Number(v) || 0;
+const saleLineTotal = row => ERP.db.sales.totalAmount
+  ? ERP.db.sales.totalAmount(row)
+  : row.sales_amt != null
+    ? N(row.sales_amt) + N(row.processing_fee)
+    : N(row.total_amt);
+const saleContractTotal = (rows, includeAdvances = false) => {
+  if (ERP.db.sales.contractTotal) return ERP.db.sales.contractTotal(rows, includeAdvances);
+  const originals = rows.filter(row => !row.return_of_id);
+  const returns = rows.filter(row => row.return_of_id);
+  const itemTotal = originals.reduce((sum, row) => sum + saleLineTotal(row), 0);
+  const storedTotals = originals.map(row => Number(row.total_amt));
+  const allTotalsPresent = storedTotals.length > 0 && storedTotals.every(Number.isFinite);
+  const storedTotal = allTotalsPresent && storedTotals.length > 1
+    && storedTotals.every(amount => amount === storedTotals[0])
+    ? storedTotals[0]
+    : storedTotals.reduce((sum, amount) => sum + (Number.isFinite(amount) ? amount : 0), 0);
+  const advance = includeAdvances ? originals.reduce((sum, row) => sum + N(row.advance), 0) : 0;
+  return Math.max(itemTotal, allTotalsPresent ? storedTotal : itemTotal) + advance
+    + returns.reduce((sum, row) => sum + saleLineTotal(row), 0);
+};
 let PM = { cash: [], bank: [] };
 let CUST = new Map(), STOCK = [], HIST = [], RETURNED_SALES = new Map(), activeSaleLine = null, mode = "inst", editing = null, active = null, curCust = null;
 const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
@@ -244,8 +264,9 @@ function groups() { const q = $("hQ").value.trim().toLowerCase(), g = new Map();
   HIST.filter(r => !q || [r.account_no, r.account_title, r.model, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.account_no; (g.get(k) || g.set(k, []).get(k)).push(r); }); return g; }
 function renderHist() {
   const g = groups(); let grand = 0;
+  const selectedRows = [...g.values()].flat();
   $("hList").innerHTML = [...g].map(([acc, rs]) => {
-    const tot = ERP.db.sales.contractTotal(rs, true), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0), cash = /^INV-/i.test(acc);
+    const cash = /^INV-/i.test(acc), tot = saleContractTotal(rs, !cash), adv = rs.reduce((s, r) => s + N(r.advance), 0), ins = rs.reduce((s, r) => s + N(r.installment_per_month), 0);
     const hasReturns = rs.some(r => r.return_ref) || rs.some(r => (RETURNED_SALES.get(String(r.id)) || 0) > 0);
     grand += tot;
     const itemRows = rs.map(r => {
@@ -254,13 +275,16 @@ function renderHist() {
       const remaining = Math.max(N(r.qty) - returned, 0);
       const returnAction = !isReturn && remaining > 0 && ERP.auth.can("write")
         ? `<button type="button" class="btn sm ghost" data-do="return-item" data-id="${E(r.id)}">Return · ${M(remaining)} left</button>` : "";
-      return `<tr class="${isReturn ? "return-row" : ""}"><td>${isReturn ? `<span class="badge warn">Return ${E(r.return_ref)}</span>` : `${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small>`}</td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(ERP.db.sales.totalAmount(r))}</td><td>${returnAction}</td></tr>`;
+      return `<tr class="${isReturn ? "return-row" : ""}"><td>${isReturn ? `<span class="badge warn">Return ${E(r.return_ref)}</span>` : `${E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small>`}</td><td class="num">${M(r.qty)}</td><td class="num">${M(r.sales_rate)}</td><td class="num">${M(r.plan_months)}</td><td class="num">${M(r.advance)}</td><td class="num">${M(r.installment_per_month)}</td><td class="num">${M(saleLineTotal(r))}</td><td>${returnAction}</td></tr>`;
     }).join("");
-    return `<article class="po" data-a="${E(acc)}"><div class="po-h"><div><b>${E(rs[0].account_title)}</b> <span class="badge ${cash ? "" : "ok"}">${cash ? "Cash" : "CAF"} ${E(acc)}</span><br><small>${E(rs[0].date)} · ${rs.length} item${rs.length > 1 ? "s" : ""}${!cash && ins ? " · Inst Rs " + M(ins) + "/mo" : ""}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400">Advance ${M(adv)}</small></div></div>
+    return `<article class="po" data-a="${E(acc)}"><div class="po-h"><div><b>${E(rs[0].account_title)}</b> <span class="badge ${cash ? "" : "ok"}">${cash ? "Cash" : "CAF"} ${E(acc)}</span><br><small>${E(rs[0].date)} · ${rs.length} item${rs.length > 1 ? "s" : ""}${!cash && ins ? " · Inst Rs " + M(ins) + "/mo" : ""}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400">${cash ? "Paid" : "Advance"} ${M(adv)}</small></div></div>
       <div class="po-b" hidden><div class="table-wrap"><table style="min-width:680px"><thead><tr><th>Product / return</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Plan</th><th class="num">Advance</th><th class="num">Inst/mo</th><th class="num">Total</th><th>Action</th></tr></thead><tbody>${itemRows}</tbody></table></div>
       <div class="sch" data-acc="${E(acc)}"></div><div class="ba">${cash ? "" : `<a class="btn sm ghost" style="text-decoration:none;display:inline-grid;place-items:center" href="LedgerView.html?accNo=${encodeURIComponent(acc)}">Ledger</a>`}${!cash && ERP.auth.can("edit") ? '<button class="btn sm ghost" data-do="sched">Schedule</button>' : ""}<button class="btn sm ghost" data-do="print">Print slip</button>${ERP.auth.can("delete") && !hasReturns ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${ERP.auth.can("edit") && !hasReturns ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}${hasReturns ? '<small style="color:var(--muted)">Edit/delete disabled after a return</small>' : ""}</div></div></article>`;
   }).join("") || '<div class="empty">No sales in this period.</div>';
-  $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
+  const totalAdvance = selectedRows.filter(row => !row.return_of_id && !/^INV-/i.test(String(row.account_no || ""))).reduce((sum, row) => sum + N(row.advance), 0);
+  const totalProcessingFee = selectedRows.reduce((sum, row) => sum + N(row.processing_fee), 0);
+  const totalFirstInstallment = selectedRows.reduce((sum, row) => sum + N(row.installment_per_month), 0);
+  $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)} · Advance Rs ${M(totalAdvance)} · Processing fee Rs ${M(totalProcessingFee)} · 1st installment Rs ${M(totalFirstInstallment)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
 }
 function openSalesReturn(id) {
   const row = HIST.find(item => String(item.id) === String(id));
@@ -372,10 +396,10 @@ $("scSave").onclick = () => ERP.ui.busy($("scSave"), async () => { if (!SC) retu
 /* ---------- print slip ---------- */
 async function slip(acc, auto) {
   const rows = HIST.filter(r => r.account_no === acc).length ? HIST.filter(r => r.account_no === acc) : await ERP.db.sales.list({ accNo: acc });
-  if (!rows.length) return; const r0 = rows[0], tot = ERP.db.sales.contractTotal(rows, true), adv = rows.reduce((s, r) => s + N(r.advance), 0), cash = /^INV-/i.test(acc), fee = rows.reduce((s, r) => s + N(r.processing_fee), 0);
+  if (!rows.length) return; const r0 = rows[0], cash = /^INV-/i.test(acc), tot = saleContractTotal(rows, !cash), adv = rows.reduce((s, r) => s + N(r.advance), 0), fee = rows.reduce((s, r) => s + N(r.processing_fee), 0);
   $("printArea").innerHTML = `<h2>${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>${cash ? "Cash invoice" : "Installment sale"} · <b>${E(acc)}</b> · ${E(r0.date)}</div><div>Customer: <b>${E(r0.account_title)}</b></div>
     <table><thead><tr><th style="text-align:left">Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows.map(r => `<tr><td>${E(r.model)} ${E(r.color)}${r.remarks ? "<br><small>" + E(r.remarks) + "</small>" : ""}</td><td style="text-align:center">${M(r.qty)}</td><td style="text-align:right">${M(r.sales_rate)}</td><td style="text-align:right">${M(r.sales_amt)}</td></tr>`).join("")}</tbody></table>
-    ${fee ? `<div>Processing fee: Rs ${M(fee)}</div>` : ""}<div><b>Total: Rs ${M(tot)}</b></div><div>Advance / paid: Rs ${M(adv)}</div>${cash ? "" : `<div>Balance: Rs ${M(Math.max(tot - adv, 0))}</div>${rows.map(r => N(r.plan_months) ? `<div>${E(r.model)}: ${M(r.plan_months)} × Rs ${M(r.installment_per_month)}</div>` : "").join("")}`}<p style="margin-top:14px">Thank you for your business.</p>`;
+    ${fee ? `<div>Processing fee: Rs ${M(fee)}</div>` : ""}<div><b>Total: Rs ${M(tot)}</b></div><div>${cash ? "Paid" : "Advance"}: Rs ${M(adv)}</div>${cash ? "" : `<div>Balance: Rs ${M(Math.max(tot - adv, 0))}</div>${rows.map(r => N(r.plan_months) ? `<div>${E(r.model)}: ${M(r.plan_months)} × Rs ${M(r.installment_per_month)}</div>` : "").join("")}`}<p style="margin-top:14px">Thank you for your business.</p>`;
   if (!auto || confirm("Print the invoice?")) window.print();
 }
 
