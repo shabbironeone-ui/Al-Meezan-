@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer Follow-up | Al Meezan ERP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .toolbar{display:grid;gap:10px;grid-template-columns:1fr 1fr;align-items:end}
+    .toolbar .search{grid-column:1/-1}
+    @media(min-width:850px){.toolbar{grid-template-columns:minmax(210px,1.2fr) 170px 190px 180px auto}.toolbar .search{grid-column:auto}}
+    .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media(min-width:760px){.stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
+    .stat.due b{color:var(--warn)}.stat.overdue b{color:var(--danger)}
+    .table-wrap{overflow:auto;max-height:calc(100dvh - 340px)}
+    .follow-table{min-width:1040px}
+    .follow-table th{position:sticky;top:0;z-index:2}
+    .follow-table td{vertical-align:top}
+    .customer{min-width:210px;white-space:normal}
+    .customer strong{display:block}
+    .customer small,.subtle{display:block;color:var(--muted);font-size:12px}
+    .amount{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .status-cell{min-width:118px}
+    .row-actions{display:flex;gap:5px;flex-wrap:wrap;min-width:190px}
+    .row-actions .btn{min-height:34px;padding:4px 9px;font-size:12px}
+    .wa{background:#15803d}.wa:hover{background:#166534}
+    .promise{white-space:normal;min-width:160px}
+    .promise .badge{margin-bottom:4px}
+    .loading{display:grid;gap:12px}
+    .notice{margin:10px 0;padding:12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:var(--radius);color:#854d0e}
+    .error{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+    .no-data{padding:28px;text-align:center;color:var(--muted)}
+    .month-label{font-weight:700}
+    .promise-form{display:grid;gap:12px}
+    .promise-form .actions{display:flex;justify-content:flex-end;gap:8px}
+    .history-list{display:grid;gap:10px}
+    .history-item{padding:12px;background:#fff;border:1px solid var(--line);border-radius:10px}
+    .history-item p{margin:5px 0 0;white-space:pre-wrap}
+    .history-item small{color:var(--muted)}
+    .history-tabs{display:flex;gap:8px;margin-bottom:12px}
+    .history-tabs button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand-dark)}
+    @media(max-width:600px){.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}.table-wrap{max-height:none}}
+    @media print{.toolbar,.bar-actions,.row-actions,.history-tabs{display:none!important}.table-wrap{max-height:none;overflow:visible}.follow-table{min-width:0}.page{max-width:none}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="appbar">
+      <div><h1>Customer Follow-up</h1><p id="subtitle">Monthly installment due list, WhatsApp reminders and promise tracking</p></div>
+      <div class="bar-actions">
+        <button class="btn ghost" id="printBtn" type="button">Print</button>
+        <button class="btn ghost" id="exportBtn" type="button" hidden>Export CSV</button>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" hidden role="alert"></div>
+    <section class="card toolbar" aria-label="Follow-up filters">
+      <div class="search"><label for="search">Search customer</label><input id="search" type="search" placeholder="Name, account, mobile" autocomplete="off"></div>
+      <div><label for="month">Due month</label><input id="month" type="month"></div>
+      <div id="croField"><label for="croFilter">CRO</label><select id="croFilter"><option value="">All CROs</option></select></div>
+      <div><label for="statusFilter">Show</label><select id="statusFilter"><option value="all">All customers</option><option value="due">Has due amount</option><option value="overdue">Unpaid past due</option><option value="promise">Promise recorded</option><option value="no_due">No due this month</option></select></div>
+      <button class="btn ghost" id="clearBtn" type="button">Clear filters</button>
+    </section>
+
+    <section class="stats" id="stats" aria-label="Monthly collection summary"></section>
+    <section class="card">
+      <div class="table-wrap">
+        <table class="follow-table">
+          <thead><tr><th>Customer</th><th>CRO</th><th>Monthly due</th><th>Received</th><th>Month remaining</th><th>Past due</th><th>Status</th><th>Latest promise</th><th>Last reminder</th><th>Actions</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="no-data" id="empty" hidden>No customers match these filters.</div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="promiseDialog" class="sheet">
+    <div class="sh-head"><div><h2>Record payment promise</h2><p id="promiseCustomer"></p></div><button class="x" type="button" data-close aria-label="Close">✕</button></div>
+    <form id="promiseForm" class="sh-body promise-form">
+      <div class="fld"><label for="promisedDate">Promised payment date</label><input id="promisedDate" type="date" required></div>
+      <div class="fld"><label for="promisedAmount">Promised amount (Rs)</label><input id="promisedAmount" type="number" min="0.01" step="0.01" required></div>
+      <div class="fld"><label for="promiseNotes">Notes</label><textarea id="promiseNotes" rows="3" maxlength="1000" placeholder="Optional call notes or agreed details"></textarea></div>
+      <div class="actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn" id="promiseSave" type="submit">Save promise</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="historyDialog" class="sheet">
+    <div class="sh-head"><div><h2 id="historyTitle">Follow-up history</h2><p id="historySubtitle"></p></div><button class="x" type="button" data-close aria-label="Close">✕</button></div>
+    <div class="sh-body">
+      <div class="history-tabs">
+        <button class="chip" id="promisesTab" type="button" aria-pressed="true">Promises</button>
+        <button class="chip" id="remindersTab" type="button" aria-pressed="false">WhatsApp reminders</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
+    <div class="sh-foot"><button class="btn" type="button" data-close>Close</button></div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const E = ERP.ui.esc, M = ERP.ui.money, N = value => Number(value) || 0;
+    let rows = [];
+    let selected = null;
+    let profile = null;
+    let historyMode = "promises";
+
+    function monthIso() { return ($("month").value || ERP.ui.today().slice(0, 7)) + "-01"; }
+    function monthName(value) {
+      const date = new Date(value + "T12:00:00");
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en", { month: "long", year: "numeric" });
+    }
+    function showNotice(text, error = false) {
+      $("notice").hidden = !text;
+      $("notice").textContent = text || "";
+      $("notice").classList.toggle("error", error);
+    }
+    function isCro() { return profile && profile.role === "cro"; }
+    function canWrite() { return ERP.auth.can("write", "followup"); }
+    function currentMonth() { return ERP.ui.today().slice(0, 7) + "-01"; }
+    function statusFor(row) {
+      if (N(row.overdue_total) > 0) return "Overdue";
+      if (N(row.balance_due) <= 0 && N(row.due_amt) > 0) return "Paid";
+      if (N(row.due_amt) <= 0) return "No due this month";
+      if (row.due_month < currentMonth()) return "Past month due";
+      if (row.due_month === currentMonth()) return "Due this month";
+      return "Upcoming";
+    }
+    function filteredRows() {
+      const query = $("search").value.trim().toLowerCase();
+      const cro = $("croFilter").value;
+      const status = $("statusFilter").value;
+      return rows.filter(row => {
+        const state = statusFor(row);
+        const textMatch = !query || [row.account_no, row.account_title, row.mobile_number, row.cro]
+          .some(value => String(value || "").toLowerCase().includes(query));
+        const croMatch = !cro || row.cro === cro;
+        const statusMatch = status === "all"
+          || status === "due" && N(row.due_amt) > 0
+          || status === "overdue" && N(row.overdue_total) > 0
+          || status === "promise" && !!row.promise
+          || status === "no_due" && N(row.due_amt) === 0;
+        return textMatch && croMatch && statusMatch;
+      });
+    }
+    function renderStats() {
+      const due = rows.reduce((sum, row) => sum + N(row.due_amt), 0);
+      const remaining = rows.reduce((sum, row) => sum + N(row.balance_due), 0);
+      const overdue = rows.reduce((sum, row) => sum + N(row.overdue_total), 0);
+      const promised = rows.filter(row => !!row.promise).length;
+      const cards = [
+        ["Customers", rows.length, ""],
+        ["Scheduled this month", "Rs " + M(due), "due"],
+        ["This month outstanding", "Rs " + M(remaining), "due"],
+        ["Past-month outstanding", "Rs " + M(overdue), "overdue"],
+        ["Active promises", promised, ""]
+      ];
+      $("stats").innerHTML = cards.map(([label, value, className]) =>
+        `<div class="stat ${className}"><small>${E(label)}</small><b>${E(String(value))}</b></div>`).join("");
+    }
+    function render() {
+      const shown = filteredRows();
+      $("rows").innerHTML = shown.map(row => {
+        const state = statusFor(row);
+        const badge = state === "Paid" ? "ok" : state === "Overdue" ? "bad" : state === "No due this month" ? "" : "warn";
+        const promise = row.promise;
+        const reminder = row.last_reminder;
+        const totalOutstanding = N(row.overdue_total) + (row.due_month >= currentMonth() ? N(row.balance_due) : 0);
+        return `<tr>
+          <td class="customer"><strong>${E(row.account_title || "Unnamed customer")}</strong><small>CAF ${E(row.account_no)} · ${E(row.mobile_number || "No mobile")}</small></td>
+          <td>${E(row.cro || "Unassigned")}</td>
+          <td class="amount">${N(row.due_amt) ? "Rs " + M(row.due_amt) : "—"}<small class="subtle">${row.installments && row.installments.length ? row.installments.length + " installment(s)" : ""}</small></td>
+          <td class="amount">${N(row.paid_amt) ? "Rs " + M(row.paid_amt) : "—"}</td>
+          <td class="amount"><strong>${N(row.balance_due) ? "Rs " + M(row.balance_due) : "—"}</strong></td>
+          <td class="amount">${N(row.overdue_total) ? "Rs " + M(row.overdue_total) : "—"}<small class="subtle">${row.oldest_overdue_month ? "Since " + E(monthName(row.oldest_overdue_month)) : ""}</small></td>
+          <td class="status-cell"><span class="badge ${badge}">${E(state)}</span></td>
+          <td class="promise">${promise ? `<span class="badge warn">Promised ${E(monthName(promise.promised_date))}</span><small class="subtle">Rs ${M(promise.promised_amount)}</small>` : '<small class="subtle">No promise recorded</small>'}</td>
+          <td>${reminder ? `<small>${E(new Date(reminder.created_at).toLocaleString())}</small>` : '<small class="subtle">No reminder</small>'}</td>
+          <td><div class="row-actions">
+            <button class="btn wa" type="button" data-action="whatsapp" data-account="${E(row.account_no)}" ${!row.mobile_number || !totalOutstanding || !canWrite() ? "disabled" : ""}>WhatsApp</button>
+            <button class="btn ghost" type="button" data-action="promise" data-account="${E(row.account_no)}" ${!totalOutstanding || !canWrite() ? "disabled" : ""}>Promise</button>
+            <button class="btn ghost" type="button" data-action="history" data-account="${E(row.account_no)}">History</button>
+          </div></td>
+        </tr>`;
+      }).join("");
+      $("empty").hidden = shown.length !== 0;
+      renderStats();
+      $("subtitle").textContent = `${monthName(monthIso())} · ${rows.length} customers${isCro() ? " assigned to " + (profile.cro_name || "your CRO account") : ""}`;
+    }
+    async function load() {
+      $("refreshBtn").disabled = true;
+      $("rows").innerHTML = '<tr><td colspan="10"><div class="skeleton" style="width:60%"></div></td></tr>';
+      showNotice("");
+      try {
+        const croFilter = isCro() ? null : $("croFilter").value || null;
+        const { data, error } = await ERP.db.sb.rpc("followup_list_month", {
+          p_month: monthIso(),
+          p_cro_name: croFilter
+        });
+        if (error) throw new Error("Could not load monthly due list: " + error.message);
+        rows = (data || []).map(item => typeof item === "string" ? JSON.parse(item) : item);
+        if (!isCro()) {
+          const croNames = [...new Set(rows.map(row => String(row.cro || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+          const selectedCro = $("croFilter").value;
+          $("croFilter").replaceChildren(new Option("All CROs", ""));
+          croNames.forEach(name => $("croFilter").add(new Option(name, name)));
+          $("croFilter").value = croNames.includes(selectedCro) ? selectedCro : "";
+        }
+        render();
+      } catch (error) {
+        rows = [];
+        render();
+        showNotice(error.message + " Make sure sql/14_user_permissions.sql and sql/15_customer_followup.sql have both been run in Supabase.", true);
+      } finally {
+        $("refreshBtn").disabled = false;
+      }
+    }
+    function mobileDigits(value) {
+      let digits = String(value || "").replace(/\D/g, "");
+      if (digits.startsWith("00")) digits = digits.slice(2);
+      if (digits.startsWith("92")) return digits;
+      if (digits.startsWith("0")) return "92" + digits.slice(1);
+      if (digits.startsWith("3")) return "92" + digits;
+      return digits;
+    }
+    async function openWhatsApp(row) {
+      const phone = mobileDigits(row.mobile_number);
+      if (!phone) { showNotice("This customer has no usable mobile number.", true); return; }
+      const dueText = row.due_month >= currentMonth() && N(row.balance_due)
+        ? `${monthName(row.due_month)} ki installment Rs ${M(row.balance_due)}`
+        : "";
+      const overdueText = N(row.overdue_total) ? `Pichlay mahino ka overdue Rs ${M(row.overdue_total)}` : "";
+      const message = `Assalam o Alaikum ${row.account_title || ""}, ${[dueText, overdueText].filter(Boolean).join(" aur ")} baqaya hai. Meherbani farma kar adaigi ki tareekh confirm kar dein. Shukriya - Al Meezan`;
+      const tab = window.open("https://wa.me/" + phone + "?text=" + encodeURIComponent(message), "_blank");
+      if (!tab) { showNotice("WhatsApp window was blocked by the browser. Allow pop-ups and try again.", true); return; }
+      tab.opener = null;
+      const { error } = await ERP.db.sb.from("followup_reminders").insert({
+        account_no: String(row.account_no),
+        due_month: row.due_month,
+        cro_name: String(row.cro || "")
+      });
+      if (error) {
+        await load();
+        showNotice("WhatsApp opened, but the reminder log could not be saved: " + error.message, true);
+        return;
+      }
+      showNotice("WhatsApp chat opened and reminder attempt logged. Message delivery is not confirmed by this app.");
+      await load();
+    }
+    function openPromise(row) {
+      selected = row;
+      const totalOutstanding = N(row.overdue_total) + (row.due_month >= currentMonth() ? N(row.balance_due) : 0);
+      $("promiseCustomer").textContent = `${row.account_title} · CAF ${row.account_no} · ${monthName(row.due_month)} · Total outstanding Rs ${M(totalOutstanding)}`;
+      $("promisedDate").value = ERP.ui.today();
+      $("promisedAmount").value = (N(row.overdue_total) + (row.due_month >= currentMonth() ? N(row.balance_due) : 0)).toFixed(2);
+      $("promiseNotes").value = "";
+      $("promiseDialog").showModal();
+      $("promisedDate").focus();
+    }
+    async function savePromise(event) {
+      event.preventDefault();
+      if (!selected || !canWrite()) return;
+      const saveButton = $("promiseSave");
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving…";
+      try {
+        const { error } = await ERP.db.sb.from("followup_promises").insert({
+          account_no: String(selected.account_no),
+          due_month: selected.due_month,
+          cro_name: String(selected.cro || ""),
+          promised_date: $("promisedDate").value,
+          promised_amount: Number($("promisedAmount").value),
+          notes: $("promiseNotes").value.trim()
+        });
+        if (error) throw new Error(error.message);
+        $("promiseDialog").close();
+        showNotice("Payment promise saved.");
+        await load();
+      } catch (error) {
+        showNotice("Could not save promise: " + error.message, true);
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save promise";
+      }
+    }
+    function formatDate(value) {
+      return value ? new Date(value).toLocaleString() : "";
+    }
+    async function showHistory(row, mode = "promises") {
+      selected = row;
+      historyMode = mode;
+      $("historyTitle").textContent = "Follow-up history";
+      $("historySubtitle").textContent = `${row.account_title} · CAF ${row.account_no} · ${monthName(row.due_month)}`;
+      $("historyList").innerHTML = '<div class="skeleton"></div>';
+      $("historyDialog").showModal();
+      $("promisesTab").setAttribute("aria-pressed", String(mode === "promises"));
+      $("remindersTab").setAttribute("aria-pressed", String(mode === "reminders"));
+      try {
+        const table = mode === "promises" ? "followup_promises" : "followup_reminders";
+        const { data, error } = await ERP.db.sb.from(table).select("*")
+          .eq("account_no", String(row.account_no))
+          .eq("due_month", row.due_month)
+          .order("created_at", { ascending: false });
+        if (error) throw new Error(error.message);
+        if (!data.length) {
+          $("historyList").innerHTML = `<div class="no-data">No ${mode === "promises" ? "payment promises" : "WhatsApp reminder attempts"} recorded for this month.</div>`;
+          return;
+        }
+        $("historyList").innerHTML = data.map(item => mode === "promises"
+          ? `<article class="history-item"><span class="badge ${item.status === "kept" ? "ok" : item.status === "broken" ? "bad" : "warn"}">${E(item.status)}</span><strong> Rs ${M(item.promised_amount)}</strong><small> promised by ${E(monthName(item.promised_date))}</small><p>${E(item.notes || "No notes")}</p><small>Recorded ${E(formatDate(item.created_at))}</small>${item.status === "promised" && canWrite() ? `<div class="row-actions" style="margin-top:8px"><button class="btn sm" type="button" data-promise-status="kept" data-id="${item.id}">Mark kept</button><button class="btn sm danger" type="button" data-promise-status="broken" data-id="${item.id}">Mark broken</button><button class="btn sm ghost" type="button" data-promise-status="cancelled" data-id="${item.id}">Cancel promise</button></div>` : ""}</article>`
+          : `<article class="history-item"><span class="badge">WhatsApp</span><strong> Chat opened</strong><p>Message delivery is not confirmed.</p><small>Opened ${E(formatDate(item.created_at))}</small></article>`).join("");
+      } catch (error) {
+        $("historyList").innerHTML = `<div class="no-data">Could not load history: ${E(error.message)}</div>`;
+      }
+    }
+    function exportRows() {
+      const data = filteredRows().map(row => ({
+        month: row.due_month,
+        account_no: row.account_no,
+        customer: row.account_title,
+        mobile: row.mobile_number,
+        cro: row.cro,
+        due: row.due_amt,
+        received: row.paid_amt,
+        remaining: row.balance_due,
+        past_due: row.overdue_total,
+        status: statusFor(row),
+        promised_date: row.promise ? row.promise.promised_date : "",
+        promised_amount: row.promise ? row.promise.promised_amount : ""
+      }));
+      ERP.ui.downloadCSV("followup_" + $("month").value + ".csv", data);
+    }
+    async function updatePromiseStatus(button) {
+      button.disabled = true;
+      try {
+        const { error } = await ERP.db.sb.rpc("followup_set_promise_status", {
+          p_promise_id: Number(button.dataset.id),
+          p_status: button.dataset.promiseStatus,
+          p_notes: null
+        });
+        if (error) throw new Error(error.message);
+        showNotice("Promise status updated.");
+        await showHistory(selected, "promises");
+        await load();
+      } catch (error) {
+        button.disabled = false;
+        showNotice("Could not update promise: " + error.message, true);
+      }
+    }
+
+    document.addEventListener("click", event => {
+      const close = event.target.closest("[data-close]");
+      const dialog = event.target.closest("dialog");
+      if (close && dialog) dialog.close();
+      const button = event.target.closest("button[data-action]");
+      if (button) {
+        const row = rows.find(item => String(item.account_no) === button.dataset.account);
+        if (!row) return;
+        if (button.dataset.action === "whatsapp") openWhatsApp(row);
+        if (button.dataset.action === "promise") openPromise(row);
+        if (button.dataset.action === "history") showHistory(row);
+        return;
+      }
+      const promiseButton = event.target.closest("button[data-promise-status]");
+      if (promiseButton) updatePromiseStatus(promiseButton);
+    });
+    $("promiseForm").addEventListener("submit", savePromise);
+    $("promisesTab").addEventListener("click", () => selected && showHistory(selected, "promises"));
+    $("remindersTab").addEventListener("click", () => selected && showHistory(selected, "reminders"));
+    $("month").addEventListener("change", load);
+    $("croFilter").addEventListener("change", load);
+    $("statusFilter").addEventListener("change", render);
+    $("search").addEventListener("input", ERP.ui.debounce(render, 120));
+    $("clearBtn").addEventListener("click", () => {
+      $("search").value = "";
+      $("statusFilter").value = "all";
+      if (!isCro()) $("croFilter").value = "";
+      render();
+    });
+    $("refreshBtn").addEventListener("click", load);
+    $("printBtn").addEventListener("click", () => window.print());
+    $("exportBtn").addEventListener("click", exportRows);
+
+    (async () => {
+      try {
+        profile = await ERP.auth.guard();
+        if (!ERP.auth.can("read", "followup")) {
+          showNotice("You do not have permission to view Customer Follow-up.", true);
+          return;
+        }
+        const current = new Date();
+        $("month").value = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`;
+        if (isCro()) {
+          $("croField").hidden = true;
+          if (!profile.cro_name) {
+            showNotice("No CRO name is assigned to your account. Ask an admin to assign your CRO name in User Roles.", true);
+            return;
+          }
+        }
+        $("exportBtn").hidden = !ERP.auth.can("export", "followup");
+        await load();
+      } catch (error) {
+        showNotice(error.message, true);
+      }
+    })();
+  </script>
+</body>
+</html>
