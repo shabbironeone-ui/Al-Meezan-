@@ -41,6 +41,18 @@ ERP.auth = (function () {
     return data;
   }
 
+  async function changePassword(password) {
+    const { data, error } = await sb().auth.updateUser({ password });
+    if (error) throw new Error("Could not change password: " + error.message);
+    return data;
+  }
+
+  async function sendPasswordReset(email) {
+    const redirectTo = new URL("index.html", window.location.href).toString();
+    const { error } = await sb().auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw new Error("Could not send password reset email: " + error.message);
+  }
+
   const toLogin = () => (self !== top ? top : window).location.replace("login.html");   // never show the login page inside the frame
   async function signOut() { await sb().auth.signOut(); toLogin(); }
 
@@ -116,7 +128,7 @@ ERP.auth = (function () {
   }
 
   return {
-    session, signIn, signOut, guard, can, pageKey,
+    session, signIn, signOut, changePassword, sendPasswordReset, guard, can, pageKey,
     pages: PAGES.map(([file, key, label]) => ({ file, key, label })),
     actions: ACTIONS.slice(),
     roles: Object.keys(ROLE_RULES),
