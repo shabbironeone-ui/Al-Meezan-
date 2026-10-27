@@ -6,156 +6,219 @@
   <title>User Roles | Al Meezan ERP</title>
   <link rel="stylesheet" href="css/app.css">
   <style>
-    .page{max-width:1440px}
-    .appbar{margin:8px 0 18px}
-    .appbar h1{font-size:clamp(22px,3vw,29px)}
-    .appbar p,.muted{color:var(--muted)}
-    .bar-actions{flex-wrap:wrap}
-    button:disabled,.btn:disabled,input:disabled,select:disabled{cursor:not-allowed!important}
-    #saveBtn[data-saving="true"]{cursor:progress!important}
-    .intro{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:var(--radius);margin-bottom:14px;color:#065f46}
-    .intro strong{display:block;margin-bottom:2px}
-    .intro p{margin:0;font-size:13px}
-    .warning{padding:16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius)}
+    .ur{--b:var(--brand,#0f766e);--ink2:var(--ink,#0f172a);--mut:var(--muted,#64748b);--line:#e2e8f0;--soft:#f8fafc;--r:12px;max-width:1360px;margin:0 auto;padding:20px 16px 120px;color:var(--ink2)}
+    .ur *{box-sizing:border-box}
+    .ur [hidden]{display:none!important}
+    .top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .top h1{margin:0;font-size:clamp(22px,3vw,28px)}
+    .top p{margin:4px 0 0;color:var(--mut)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+
+    .ub{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--b);background:var(--b);color:#fff;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+    .ub:hover:not(:disabled){filter:brightness(.93)}
+    .ub.ghost{background:#fff;color:var(--ink2);border-color:#cbd5e1}
+    .ub.danger{background:#fff;color:#b91c1c;border-color:#fecaca}
+    .ub.sm{min-height:34px;padding:0 12px;font-size:13px}
+    .ub:disabled{opacity:.5;cursor:not-allowed}
+    .ur input:not([type=checkbox]),.ur select{width:100%;min-height:40px;padding:0 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font:inherit;color:inherit}
+    .ur input:disabled,.ur select:disabled{background:var(--soft);cursor:not-allowed}
+    .ur :focus-visible{outline:2px solid var(--b);outline-offset:2px}
+    .ur label{display:block;margin:0 0 5px;font-size:13px;font-weight:600}
+
+    .msg{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;font-size:14px}
+    .msg:empty{display:none}
+    .msg.error{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .warning{padding:16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--r)}
     .warning p{margin:6px 0 0}
-    .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
-    .stat small{display:block}
-    .filters{display:grid;gap:12px;grid-template-columns:1fr}
-    @media(min-width:700px){.filters{grid-template-columns:minmax(200px,1fr) minmax(200px,1fr) minmax(150px,.7fr) minmax(190px,.8fr);align-items:end}}
-    .filters .fld{min-width:0}
-    .user-meta{align-self:center;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
-    .user-meta strong{color:var(--ink)}
-    .toolbar-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
-    .toolbar-actions .btn{min-height:36px;padding:5px 11px;font-size:13px}
-    .table-wrap{max-height:calc(100dvh - 390px);min-height:260px}
-    .permissions-table{min-width:740px}
-    .permissions-table th:first-child,.permissions-table td:first-child{position:sticky;left:0;background:#fff;z-index:2}
-    .permissions-table th:first-child{background:#f8fafc;z-index:3}
-    .permissions-table td:not(:first-child),.permissions-table th:not(:first-child){text-align:center;width:112px}
-    .permissions-table tbody tr:hover{background:#f8fafc}
-    .permissions-table tbody tr:hover td:first-child{background:#f8fafc}
-    .perm-check{width:19px;height:19px;min-height:19px;vertical-align:middle;accent-color:var(--brand);cursor:pointer}
-    .perm-check:disabled{cursor:not-allowed;opacity:.45}
-    .perm-name{min-width:230px;font-weight:600}
-    .action-label{display:block}
-    .unavailable{font-size:10px;font-weight:500;color:var(--muted)}
-    .table-empty{padding:28px;text-align:center;color:var(--muted)}
-    .statusline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin:0 2px 10px;color:var(--muted);font-size:13px}
-    .dirty{color:#92400e;font-weight:700}
-    .error{color:var(--danger);font-weight:600}
-    .role-pill{display:inline-block;padding:2px 9px;border-radius:99px;background:#e0f2fe;color:#075985;font-size:12px;font-weight:700;text-transform:capitalize}
-    .role-pill.admin{background:#d1fae5;color:#065f46}
-    .help{margin:12px 2px 0;color:var(--muted);font-size:13px;line-height:1.55}
-    .empty{padding:32px 16px}
-    .role-builder{display:grid;gap:12px;grid-template-columns:1fr}
-    .role-builder .fld{min-width:0}
-    .role-builder-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
-    .role-builder-actions .btn{min-height:40px}
-    .scope-option{display:flex;align-items:center;gap:8px;min-height:42px;font-size:13px;font-weight:600}
-    .scope-option input{width:18px;height:18px;min-height:18px}
-    .user-list{min-width:760px}
-    .user-list td:last-child,.user-list th:last-child{text-align:right}
-    .user-list .btn{min-height:36px;padding:5px 10px;font-size:12px}
-    .user-reset-status{min-height:20px;margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+    .tab{background:none;border:0;padding:10px 14px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+    .tab[aria-selected=true]{color:var(--b);border-bottom-color:var(--b)}
+    .count{display:inline-block;min-width:20px;padding:0 6px;border-radius:99px;background:#e2e8f0;color:#334155;font-size:12px;text-align:center}
+
+    .split{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
+    .box{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px}
+    .box h2{margin:0 0 2px;font-size:16px}
+    .box .sub{margin:0 0 12px;color:var(--mut);font-size:13px}
+    .users-pane{position:sticky;top:12px}
+    .count-line{margin:8px 2px 0;color:var(--mut);font-size:12px}
+    .u-list{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:calc(100dvh - 270px);min-height:120px;overflow:auto}
+    .u-item{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 10px;border:1px solid transparent;border-radius:10px;background:none;font:inherit;color:inherit;cursor:pointer}
+    .u-item:hover{background:var(--soft)}
+    .u-item.on{background:#f0fdfa;border-color:var(--b)}
+    .avatar{flex:none;width:36px;height:36px;border-radius:50%;background:#e2e8f0;display:grid;place-items:center;font-weight:700;color:#334155}
+    .u-item.on .avatar{background:var(--b);color:#fff}
+    .u-text{min-width:0;flex:1}
+    .u-text strong,.u-text small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .u-text small{color:var(--mut);font-size:12px}
+    .chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#e0f2fe;color:#075985;white-space:nowrap}
+    .chip.ok{background:#d1fae5;color:#065f46}
+    .chip.warn{background:#fef3c7;color:#92400e}
+    .chip.off{background:#f1f5f9;color:#475569}
+    .empty{padding:28px 12px;text-align:center;color:var(--mut)}
+
+    .detail{display:grid;gap:16px;min-width:0}
+    .profile{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .profile .avatar{width:52px;height:52px;font-size:20px;background:var(--b);color:#fff}
+    .profile-info{flex:1;min-width:200px}
+    .profile-info h2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:18px}
+    .profile-info p{margin:2px 0 0;color:var(--mut);font-size:14px;overflow-wrap:anywhere}
+    .form-row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end}
+    .note{margin:10px 0 0;color:var(--mut);font-size:13px}
+    .perm-head{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    .perm-head .grow{flex:1;min-width:180px;max-width:300px}
+    .table-wrap{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:10px}
+    table.perm{width:100%;border-collapse:collapse;min-width:640px}
+    .perm th,.perm td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:center}
+    .perm th{position:sticky;top:0;background:var(--soft);font-size:13px;z-index:3}
+    .perm th:first-child,.perm td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:2;min-width:200px;font-weight:600}
+    .perm th:first-child{background:var(--soft);z-index:4}
+    .perm tbody tr:hover td{background:var(--soft)}
+    .perm tr:last-child td{border-bottom:0}
+    .perm-check{width:18px;height:18px;accent-color:var(--b);cursor:pointer;vertical-align:middle}
+    .perm-check:disabled{opacity:.4;cursor:not-allowed}
+    .na{color:#94a3b8}
+    .table-empty{padding:24px;text-align:center;color:var(--mut)}
+
+    .rb{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-items:end;margin-bottom:12px}
+    .scope{display:flex;align-items:center;gap:8px;min-height:40px;margin:0!important}
+    .scope input{width:18px;height:18px}
+    .rb-msg{margin:0 0 12px;color:var(--mut);font-size:13px}
+    .rb-msg.dirty{color:#92400e;font-weight:700}
+    .rb-msg.error{color:#b91c1c;font-weight:600}
+
+    .savebar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid #cbd5e1;box-shadow:0 -6px 20px rgba(15,23,42,.10);padding:12px 16px}
+    .savebar-in{max-width:1360px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .savebar-text{min-width:0}
+    .savebar-text strong{display:block;overflow-wrap:anywhere}
+    .savebar-text span{font-size:13px;color:#92400e;font-weight:600}
+
     .account-form{display:grid;gap:12px}
     .account-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-    .account-message{min-height:20px;color:var(--muted);font-size:13px}
-    .account-message.error{color:var(--danger);font-weight:600}
-    @media(min-width:850px){.role-builder{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr) auto}}
-    @media(max-width:600px){
-      .page{padding:10px}
-      .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .table-wrap{max-height:none}
-      .bar-actions{width:100%}
-      .bar-actions .btn{flex:1}
-    }
+    .account-message{min-height:20px;color:var(--muted,#64748b);font-size:13px}
+    .account-message.error{color:var(--danger,#b91c1c);font-weight:600}
 
-    /* Layout: 1) user + role  2) page permissions  3) advanced tools */
-    #manager{display:flex;flex-direction:column;gap:14px}
-    #manager>*{margin-top:0;margin-bottom:0}
-    #manager>.stats{order:1}
-    #manager>.filters{order:2}
-    #manager>.toolbar{order:3}
-    #manager>.statusline{order:4}
-    #manager>.perm-card{order:5}
-    #manager>.help{order:6}
-    #manager>.users-card{order:7}
-    #manager>.roles-card{order:8}
-    #manager>.apply-bar{order:9}
-    .step-head{grid-column:1/-1}
-    .step-head h2{margin:0 0 2px;font-size:17px}
-    .step-head p{margin:0;color:var(--muted);font-size:13px}
-    .fold>h2{cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin:0;user-select:none}
-    .fold>h2::after{content:"Show";font-size:12px;font-weight:600;color:var(--brand)}
-    .fold:not(.collapsed)>h2::after{content:"Hide"}
-    .fold:not(.collapsed)>h2{margin-bottom:6px}
-    .fold.collapsed>:not(h2){display:none}
-    .fold>h2:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
-    #saveBtn{display:none}
-    .apply-bar{position:sticky;bottom:8px;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;background:#fff;border:1px solid #cbd5e1;border-radius:var(--radius);box-shadow:0 -4px 18px rgba(15,23,42,.10)}
-    .apply-bar.dirty{background:#fffbeb;border-color:#f59e0b}
-    .apply-bar.done{background:#ecfdf5;border-color:#34d399}
-    .apply-info{display:flex;flex-direction:column;gap:2px;min-width:0}
-    .apply-info strong{overflow-wrap:anywhere}
-    .apply-info span{font-size:13px;color:var(--muted)}
-    .apply-bar.dirty .apply-info span{color:#92400e;font-weight:600}
-    .apply-bar.done .apply-info span{color:#065f46;font-weight:600}
-    .danger-row{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px dashed #cbd5e1}
-    .danger-row small{color:var(--muted);margin-right:auto;min-width:200px}
-    .danger-row .btn{min-height:36px;padding:5px 12px;font-size:13px}
-    #applyRoleBtn{min-height:44px;padding:8px 20px;font-weight:700}
-    @media(max-width:600px){#applyRoleBtn{width:100%}}
+    @media(max-width:900px){
+      .split{grid-template-columns:1fr}
+      .users-pane{position:static}
+      .u-list{max-height:260px}
+    }
+    @media(max-width:600px){
+      .ur{padding:12px 10px 140px}
+      .top .row{width:100%}
+      .top .ub{flex:1}
+      .savebar .row,.savebar .ub{width:100%}
+    }
   </style>
 </head>
 <body>
-  <main class="page">
-    <header class="appbar">
+  <main class="ur">
+    <header class="top">
       <div>
-        <h1>User roles and permissions</h1>
-        <p>Manage who can view or change each part of Al Meezan ERP.</p>
+        <h1>User access</h1>
+        <p>Choose a person, give them a role, then fine-tune which pages they can use.</p>
       </div>
-      <div class="bar-actions">
-        <button class="btn ghost" id="createAccountBtn" type="button">Create new account</button>
-        <button class="btn ghost" id="refreshBtn" type="button">Refresh users</button>
-        <button class="btn" id="saveBtn" type="button" disabled>Save changes</button>
+      <div class="row">
+        <button class="ub ghost" id="refreshBtn" type="button">Refresh</button>
+        <button class="ub" id="createAccountBtn" type="button">+ New account</button>
       </div>
     </header>
 
-    <div class="intro">
-      <div aria-hidden="true">🔐</div>
-      <div>
-        <strong>Roles set the maximum access. Page permissions can only reduce it.</strong>
-        <p>Supabase Authentication users appear here automatically. You can create custom roles from templates, assign page-by-page permissions, and optionally limit Follow-up customers to one CRO. Supabase policies enforce supported data operations as well.</p>
-      </div>
-    </div>
-
-    <div id="message" class="statusline" role="status" aria-live="polite"></div>
+    <div id="message" class="msg" role="status" aria-live="polite"></div>
     <div id="openWarning" class="warning" hidden>
       <strong>Role management is not active.</strong>
       <p>This app is in open-access mode. Verify your Supabase Auth admin profile and the permission migration before enabling authentication in <code>js/config.js</code>.</p>
     </div>
-    <div id="manager" hidden>
-      <section class="stats" aria-label="User summary">
-        <div class="stat"><small>Auth users</small><b id="statUsers">0</b></div>
-        <div class="stat"><small>Admins</small><b id="statAdmins">0</b></div>
-        <div class="stat"><small>Accountants</small><b id="statAccountants">0</b></div>
-        <div class="stat"><small>Other roles</small><b id="statOther">0</b></div>
-        <div class="stat"><small>Custom roles</small><b id="statCustomRoles">0</b></div>
-      </section>
 
-      <section class="card" aria-labelledby="customRoleHeading">
-        <h2 id="customRoleHeading">Create and customize roles</h2>
-        <p class="muted">Set the maximum page permissions for your own role. Assigned users can be given fewer permissions, but never more than the role allows.</p>
-        <div class="role-builder">
-          <div class="fld">
+    <div id="manager" hidden>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tabBtnUsers" data-tab="users" aria-selected="true" type="button">Users</button>
+        <button class="tab" role="tab" id="tabBtnRoles" data-tab="roles" aria-selected="false" type="button">Custom roles <span class="count" id="statCustomRoles">0</span></button>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="tabUsers" class="split">
+        <aside class="box users-pane" aria-label="Users">
+          <label for="userSearch">Find user</label>
+          <input id="userSearch" type="search" placeholder="Search name or email" autocomplete="off">
+          <div id="userList" class="u-list" role="listbox" aria-label="Users"></div>
+          <div id="userListEmpty" class="empty" hidden>No users match this search.</div>
+          <p id="userCount" class="count-line"></p>
+        </aside>
+
+        <section class="detail" aria-label="Selected user">
+          <div id="emptyDetail" class="box empty" hidden>Select a user from the list to manage their access.</div>
+          <div id="detail" class="detail">
+            <div class="box profile">
+              <div class="avatar" id="profAvatar" aria-hidden="true">?</div>
+              <div class="profile-info">
+                <h2><span id="profName"></span> <span id="profStatus" class="chip"></span></h2>
+                <p id="profEmail"></p>
+                <p id="inactiveNote" class="note" hidden>This user is inactive: they can log in but cannot open any page. Pick a role below, then press Activate user.</p>
+              </div>
+              <div class="row">
+                <button class="ub ghost sm" id="passwordBtn" type="button">Change password</button>
+                <button class="ub danger sm" id="removeAccessBtn" type="button">Deactivate user</button>
+              </div>
+            </div>
+
+            <div class="box">
+              <h2>Role</h2>
+              <p class="sub">The role sets the most this person can do. Page access below can only lower it.</p>
+              <div class="form-row">
+                <div>
+                  <label for="roleSelect">Role</label>
+                  <select id="roleSelect">
+                    <option value="viewer">Viewer</option>
+                    <option value="cro">CRO</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div id="croAssign" hidden>
+                  <label for="croSelect">Assigned CRO name</label>
+                  <select id="croSelect"></select>
+                </div>
+              </div>
+              <p id="accessSummary" class="note"></p>
+              <p id="roleNote" class="note"></p>
+            </div>
+
+            <div class="box">
+              <h2>Page access</h2>
+              <p class="sub">Tick what this person can do on each page. Greyed items are not allowed by the role.</p>
+              <div class="perm-head">
+                <input class="grow" id="pageSearch" type="search" placeholder="Filter pages…" autocomplete="off" aria-label="Filter pages">
+                <button class="ub ghost sm" id="allowAllBtn" type="button">Allow all</button>
+                <button class="ub ghost sm" id="clearAllBtn" type="button">Clear all</button>
+                <button class="ub ghost sm" id="defaultsBtn" type="button">Reset to role default</button>
+              </div>
+              <div class="table-wrap">
+                <table class="perm">
+                  <thead><tr><th scope="col">Page</th><th scope="col">View</th><th scope="col">Add</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th></tr></thead>
+                  <tbody id="permissionsBody"></tbody>
+                </table>
+                <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- CUSTOM ROLES TAB -->
+      <div id="tabRoles" class="box" hidden>
+        <h2>Custom roles</h2>
+        <p class="sub">Build your own role, for example Recovery Officer. Users given this role can be limited further, never extended.</p>
+        <div class="rb">
+          <div>
             <label for="customRoleSelect">Role to edit</label>
             <select id="customRoleSelect"><option value="">+ Create a new role</option></select>
           </div>
-          <div class="fld">
+          <div>
             <label for="customRoleName">Role name</label>
             <input id="customRoleName" type="text" maxlength="50" placeholder="e.g. Recovery Officer" autocomplete="off">
           </div>
-          <div class="fld">
+          <div>
             <label for="roleTemplate">Start from a template</label>
             <select id="roleTemplate">
               <option value="viewer">Viewer</option>
@@ -163,90 +226,32 @@
               <option value="accountant">Accountant</option>
             </select>
           </div>
-          <div class="role-builder-actions">
-            <button class="btn ghost" id="applyTemplateBtn" type="button">Apply template</button>
-            <button class="btn ghost danger" id="deleteRoleBtn" type="button" hidden>Delete role</button>
-            <button class="btn" id="saveRoleBtn" type="button">Save role</button>
-          </div>
-          <label class="scope-option"><input id="croScope" type="checkbox"> Restrict Follow-up customers to assigned CRO</label>
+          <label class="scope"><input id="croScope" type="checkbox"> Limit Follow-up customers to the assigned CRO</label>
         </div>
-        <div id="roleEditorMessage" class="statusline" role="status" aria-live="polite"></div>
+        <div class="row" style="margin-bottom:12px">
+          <button class="ub ghost sm" id="applyTemplateBtn" type="button">Apply template</button>
+          <button class="ub danger sm" id="deleteRoleBtn" type="button" hidden>Delete role</button>
+          <button class="ub sm" id="saveRoleBtn" type="button">Save role</button>
+        </div>
+        <p id="roleEditorMessage" class="rb-msg" role="status" aria-live="polite"></p>
         <div class="table-wrap">
-          <table class="permissions-table">
+          <table class="perm">
             <thead><tr><th scope="col">Page</th><th scope="col">View</th><th scope="col">Add</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th></tr></thead>
             <tbody id="customRolePermissionsBody"></tbody>
           </table>
         </div>
-      </section>
-
-      <section class="card filters" aria-label="User and role selection">
-        <div class="fld">
-          <label for="userSearch">Find user</label>
-          <input id="userSearch" type="search" placeholder="Search name or email" autocomplete="off">
-        </div>
-        <div class="fld">
-          <label for="userSelect">Selected user</label>
-          <select id="userSelect"></select>
-        </div>
-        <div class="fld">
-          <label for="roleSelect">Role</label>
-          <select id="roleSelect">
-            <option value="viewer">Viewer</option>
-            <option value="cro">CRO</option>
-            <option value="accountant">Accountant</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <div class="fld" id="croAssign" hidden>
-          <label for="croSelect">Assigned CRO name</label>
-          <select id="croSelect"></select>
-        </div>
-        <div id="userMeta" class="user-meta"></div>
-        <div class="danger-row">
-          <small>Remove access keeps the login but clears the role and page permissions. Delete account removes the login permanently.</small>
-          <button class="btn ghost danger" id="removeAccessBtn" type="button" disabled>Remove ERP access</button>
-          <button class="btn ghost danger" id="deleteAccountBtn" type="button" disabled>Delete account</button>
-        </div>
-      </section>
-
-      <section class="card" aria-labelledby="userListHeading">
-        <h2 id="userListHeading">Users and passwords</h2>
-        <p class="muted">Create accounts here and set a new password for any listed user. Passwords are never displayed after they are saved.</p>
-        <div class="table-wrap">
-          <table class="user-list">
-            <thead><tr><th scope="col">User</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Account</th><th scope="col">Password</th></tr></thead>
-            <tbody id="userDirectory"></tbody>
-          </table>
-          <div id="userDirectoryEmpty" class="table-empty" hidden>No users match this search.</div>
-        </div>
-        <div id="accountStatus" class="user-reset-status" role="status" aria-live="polite"></div>
-      </section>
-
-      <section class="card toolbar" aria-label="Find pages and bulk permissions">
-        <div class="search">
-          <input id="pageSearch" type="search" placeholder="Filter pages…" autocomplete="off" aria-label="Filter pages">
-        </div>
-        <div class="toolbar-actions">
-          <button class="btn ghost" id="defaultsBtn" type="button">Reset to role defaults</button>
-          <button class="btn ghost" id="allowAllBtn" type="button">Enable all available</button>
-          <button class="btn ghost" id="clearAllBtn" type="button">Clear available</button>
-        </div>
-      </section>
-
-      <div class="statusline">
-        <span id="accessSummary"></span>
-        <span id="changeStatus"></span>
       </div>
-      <section class="card">
-        <div class="table-wrap">
-          <table class="permissions-table">
-            <thead><tr><th scope="col">Page</th><th scope="col">View</th><th scope="col">Add</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th></tr></thead>
-            <tbody id="permissionsBody"></tbody>
-          </table>
-          <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
+
+      <!-- SAVE BAR -->
+      <div id="savebar" class="savebar" hidden>
+        <div class="savebar-in">
+          <div class="savebar-text"><strong id="saveWho"></strong><span id="saveState"></span></div>
+          <div class="row">
+            <button class="ub ghost" id="discardBtn" type="button">Discard</button>
+            <button class="ub" id="saveBtn" type="button" disabled>Save changes</button>
+          </div>
         </div>
-      </section>
-      <p class="help">Create the account and initial password under <strong>Users and passwords</strong> or with <strong>Create new account</strong>. Then select the new user, assign a role, configure page permissions, and press <strong>Apply role to user</strong> to create their ERP profile.</p>
+      </div>
     </div>
   </main>
 
@@ -299,10 +304,11 @@
     let roleDraftPermissions = {};
     let roleSavedState = "";
     let loading = false;
+    let activeTab = "users";
 
     function setMessage(text, type) {
       $("message").textContent = text;
-      $("message").className = "statusline" + (type === "error" ? " error" : "");
+      $("message").className = "msg" + (type === "error" ? " error" : "");
     }
     function customRole(role) { return customRoles.find(item => item.role_key === role) || null; }
     function roleLabel(role) { return roleLabels[role] || (customRole(role) && customRole(role).role_name) || role; }
@@ -315,6 +321,24 @@
     }
     function userNeedsCro(role) { return role === "cro" || !!(customRole(role) && customRole(role).cro_scoped); }
     function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
+    function isSelf(user) { return !!user && user.user_id === currentUserId; }
+    function initials(user) {
+      const text = String(user.full_name || user.email || "?").trim();
+      return text.split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
+    }
+    function accessCount(user) {
+      const pages = ERP.auth.pages.filter(page => page.key !== "user_access");
+      if (user.role === "admin") return pages.length;
+      return pages.filter(page => {
+        const override = user.permissions && user.permissions[page.key];
+        return roleActions(user.role, page.key).includes("read") && !(override && override.read === false);
+      }).length;
+    }
+    function statusOf(user) {
+      if (user.profile_exists === false) return { text: "Setup required", cls: "warn" };
+      if (accessCount(user) === 0) return { text: "Inactive", cls: "off" };
+      return { text: "Active", cls: "ok" };
+    }
     function collectPermissions() {
       return JSON.parse(JSON.stringify(draftPermissions));
     }
@@ -332,24 +356,43 @@
       return window.confirm("You have unsaved permission changes. Discard them?");
     }
     function updateChangeStatus() {
-      const changed = hasChanges();
       const user = currentUser();
+      const changed = hasChanges();
       const needsProfile = !!user && user.profile_exists === false;
-      $("changeStatus").textContent = changed ? "Unsaved changes" : needsProfile ? "Profile setup required · save to activate this user" : "All changes saved";
-      $("changeStatus").className = changed || needsProfile ? "dirty" : "";
-      $("saveBtn").disabled = loading || !needsSave() || userNeedsCro($("roleSelect").value) && !$("croSelect").value;
+      const needsCro = userNeedsCro($("roleSelect").value) && !$("croSelect").value;
+      const busy = $("saveBtn").dataset.saving === "true";
+
+      $("savebar").hidden = !user || activeTab !== "users" || !(changed || needsProfile);
+      $("saveWho").textContent = user ? (user.full_name || user.email || "Selected user") + "  →  " + roleLabel($("roleSelect").value) : "";
+      $("saveState").textContent = needsCro ? "Choose the assigned CRO name to continue"
+        : changed ? "You have unsaved changes"
+        : "ERP profile not created yet. Save to activate this user.";
+      $("saveBtn").disabled = loading || !needsSave() || needsCro;
+      $("discardBtn").disabled = loading || !changed;
+      $("saveBtn").textContent = busy ? "Saving…" : needsProfile && !changed ? "Create profile" : "Save changes";
+      const inactive = !!user && user.profile_exists !== false && accessCount(user) === 0;
+      const toggle = $("removeAccessBtn");
+      toggle.textContent = inactive ? "Activate user" : "Deactivate user";
+      toggle.className = "ub sm" + (inactive ? "" : " danger");
+      toggle.disabled = !user || isSelf(user) || user.profile_exists === false || loading || (inactive && needsCro);
+      toggle.title = isSelf(user) ? "You cannot deactivate your own account."
+        : inactive ? "Gives access back using the role selected below"
+        : "Keeps the login but switches off every page";
+      $("inactiveNote").hidden = !inactive;
       return changed;
     }
     function updateSummary() {
-      const counts = users.reduce((total, user) => {
-        total[user.role] = (total[user.role] || 0) + 1;
-        return total;
-      }, {});
-      $("statUsers").textContent = String(users.length);
-      $("statAdmins").textContent = String(counts.admin || 0);
-      $("statAccountants").textContent = String(counts.accountant || 0);
-      $("statOther").textContent = String(users.length - (counts.admin || 0) - (counts.accountant || 0));
+      const admins = users.filter(user => user.role === "admin").length;
+      $("userCount").textContent = users.length + " user" + (users.length === 1 ? "" : "s") + " · " + admins + " admin" + (admins === 1 ? "" : "s");
       $("statCustomRoles").textContent = String(customRoles.length);
+    }
+    function switchTab(tab) {
+      activeTab = tab;
+      $("tabUsers").hidden = tab !== "users";
+      $("tabRoles").hidden = tab !== "roles";
+      $("tabBtnUsers").setAttribute("aria-selected", String(tab === "users"));
+      $("tabBtnRoles").setAttribute("aria-selected", String(tab === "roles"));
+      updateChangeStatus();
     }
     function refreshRoleOptions() {
       const select = $("roleSelect");
@@ -384,7 +427,7 @@
       $("roleEditorMessage").textContent = dirty
         ? "Unsaved role changes"
         : selected ? "Role settings saved" : "Create a role, set its maximum page permissions, then save.";
-      $("roleEditorMessage").className = "statusline" + (dirty ? " dirty" : "");
+      $("roleEditorMessage").className = "rb-msg" + (dirty ? " dirty" : "");
       $("saveRoleBtn").disabled = loading || !$("customRoleName").value.trim();
       $("deleteRoleBtn").hidden = !selected;
     }
@@ -394,7 +437,6 @@
       ERP.auth.pages.filter(page => page.key !== "user_access").forEach(page => {
         const row = document.createElement("tr");
         const name = document.createElement("td");
-        name.className = "perm-name";
         name.textContent = page.label;
         row.appendChild(name);
         ERP.auth.actions.forEach(action => {
@@ -422,8 +464,7 @@
           roleDraftPermissions[page.key][action] = base.includes(action);
         });
       });
-      if (template === "cro") $("croScope").checked = true;
-      if (template !== "cro") $("croScope").checked = false;
+      $("croScope").checked = template === "cro";
       renderRoleEditor();
     }
     function selectCustomRole(key) {
@@ -445,8 +486,8 @@
         $("croScope").checked = false;
       }
       roleSavedState = roleEditorSnapshot();
-      $("roleEditorMessage").textContent = selected ? "Editing " + selected.role_name : "New role";
       renderRoleEditor();
+      $("roleEditorMessage").textContent = selected ? "Editing " + selected.role_name : "New role";
     }
     async function loadCustomRoles(preferredKey) {
       const { data, error } = await ERP.db.sb.from("custom_roles")
@@ -458,10 +499,7 @@
       refreshRoleOptions();
       const selectedKey = $("customRoleSelect").value;
       $("customRoleSelect").replaceChildren(new Option("+ Create a new role", ""));
-      customRoles.forEach(role => {
-        const option = new Option(role.role_name, role.role_key);
-        $("customRoleSelect").add(option);
-      });
+      customRoles.forEach(role => $("customRoleSelect").add(new Option(role.role_name, role.role_key)));
       const nextKey = preferredKey || selectedKey;
       selectCustomRole(customRole(nextKey) ? nextKey : "");
     }
@@ -498,7 +536,7 @@
       const name = $("customRoleName").value.trim();
       if (name.length < 2) {
         $("roleEditorMessage").textContent = "Enter a role name with at least 2 characters.";
-        $("roleEditorMessage").className = "statusline error";
+        $("roleEditorMessage").className = "rb-msg error";
         return;
       }
       const currentKey = $("customRoleSelect").value;
@@ -517,10 +555,10 @@
         if (error) throw new Error(error.message);
         await loadCustomRoles(key);
         if (currentUser() && currentUser().role === key) renderSelectedUser();
-        setMessage("Custom role saved. Assign it to users below.");
+        setMessage("Custom role saved. You can now assign it to users.");
       } catch (error) {
         $("roleEditorMessage").textContent = "Could not save role: " + error.message;
-        $("roleEditorMessage").className = "statusline error";
+        $("roleEditorMessage").className = "rb-msg error";
       } finally {
         loading = false;
         updateRoleEditorStatus();
@@ -539,66 +577,46 @@
         setMessage("Custom role deleted.");
       } catch (error) {
         $("roleEditorMessage").textContent = "Could not delete role: " + error.message;
-        $("roleEditorMessage").className = "statusline error";
+        $("roleEditorMessage").className = "rb-msg error";
       } finally {
         loading = false;
         updateRoleEditorStatus();
         updateChangeStatus();
       }
     }
-    function renderUserOptions(filter) {
-      const select = $("userSelect");
-      const query = String(filter || "").trim().toLowerCase();
-      const matches = users.filter(user => [user.full_name, user.email, user.user_id]
-        .some(value => String(value || "").toLowerCase().includes(query)));
-      select.replaceChildren();
-      const selected = currentUser();
-      if (selected && !matches.some(user => user.user_id === selectedId)) {
-        const option = document.createElement("option");
-        option.value = selected.user_id;
-        option.textContent = "Current selection · " + (selected.full_name || selected.email || selected.user_id);
-        select.appendChild(option);
-      }
-      matches.forEach(user => {
-        const option = document.createElement("option");
-        option.value = user.user_id;
-        const label = user.full_name || user.email || user.user_id;
-        option.textContent = (label + (user.email && user.full_name ? " · " + user.email : "") + (user.profile_exists === false ? " · Setup required" : "") + (user.user_id === currentUserId ? " · You" : ""));
-        select.appendChild(option);
-      });
-      if (!selectedId && matches.length) selectedId = matches[0].user_id;
-      select.value = selectedId;
-      select.disabled = !selected && !matches.length;
-      return matches.length;
-    }
-    function renderUserDirectory(filter) {
+
+    function renderUserList(filter) {
       const query = String(filter || "").trim().toLowerCase();
       const matches = users.filter(user => [user.full_name, user.email, user.user_id, roleLabel(user.role)]
         .some(value => String(value || "").toLowerCase().includes(query)));
-      const body = $("userDirectory");
-      body.replaceChildren();
+      const list = $("userList");
+      list.replaceChildren();
       matches.forEach(user => {
-        const row = document.createElement("tr");
-        const name = document.createElement("td");
-        name.textContent = user.full_name || "Unnamed user";
-        const email = document.createElement("td");
-        email.textContent = user.email || "No email address";
-        const role = document.createElement("td");
-        role.textContent = roleLabel(user.role);
-        const account = document.createElement("td");
-        account.textContent = user.profile_exists === false ? "Setup required" : "Active";
-        const action = document.createElement("td");
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "btn ghost";
-        button.dataset.setPasswordUser = user.user_id;
-        button.textContent = "Change password";
-        button.title = "Set a new password for " + (user.email || user.full_name || "this user");
-        action.appendChild(button);
-        row.append(name, email, role, account, action);
-        body.appendChild(row);
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "u-item" + (user.user_id === selectedId ? " on" : "");
+        item.dataset.userId = user.user_id;
+        item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", String(user.user_id === selectedId));
+        const avatar = document.createElement("span");
+        avatar.className = "avatar";
+        avatar.textContent = initials(user);
+        const text = document.createElement("span");
+        text.className = "u-text";
+        const name = document.createElement("strong");
+        name.textContent = (user.full_name || user.email || "Unnamed user") + (isSelf(user) ? " (You)" : "");
+        const sub = document.createElement("small");
+        sub.textContent = user.email || user.user_id;
+        text.append(name, sub);
+        const state = statusOf(user);
+        const chip = document.createElement("span");
+        chip.className = "chip " + (state.cls === "ok" ? "" : state.cls);
+        chip.textContent = state.cls === "ok" ? roleLabel(user.role) : state.text;
+        item.append(avatar, text, chip);
+        list.appendChild(item);
       });
-      $("userDirectoryEmpty").hidden = matches.length > 0;
+      $("userListEmpty").hidden = matches.length > 0;
+      return matches.length;
     }
     function showAccountMessage(element, text, isError = false) {
       element.textContent = text;
@@ -641,9 +659,9 @@
         $("userSearch").value = "";
         $("createAccountForm").reset();
         $("createAccountDialog").close();
+        switchTab("users");
         await loadUsers();
-        $("accountStatus").className = "user-reset-status";
-        $("accountStatus").textContent = "Account created. Select the user, assign a role, and save permissions to finish ERP setup.";
+        setMessage("Account created. Now choose a role and press Create profile to finish setup.");
       } catch (error) {
         showAccountMessage($("createAccountMessage"), error.message, true);
       } finally {
@@ -670,8 +688,7 @@
         });
         showAccountMessage($("setPasswordMessage"), result.message || "Password changed successfully.");
         $("setPasswordForm").reset();
-        $("accountStatus").className = "user-reset-status";
-        $("accountStatus").textContent = "Password changed for " + ($("setPasswordUser").textContent || "the selected user") + ".";
+        setMessage("Password changed for " + ($("setPasswordUser").textContent || "the selected user") + ".");
         window.setTimeout(() => $("setPasswordDialog").close(), 1100);
       } catch (error) {
         showAccountMessage($("setPasswordMessage"), error.message, true);
@@ -679,6 +696,14 @@
         button.disabled = false;
         button.textContent = "Change password";
       }
+    }
+    function renderProfile(user) {
+      $("profAvatar").textContent = initials(user);
+      $("profName").textContent = user.full_name || "Unnamed user";
+      $("profEmail").textContent = (user.email || "No email address") + (isSelf(user) ? " · Your account" : "");
+      const state = statusOf(user);
+      $("profStatus").textContent = state.text;
+      $("profStatus").className = "chip " + state.cls;
     }
     function renderPermissions(user) {
       const role = $("roleSelect").value;
@@ -694,27 +719,26 @@
         const row = document.createElement("tr");
         row.dataset.page = page.key;
         const name = document.createElement("td");
-        name.className = "perm-name";
         name.textContent = page.label;
         row.appendChild(name);
         ERP.auth.actions.forEach(action => {
           const cell = document.createElement("td");
-          const input = document.createElement("input");
-          input.type = "checkbox";
-          input.className = "perm-check";
-          input.dataset.page = page.key;
-          input.dataset.action = action;
-          input.checked = !!(draftPermissions[page.key] && draftPermissions[page.key][action]);
           const available = page.key !== "user_access" && roleActions(role, page.key).includes(action);
-          input.disabled = isAdmin || !available || action !== "read" && !draftPermissions[page.key].read;
-          input.setAttribute("aria-label", page.label + " " + actionLabels[action]);
           if (!available) {
-            const unavailable = document.createElement("span");
-            unavailable.className = "unavailable";
-            unavailable.textContent = "Role limit";
-            unavailable.title = "This action is not available to the selected role.";
-            cell.appendChild(unavailable);
+            const none = document.createElement("span");
+            none.className = "na";
+            none.textContent = "—";
+            none.title = "Not allowed by the selected role.";
+            cell.appendChild(none);
           } else {
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.className = "perm-check";
+            input.dataset.page = page.key;
+            input.dataset.action = action;
+            input.checked = !!(draftPermissions[page.key] && draftPermissions[page.key][action]);
+            input.disabled = isAdmin || action !== "read" && !draftPermissions[page.key].read;
+            input.setAttribute("aria-label", page.label + " " + actionLabels[action]);
             cell.appendChild(input);
           }
           row.appendChild(cell);
@@ -723,16 +747,7 @@
       });
 
       $("noPages").hidden = shown !== 0;
-      $("userMeta").replaceChildren();
-      if (user) {
-        const roleBadge = document.createElement("span");
-        roleBadge.className = "role-pill" + (user.role === "admin" ? " admin" : "");
-        roleBadge.textContent = roleLabel(role);
-        const details = document.createElement("span");
-        details.textContent = (user.email || user.full_name || user.user_id) + (user.profile_exists === false ? " · ERP profile not created" : "") + (user.user_id === currentUserId ? " · Your account" : "");
-        $("userMeta").append(roleBadge, document.createTextNode(" "), details);
-      }
-      const selfAdmin = !!user && user.user_id === currentUserId && user.role === "admin";
+      const selfAdmin = !!user && isSelf(user) && user.role === "admin";
       $("roleSelect").disabled = !user || selfAdmin;
       $("croAssign").hidden = !userNeedsCro(role);
       $("croSelect").disabled = !user || isAdmin || selfAdmin;
@@ -740,17 +755,26 @@
       const hasAnyPageAccess = ERP.auth.pages.some(page => roleActions(role, page.key).includes("read"));
       $("allowAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
       $("clearAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
+      $("roleNote").textContent = selfAdmin ? "This is your own admin account, so its role and access are locked." : "";
       $("accessSummary").textContent = user
         ? (isAdmin ? "Admin has full access to every page and action." : customRole(role)
-          ? "Custom role maximum: " + roleLabel(role) + ". Page permissions can only be reduced for this user."
-          : "Available actions for " + roleLabel(role) + ": " + ERP.auth.roleRules[role].map(action => actionLabels[action]).join(", ") + ".")
-        : "No matching user profile.";
+          ? "Custom role: " + roleLabel(role) + ". Page access can only be reduced for this user."
+          : "Actions this role allows: " + ERP.auth.roleRules[role].map(action => actionLabels[action]).join(", ") + ".")
+        : "";
       updateChangeStatus();
     }
     function renderSelectedUser() {
       const user = currentUser();
-      $("roleSelect").value = user ? user.role : "viewer";
-      const assignedCro = user && user.cro_name;
+      $("detail").hidden = !user;
+      $("emptyDetail").hidden = !!user;
+      if (!user) {
+        savedState = "";
+        updateChangeStatus();
+        return;
+      }
+      renderProfile(user);
+      $("roleSelect").value = user.role;
+      const assignedCro = user.cro_name;
       $("croSelect").replaceChildren(new Option("Choose a CRO", ""));
       croNames.forEach(name => $("croSelect").add(new Option(name, name)));
       if (assignedCro && !croNames.includes(assignedCro)) $("croSelect").add(new Option(assignedCro + " (not in Settings)", assignedCro));
@@ -760,7 +784,7 @@
       ERP.auth.pages.forEach(page => {
         draftPermissions[page.key] = {};
         ERP.auth.actions.forEach(action => {
-          const override = user && user.permissions && user.permissions[page.key];
+          const override = user.permissions && user.permissions[page.key];
           draftPermissions[page.key][action] = page.key !== "user_access"
             && roleActions(role, page.key).includes(action)
             && !(override && override[action] === false);
@@ -787,53 +811,143 @@
         });
       });
       renderPermissions(currentUser());
-      updateChangeStatus();
     }
     function resetToDefaults() {
       if (!$("roleSelect").value || $("roleSelect").value === "admin") return;
       useRoleDefaults($("roleSelect").value);
       renderPermissions(currentUser());
-      updateChangeStatus();
     }
     async function loadUsers() {
       loading = true;
       $("refreshBtn").disabled = true;
       updateChangeStatus();
-      setMessage("Loading Supabase users…");
+      setMessage("Loading users…");
       try {
         const { data, error } = await ERP.db.sb.rpc("admin_list_user_access");
         if (error) throw new Error("Could not load users: " + error.message);
         users = data || [];
-        if (!users.some(user => user.user_id === selectedId)) selectedId = "";
-        renderUserDirectory($("userSearch").value);
+        if (!users.some(user => user.user_id === selectedId)) selectedId = users.length ? users[0].user_id : "";
         updateSummary();
-        if (!renderUserOptions($("userSearch").value)) {
-          $("permissionsBody").replaceChildren();
-          $("userMeta").textContent = "";
-          $("accessSummary").textContent = "No users match your search.";
-          $("noPages").hidden = true;
-          savedState = "";
-          updateChangeStatus();
-          setMessage("No matching Supabase users found.");
-          return;
-        }
+        renderUserList($("userSearch").value);
         renderSelectedUser();
-        setMessage(users.length + " Supabase user" + (users.length === 1 ? "" : "s") + " loaded.");
+        setMessage(users.length ? "" : "No users found yet. Use New account to add one.");
       } finally {
         loading = false;
         $("refreshBtn").disabled = false;
         updateChangeStatus();
       }
     }
+    async function removeAccess() {
+      const user = currentUser();
+      if (!user || isSelf(user) || !confirmDiscard()) return;
+      const name = user.email || user.full_name || "this user";
+      if (!window.confirm("Deactivate " + name + "?\n\nThey keep their login but cannot open any page until you activate them again.")) return;
+      const none = {};
+      ERP.auth.pages.forEach(page => {
+        none[page.key] = {};
+        ERP.auth.actions.forEach(action => { none[page.key][action] = false; });
+      });
+      loading = true;
+      updateChangeStatus();
+      setMessage("Deactivating…");
+      try {
+        const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
+          p_user_id: user.user_id,
+          p_role: "viewer",
+          p_permissions: none,
+          p_cro_name: null
+        });
+        if (error) throw new Error(error.message);
+        loading = false;
+        await loadUsers();
+        setMessage(name + " is now inactive. Their login still exists.");
+      } catch (error) {
+        setMessage("Could not deactivate user: " + error.message, "error");
+      } finally {
+        loading = false;
+        updateChangeStatus();
+      }
+    }
+    async function saveUserAccess() {
+      const user = currentUser();
+      const role = $("roleSelect").value;
+      if (!user || !needsSave()) return;
+      if (!window.confirm("Save " + roleLabel(role) + " access for " + (user.email || user.full_name || "this user") + "?")) return;
+      loading = true;
+      $("saveBtn").dataset.saving = "true";
+      updateChangeStatus();
+      setMessage("Saving…");
+      try {
+        const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
+          p_user_id: user.user_id,
+          p_role: role,
+          p_permissions: collectPermissions(),
+          p_cro_name: userNeedsCro(role) ? $("croSelect").value || null : null
+        });
+        if (error) throw new Error("Could not save permissions: " + error.message);
+        loading = false;
+        await loadUsers();
+        const updatedUser = users.find(item => item.user_id === user.user_id);
+        if (!updatedUser || updatedUser.profile_exists !== true || updatedUser.role !== role) {
+          throw new Error("The save request finished, but the refreshed user record is still missing or unchanged. Run the latest sql/14_user_permissions.sql in Supabase, then press Refresh and try again.");
+        }
+        setMessage("Saved. " + (user.full_name || user.email || "The user") + " is now " + roleLabel(role) + ".");
+      } catch (error) {
+        setMessage(error.message, "error");
+      } finally {
+        loading = false;
+        delete $("saveBtn").dataset.saving;
+        updateChangeStatus();
+      }
+    }
 
-    $("userSearch").addEventListener("input", () => {
-      renderUserOptions($("userSearch").value);
-      renderUserDirectory($("userSearch").value);
+    document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => switchTab(tab.dataset.tab)));
+    $("userSearch").addEventListener("input", () => renderUserList($("userSearch").value));
+    $("userList").addEventListener("click", event => {
+      const item = event.target.closest("[data-user-id]");
+      if (!item || item.dataset.userId === selectedId) return;
+      if (!confirmDiscard()) return;
+      selectedId = item.dataset.userId;
+      renderUserList($("userSearch").value);
+      renderSelectedUser();
     });
-    $("userDirectory").addEventListener("click", event => {
-      const button = event.target.closest("button[data-set-password-user]");
-      if (button) openSetPassword(button.dataset.setPasswordUser);
-    });
+    $("passwordBtn").addEventListener("click", () => openSetPassword(selectedId));
+    async function toggleActive() {
+      const user = currentUser();
+      if (!user || isSelf(user)) return;
+      const inactive = user.profile_exists !== false && accessCount(user) === 0;
+      if (!inactive) { await removeAccess(); return; }
+
+      const role = $("roleSelect").value;
+      const name = user.email || user.full_name || "this user";
+      if (userNeedsCro(role) && !$("croSelect").value) {
+        setMessage("Choose the assigned CRO name first, then press Activate user.", "error");
+        return;
+      }
+      if (!window.confirm("Activate " + name + " as " + roleLabel(role) + "?\n\nThey get this role's default page access. You can fine-tune pages afterwards.")) return;
+      useRoleDefaults(role);
+      loading = true;
+      updateChangeStatus();
+      setMessage("Activating…");
+      try {
+        const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
+          p_user_id: user.user_id,
+          p_role: role,
+          p_permissions: collectPermissions(),
+          p_cro_name: userNeedsCro(role) ? $("croSelect").value || null : null
+        });
+        if (error) throw new Error(error.message);
+        loading = false;
+        await loadUsers();
+        setMessage(name + " is active again as " + roleLabel(role) + ".");
+      } catch (error) {
+        setMessage("Could not activate user: " + error.message, "error");
+      } finally {
+        loading = false;
+        updateChangeStatus();
+      }
+    }
+    $("removeAccessBtn").addEventListener("click", toggleActive);
     $("createAccountBtn").addEventListener("click", () => {
       $("createAccountForm").reset();
       showAccountMessage($("createAccountMessage"), "");
@@ -847,19 +961,9 @@
     });
     $("createAccountForm").addEventListener("submit", createAccount);
     $("setPasswordForm").addEventListener("submit", setUserPassword);
-    $("userSelect").addEventListener("change", () => {
-      if (!confirmDiscard()) {
-        $("userSelect").value = selectedId;
-        return;
-      }
-      selectedId = $("userSelect").value;
-      renderUserOptions($("userSearch").value);
-      renderSelectedUser();
-    });
     $("roleSelect").addEventListener("change", () => {
       useRoleDefaults($("roleSelect").value);
       renderPermissions(currentUser());
-      updateChangeStatus();
     });
     $("croSelect").addEventListener("change", updateChangeStatus);
     $("pageSearch").addEventListener("input", () => renderPermissions(currentUser()));
@@ -904,6 +1008,8 @@
     $("defaultsBtn").addEventListener("click", resetToDefaults);
     $("allowAllBtn").addEventListener("click", () => applyBulk(true));
     $("clearAllBtn").addEventListener("click", () => applyBulk(false));
+    $("discardBtn").addEventListener("click", renderSelectedUser);
+    $("saveBtn").addEventListener("click", saveUserAccess);
     $("refreshBtn").addEventListener("click", async () => {
       if (!confirmDiscard()) return;
       if (!confirmDiscardRole()) return;
@@ -911,39 +1017,6 @@
         await loadCustomRoles();
         await loadUsers();
       } catch (error) { setMessage(error.message, "error"); }
-    });
-    $("saveBtn").addEventListener("click", async () => {
-      const user = currentUser();
-      const role = $("roleSelect").value;
-      if (!user || !needsSave()) return;
-      if (!window.confirm("Save " + roleLabel(role) + " access for " + (user.email || user.full_name || "this user") + "?")) return;
-      loading = true;
-      updateChangeStatus();
-      $("saveBtn").dataset.saving = "true";
-      $("saveBtn").textContent = "Saving…";
-      setMessage("Saving permissions…");
-      try {
-        const { error } = await ERP.db.sb.rpc("admin_update_user_access", {
-          p_user_id: user.user_id,
-          p_role: role,
-          p_permissions: collectPermissions(),
-          p_cro_name: userNeedsCro(role) ? $("croSelect").value || null : null
-        });
-        if (error) throw new Error("Could not save permissions: " + error.message);
-        await loadUsers();
-        const updatedUser = users.find(item => item.user_id === user.user_id);
-        if (!updatedUser || updatedUser.profile_exists !== true || updatedUser.role !== role) {
-          throw new Error("The save request finished, but the refreshed user record is still missing or unchanged. Run the latest sql/14_user_permissions.sql in Supabase, then press Refresh users and try again.");
-        }
-        setMessage("Permissions saved successfully.");
-      } catch (error) {
-        setMessage(error.message, "error");
-      } finally {
-        loading = false;
-        delete $("saveBtn").dataset.saving;
-        $("saveBtn").textContent = "Save changes";
-        updateChangeStatus();
-      }
     });
     window.addEventListener("beforeunload", event => {
       if (!hasChanges() && (!roleSavedState || roleEditorSnapshot() === roleSavedState)) return;
@@ -978,125 +1051,6 @@
         setMessage(error.message, "error");
       }
     })();
-  </script>
-  <script>
-  /* Apply-role bar + layout helpers */
-  (function () {
-    const mgr = $("manager"), save = $("saveBtn");
-    if (!mgr || !save) return;
-
-    $("permissionsBody").closest("section").classList.add("perm-card");
-    const rolesCard = $("customRoleHeading").closest("section");
-    const usersCard = $("userListHeading").closest("section");
-    rolesCard.classList.add("roles-card", "fold", "collapsed");
-    usersCard.classList.add("users-card", "fold", "collapsed");
-
-    [rolesCard, usersCard].forEach(card => {
-      const h = card.querySelector("h2");
-      h.tabIndex = 0;
-      h.setAttribute("role", "button");
-      h.setAttribute("aria-expanded", "false");
-      const toggle = () => {
-        const closed = card.classList.toggle("collapsed");
-        h.setAttribute("aria-expanded", String(!closed));
-      };
-      h.addEventListener("click", toggle);
-      h.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
-      });
-    });
-
-    const head = document.createElement("div");
-    head.className = "step-head";
-    head.innerHTML = "<h2>Select a user and assign a role</h2><p>Pick the user, choose a role, adjust page permissions below, then press Apply role to user.</p>";
-    mgr.querySelector(".filters").prepend(head);
-
-    const bar = document.createElement("div");
-    bar.className = "apply-bar";
-    bar.innerHTML = '<div class="apply-info"><strong id="applyWho">No user selected</strong><span id="applyState"></span></div>' +
-      '<button class="btn" id="applyRoleBtn" type="button" disabled>Apply role to user</button>';
-    mgr.appendChild(bar);
-    const btn = $("applyRoleBtn");
-
-    function sync() {
-      const opt = $("userSelect").selectedOptions[0];
-      const role = $("roleSelect").selectedOptions[0];
-      $("applyWho").textContent = opt ? opt.textContent + (role ? "  →  " + role.textContent : "") : "No user selected";
-      const status = ($("changeStatus").textContent || "").trim();
-      const needsCro = !$("croAssign").hidden && !$("croSelect").value;
-      const busy = save.dataset.saving === "true";
-      const justSaved = /saved successfully/i.test($("message").textContent) && /All changes saved/i.test(status);
-      let text = status;
-      if (needsCro) text = "Choose the assigned CRO name to continue";
-      else if (justSaved) text = "✓ Role applied and profile saved";
-      $("applyState").textContent = text;
-      bar.classList.toggle("dirty", !justSaved && /Unsaved|Profile setup|Choose/.test(text));
-      bar.classList.toggle("done", justSaved);
-      btn.disabled = save.disabled;
-      btn.textContent = busy ? "Saving…" : "Apply role to user";
-    }
-
-    btn.addEventListener("click", () => { if (!save.disabled) save.click(); });
-    const mo = new MutationObserver(sync);
-    mo.observe(save, { attributes: true, childList: true, characterData: true, subtree: true });
-    [$("changeStatus"), $("message"), $("userMeta"), $("userSelect"), $("croAssign")].forEach(el =>
-      mo.observe(el, { attributes: true, childList: true, characterData: true, subtree: true }));
-    ["userSelect", "roleSelect", "croSelect"].forEach(id => $(id).addEventListener("change", sync));
-    sync();
-
-    /* Remove ERP access / delete account */
-    const rmBtn = $("removeAccessBtn"), delBtn = $("deleteAccountBtn");
-    function syncDanger() {
-      const u = currentUser();
-      const self = !!u && u.user_id === currentUserId;
-      rmBtn.disabled = !u || self || u.profile_exists === false || loading;
-      delBtn.disabled = !u || self || loading;
-      rmBtn.title = delBtn.title = self ? "You cannot remove your own account." : "";
-    }
-    async function dangerAction(kind) {
-      const u = currentUser();
-      if (!u || !confirmDiscard()) return;
-      const name = u.email || u.full_name || "this user";
-      if (kind === "remove") {
-        if (!window.confirm("Remove ERP access for " + name + "? The login stays, but the role and page permissions are cleared.")) return;
-      } else if (u.email) {
-        const typed = window.prompt("This permanently deletes the login account for " + name + ".\nType the email address to confirm:");
-        if (typed === null) return;
-        if (typed.trim().toLowerCase() !== u.email.toLowerCase()) {
-          setMessage("The email did not match. Nothing was deleted.", "error");
-          return;
-        }
-      } else if (!window.confirm("Permanently delete the login account for " + name + "?")) return;
-
-      loading = true;
-      syncDanger();
-      updateChangeStatus();
-      setMessage(kind === "remove" ? "Removing ERP access…" : "Deleting account…");
-      try {
-        if (kind === "remove") {
-          const { error } = await ERP.db.sb.rpc("admin_remove_user_access", { p_user_id: u.user_id });
-          if (error) throw new Error(error.message);
-        } else {
-          await ERP.auth.adminManageUser({ action: "delete_user", user_id: u.user_id });
-        }
-        selectedId = "";
-        loading = false;
-        await loadUsers();
-        setMessage(kind === "remove" ? "ERP access removed for " + name + "." : "Account deleted: " + name + ".");
-      } catch (error) {
-        setMessage("Could not " + (kind === "remove" ? "remove access" : "delete the account") + ": " + error.message + ". If this mentions a missing function or action, the backend part is not installed yet.", "error");
-      } finally {
-        loading = false;
-        updateChangeStatus();
-        syncDanger();
-      }
-    }
-    rmBtn.addEventListener("click", () => dangerAction("remove"));
-    delBtn.addEventListener("click", () => dangerAction("delete"));
-    const mo2 = new MutationObserver(syncDanger);
-    [$("userMeta"), $("userSelect"), $("message")].forEach(el => mo2.observe(el, { childList: true, characterData: true, subtree: true }));
-    syncDanger();
-  })();
   </script>
 </body>
 </html>
