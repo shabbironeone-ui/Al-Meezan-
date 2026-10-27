@@ -12,7 +12,7 @@
     .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
     @media(min-width:760px){.stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
     .stat.due b{color:var(--warn)}.stat.overdue b{color:var(--danger)}
-    .table-wrap{overflow:auto;max-height:calc(100dvh - 340px)}
+    .table-wrap{overflow-x:auto;overflow-y:visible;max-height:none}
     .follow-table{min-width:1040px}
     .follow-table th{position:sticky;top:0;z-index:2}
     .follow-table td{vertical-align:top}
