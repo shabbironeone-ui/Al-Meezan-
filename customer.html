@@ -132,7 +132,7 @@ async function load() {
   $("list").innerHTML = '<div class="card"><div class="skeleton" style="width:50%"></div><br><div class="skeleton"></div></div>'.repeat(4);
   try {
     const [c, s] = await Promise.all([ERP.db.customers.list(), ERP.db.settings().catch(() => ({ rows: [] }))]);
-    let b = []; try { b = await ERP.db.customers.balances(); } catch (er) { ERP.ui.toast("Balances unavailable (run sql/08): " + er.message, "err"); }
+    let b = []; try { b = await ERP.db.customers.balances(c); } catch (er) { ERP.ui.toast("Balances unavailable (run sql/08): " + er.message, "err"); }
     ALL = c; BAL = new Map(b.map(x => [String(x.account_no).trim(), x]));
     const names = cat => s.rows.filter(r => String(r.category || "").trim().toUpperCase() === cat).map(r => String(r.display_name || r.lookup_code || "").trim()).filter(Boolean);
     window.CRO = [...new Set(names("CRO"))].sort();

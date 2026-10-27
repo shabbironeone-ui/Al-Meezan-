@@ -146,7 +146,32 @@ async function load() {
       ERP.db.fetchAll("receipts", { order: "id", build: q => q.gte("date", from).lte("date", to) }),
       ERP.db.fetchAll("v_installment_schedule", { order: "account_no", build: q => q.eq("is_skipped", false).gte("due_month", from).lte("due_month", to).order("due_month") }),
       ERP.db.settings()]);
-    BASE = base; CRO_NAMES = settings.names("CRO"); APPROVED_NAMES = settings.names("APPROVED_BY"); REC = new Map(); DUE = new Map();
+    const accounts = [...new Set(base.map(row => String(row.account_no || "").trim()).filter(Boolean))];
+    const saleBatches = [];
+    for (let i = 0; i < accounts.length; i += 100) {
+      saleBatches.push(ERP.db.fetchAll("sales", {
+        select: "account_no,sales_amt,processing_fee,total_amt,advance,return_of_id",
+        order: "id",
+        build: q => q.in("account_no", accounts.slice(i, i + 100))
+      }));
+    }
+    const saleRows = (await Promise.all(saleBatches)).flat();
+    const salesByAccount = new Map();
+    saleRows.forEach(row => {
+      const account = String(row.account_no || "").trim();
+      if (!account) return;
+      if (!salesByAccount.has(account)) salesByAccount.set(account, []);
+      salesByAccount.get(account).push(row);
+    });
+    BASE = base.map(row => {
+      const account = String(row.account_no || "").trim();
+      const sales = salesByAccount.get(account);
+      if (!sales) return row;
+      const totalSale = ERP.db.sales.contractTotal(sales, true);
+      const totalPaid = N(row.total_paid);
+      return { ...row, total_sale: totalSale, balance: totalSale - totalPaid };
+    });
+    CRO_NAMES = settings.names("CRO"); APPROVED_NAMES = settings.names("APPROVED_BY"); REC = new Map(); DUE = new Map();
     rc.forEach(r => { const t = String(r.voucher_no || "").trim().toLowerCase(); if (t === "advance" || t === "processing fee") return; const k = String(r.account_no).trim() + "|" + String(r.date).slice(0, 7); REC.set(k, (REC.get(k) || 0) + N(r.amount)); });
     sch.forEach(r => DUE.set(String(r.account_no).trim() + "|" + String(r.due_month).slice(0, 7), N(r.due_amt)));
     buildAp(); buildCro(); render();
