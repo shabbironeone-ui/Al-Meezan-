@@ -21,6 +21,7 @@ ERP.auth = (function () {
     ["recovery.html", "aging", "Recovery"],
     ["AgingReport2.html", "aging_report", "Recovery & Aging"],
     ["cro_report.html", "cro_report", "CRO Report"],
+    ["FollowUp.html", "followup", "Customer Follow-up"],
     ["UserAccess.html", "user_access", "User Roles"]
   ];
   const ACTIONS = ["read", "write", "edit", "delete", "export"];
@@ -51,9 +52,12 @@ ERP.auth = (function () {
     if (ERP_CONFIG.OPEN_ACCESS === true) return { full_name: "", role: "admin", permissions: {}, open: true };   // only if the database lock (sql/99) was removed
     const s = await session();
     if (!s) { toLogin(); return new Promise(() => {}); }
-    let result = await sb().from("profiles").select("full_name, role, permissions").eq("id", s.user.id).maybeSingle();
+    let result = await sb().from("profiles").select("full_name, role, permissions, cro_name").eq("id", s.user.id).maybeSingle();
     if (result.error && /permissions|column/i.test(result.error.message || "")) {
-      result = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
+      result = await sb().from("profiles").select("full_name, role, permissions").eq("id", s.user.id).maybeSingle();
+      if (result.error && /permissions|column/i.test(result.error.message || "")) {
+        result = await sb().from("profiles").select("full_name, role").eq("id", s.user.id).maybeSingle();
+      }
     }
     if (result.error) throw new Error("Could not load your user profile: " + result.error.message);
     const data = result.data;
@@ -61,7 +65,19 @@ ERP.auth = (function () {
       alert("Your account has no role yet. Ask the admin to give you access.");
       await signOut(); return new Promise(() => {});
     }
-    profile = { ...data, permissions: data.permissions || {}, email: s.user.email };
+    profile = { ...data, permissions: data.permissions || {}, email: s.user.email, roleDefinition: null };
+    if (!ROLE_RULES[profile.role]) {
+      const { data: roleDefinition, error: roleError } = await sb().from("custom_roles")
+        .select("role_key, role_name, permissions, cro_scoped")
+        .eq("role_key", profile.role)
+        .maybeSingle();
+      if (roleError) throw new Error("Could not load your custom role: " + roleError.message);
+      if (!roleDefinition) {
+        await signOut();
+        throw new Error("Your assigned role is no longer available. Ask an admin to assign a valid role.");
+      }
+      profile.roleDefinition = roleDefinition;
+    }
     sb().auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") toLogin(); });
     if (!can("export")) {
       document.querySelectorAll("#btnCsv, #btnExport, #bCsv, [onclick*='exportToCSV'], [onclick*='exportToPDF']").forEach(button => { button.hidden = true; });
@@ -85,9 +101,16 @@ ERP.auth = (function () {
     if (!profile) return false;
     const key = page || pageKey(location.pathname);
     if (key === "user_access" && profile.role !== "admin") return false;
-    const base = ROLE_RULES[profile.role] || [];
-    if (!base.includes(action)) return false;
     if (profile.role === "admin") return true;
+    const base = ROLE_RULES[profile.role];
+    if (base) {
+      if (!base.includes(action)) return false;
+    } else if (!profile.roleDefinition
+      || !profile.roleDefinition.permissions
+      || !profile.roleDefinition.permissions[key]
+      || profile.roleDefinition.permissions[key][action] !== true) {
+      return false;
+    }
     const override = key && profile.permissions && profile.permissions[key];
     return !(override && override[action] === false);
   }
