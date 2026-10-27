@@ -53,6 +53,10 @@
     .role-builder-actions .btn{min-height:40px}
     .scope-option{display:flex;align-items:center;gap:8px;min-height:42px;font-size:13px;font-weight:600}
     .scope-option input{width:18px;height:18px;min-height:18px}
+    .user-list{min-width:760px}
+    .user-list td:last-child,.user-list th:last-child{text-align:right}
+    .user-list .btn{min-height:36px;padding:5px 10px;font-size:12px}
+    .user-reset-status{min-height:20px;margin:6px 0 0;color:var(--muted);font-size:13px}
     @media(min-width:850px){.role-builder{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(180px,1fr) auto}}
     @media(max-width:600px){
       .page{padding:10px}
@@ -158,6 +162,19 @@
           <select id="croSelect"></select>
         </div>
         <div id="userMeta" class="user-meta"></div>
+      </section>
+
+      <section class="card" aria-labelledby="userListHeading">
+        <h2 id="userListHeading">Users and password resets</h2>
+        <p class="muted">Send a secure password-reset link to a user's email. You cannot view or set another user's password here.</p>
+        <div class="table-wrap">
+          <table class="user-list">
+            <thead><tr><th scope="col">User</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Account</th><th scope="col">Password</th></tr></thead>
+            <tbody id="userDirectory"></tbody>
+          </table>
+          <div id="userDirectoryEmpty" class="table-empty" hidden>No users match this search.</div>
+        </div>
+        <div id="resetStatus" class="user-reset-status" role="status" aria-live="polite"></div>
       </section>
 
       <section class="card toolbar" aria-label="Find pages and bulk permissions">
@@ -480,6 +497,58 @@
       select.disabled = !selected && !matches.length;
       return matches.length;
     }
+    function renderUserDirectory(filter) {
+      const query = String(filter || "").trim().toLowerCase();
+      const matches = users.filter(user => [user.full_name, user.email, user.user_id, roleLabel(user.role)]
+        .some(value => String(value || "").toLowerCase().includes(query)));
+      const body = $("userDirectory");
+      body.replaceChildren();
+      matches.forEach(user => {
+        const row = document.createElement("tr");
+        const name = document.createElement("td");
+        name.textContent = user.full_name || "Unnamed user";
+        const email = document.createElement("td");
+        email.textContent = user.email || "No email address";
+        const role = document.createElement("td");
+        role.textContent = roleLabel(user.role);
+        const account = document.createElement("td");
+        account.textContent = user.profile_exists === false ? "Setup required" : "Active";
+        const action = document.createElement("td");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn ghost";
+        button.dataset.resetUser = user.user_id;
+        button.textContent = "Send reset link";
+        button.disabled = !user.email;
+        button.title = user.email ? "Send a password reset email to " + user.email : "This Auth user has no email address";
+        action.appendChild(button);
+        row.append(name, email, role, account, action);
+        body.appendChild(row);
+      });
+      $("userDirectoryEmpty").hidden = matches.length > 0;
+    }
+    async function sendUserPasswordReset(button) {
+      const user = users.find(item => item.user_id === button.dataset.resetUser);
+      if (!user || !user.email) {
+        $("resetStatus").textContent = "This user does not have an email address for password recovery.";
+        return;
+      }
+      if (!window.confirm("Send a password reset link to " + user.email + "?")) return;
+      button.disabled = true;
+      button.textContent = "Sending…";
+      $("resetStatus").textContent = "";
+      $("resetStatus").className = "user-reset-status";
+      try {
+        await ERP.auth.sendPasswordReset(user.email);
+        $("resetStatus").textContent = "Password reset email sent to " + user.email + ". The user must open the link and choose a new password.";
+      } catch (error) {
+        $("resetStatus").textContent = error.message;
+        $("resetStatus").className = "user-reset-status error";
+      } finally {
+        button.disabled = false;
+        button.textContent = "Send reset link";
+      }
+    }
     function renderPermissions(user) {
       const role = $("roleSelect").value;
       const isAdmin = role === "admin";
@@ -605,6 +674,7 @@
         if (error) throw new Error("Could not load users: " + error.message);
         users = data || [];
         if (!users.some(user => user.user_id === selectedId)) selectedId = "";
+        renderUserDirectory($("userSearch").value);
         updateSummary();
         if (!renderUserOptions($("userSearch").value)) {
           $("permissionsBody").replaceChildren();
@@ -627,6 +697,11 @@
 
     $("userSearch").addEventListener("input", () => {
       renderUserOptions($("userSearch").value);
+      renderUserDirectory($("userSearch").value);
+    });
+    $("userDirectory").addEventListener("click", event => {
+      const button = event.target.closest("button[data-reset-user]");
+      if (button) sendUserPasswordReset(button);
     });
     $("userSelect").addEventListener("change", () => {
       if (!confirmDiscard()) {
