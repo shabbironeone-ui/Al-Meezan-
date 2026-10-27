@@ -76,7 +76,7 @@
 <script>
 /* Menu is data: add a page here and it appears in the sidebar, home tiles, bottom bar and routing. */
 const GROUPS = [
-  ["Daily work", [["receipts.html","💵","Receipts"],["SalesForm.html","🛒","Sales"],["customer.html","👤","Customers"],["LedgerView.html","📒","Customer Ledger"]]],
+  ["Daily work", [["receipts.html","💵","Receipts"],["SalesForm.html","🛒","Sales"],["customer.html","👤","Customers"],["FollowUp.html","📲","Customer Follow-up"],["LedgerView.html","📒","Customer Ledger"]]],
   ["Accounts", [["Accounts.html","📖","Accounts & Day Book"],["voucher_entry.html","🧾","Voucher Entry"],["ReconciliationView.html","🔄","Reconciliation"]]],
   ["System", [["Settings.html","⚙️","Settings"],["UserAccess.html","🔐","User Roles"]]],
   ["Inventory", [["ProductForm.html","📦","Products"],["PurchaseForm.html","🛍️","Purchases"],["StockLedger.html","📊","Stock Ledger"],["VenderLedger.html","🏭","Vendor Ledger"]]],
@@ -200,6 +200,7 @@ $("logout").onclick = () => ERP.auth.signOut();
   if (!(ERP_CONFIG.OPEN_ACCESS === true) && !(await ERP.auth.session())) { location.replace("login.html"); return; }
   const p = await ERP.auth.guard();
   if (!p.open) { $("who").textContent = (p.full_name || p.email) + " (" + p.role + ")"; $("logout").hidden = false; }
+  if (p.role !== "admin") document.querySelectorAll('[data-p="backup"]').forEach(button => button.remove());
   document.querySelectorAll("[data-p]").forEach(button => {
     const key = ERP.auth.pageKey(button.dataset.p);
     if (key && !ERP.auth.can("read", key)) button.remove();
