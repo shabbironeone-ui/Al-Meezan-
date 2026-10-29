@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reconciliation</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+:root{--brand:#1d4ed8;--brand-dark:#1e3a8a;--brand-soft:#eaf1ff;--line:#e3e8ef;--muted:#64748b;--ink:#0f172a;--bg:#f4f6fa;--danger:#dc2626;--warn:#b45309;--ok:#047857;--radius:14px;--shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.05)}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
+.page{max-width:1280px;margin:0 auto;padding:0 14px 40px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto}
+input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px}
+.btn{font:inherit;font-weight:600;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:10px;padding:9px 14px;cursor:pointer}
+.btn:hover{background:var(--brand-dark)}
+.btn.ghost{background:#fff;color:var(--brand);border-color:#c7d6f5}.btn.ghost:hover{background:var(--brand-soft)}
+.btn.soft{background:var(--brand-soft);color:var(--brand-dark);border-color:transparent}
+.btn.danger{background:#fff;color:var(--danger);border-color:#fecaca}
+.btn.sm{padding:6px 10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* header */
+.appbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(244,246,250,.92);backdrop-filter:blur(8px);padding:14px 0 12px;margin-bottom:4px}
+.appbar h1{margin:0;font-size:20px;letter-spacing:-.01em}
+.appbar p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.bar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.steps span{background:#fff;border:1px solid var(--line);border-radius:99px;padding:4px 12px}
+.steps b{color:var(--brand);margin-right:4px}
+
+/* accounts */
+.accs{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch}
+.ac{flex:0 0 auto;min-width:176px;text-align:left;background:#fff;border:2px solid transparent;border-radius:var(--radius);padding:12px 14px;font:inherit;cursor:pointer;box-shadow:var(--shadow);transition:.15s}
+.ac:hover{border-color:#c7d6f5}
+.ac small{color:var(--muted);font-weight:600;display:block;font-size:12px}
+.ac b{font-size:18px;font-variant-numeric:tabular-nums}
+.ac[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.ac .bd{display:inline-block;margin-top:6px;font-size:11px;padding:2px 9px;border-radius:99px;background:#fee2e2;color:#991b1b;font-weight:700}
+.ac .bd.ok{background:#d1fae5;color:#065f46}
+
+/* period */
+.range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:14px;margin-bottom:12px}
+.range>div:first-child{grid-column:1/-1}
+@media(min-width:760px){.range{grid-template-columns:180px 160px 160px 1fr}.range>div:first-child{grid-column:auto}}
+
+/* stats */
+.stats.four{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-bottom:14px}
+@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.stat small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.stat b{font-size:17px;font-variant-numeric:tabular-nums}
+.stat.bad b{color:var(--danger)}
+.stat.diff{grid-column:1/-1;border-width:2px}
+.stat.diff b{font-size:22px}
+.stat.diff.good{background:#ecfdf5;border-color:#6ee7b7}.stat.diff.good b{color:var(--ok)}
+.stat.diff.bad{background:#fef2f2;border-color:#fca5a5}
+.stat.diff small:last-child{margin-top:2px;font-weight:500}
+
+/* layout */
+.seg{display:none;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:10px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+@media(max-width:999px){.seg{display:flex}#recon[data-view="books"] [data-side="bank"],#recon[data-view="bank"] [data-side="books"]{display:none}}
+.rgrid{display:grid;column-gap:14px;row-gap:0;grid-template-columns:1fr}
+@media(min-width:1000px){.rgrid{grid-template-columns:1fr 1fr}}
+.pane-title{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 8px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+.pane-title h3{margin:0;font-size:15px}
+.match-filters{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.match-filters label{display:inline-flex;gap:5px;align-items:center;margin:0;cursor:pointer}
+.sortbar{display:flex;gap:4px;background:#e2e8f0;border-radius:10px;padding:4px;margin-bottom:10px}
+.sortbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:7px}
+.sortbar button:hover{color:var(--brand-dark)}
+.sortbar button.on{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+.sec{font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--ink)}
+.sec[hidden]{display:none}
+#secM{color:var(--ok)}
+
+/* entries */
+.it{display:grid;grid-template-columns:1fr auto;gap:3px 10px;background:#fff;border:1px solid var(--line);border-left:5px solid #f59e0b;border-radius:12px;padding:10px 13px;margin-bottom:8px;font-size:14px;box-shadow:var(--shadow)}
+.it.m{border-left-color:#10b981}
+.it.mg{border-left-width:5px;border-left-style:double}
+.it.clk{cursor:pointer}.it.clk:hover{border-color:var(--brand)}
+.it small{color:var(--muted);font-size:12px}
+.it .am{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.in{color:var(--ok)}.out{color:var(--warn)}
+.it .st{grid-column:1/-1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.it.ph{border-style:dashed;border-left-color:#cbd5e1;background:#f8fafc;color:var(--muted);font-size:13px;box-shadow:none;align-content:center}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:#f1f5f9;color:var(--muted)}
+.badge.ok{background:#d1fae5;color:#065f46}.badge.warn{background:#fef3c7;color:#92400e}
+.empty{text-align:center;color:var(--muted);padding:24px 10px;background:#fff;border:1px dashed var(--line);border-radius:12px;font-size:13px}
+.skeleton{height:90px;border-radius:12px;background:linear-gradient(90deg,#e8edf3,#f4f6fa,#e8edf3);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* dialogs */
+dialog.sheet{border:0;border-radius:18px;padding:0;width:min(640px,94vw);max-height:90vh;box-shadow:0 20px 50px rgba(15,23,42,.3)}
+dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
+.sh-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.sh-head h2{margin:0;font-size:17px}.sh-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.sh-head .x{border:0;background:#f1f5f9;border-radius:8px;width:32px;height:32px;cursor:pointer}
+.sh-body{padding:16px 18px;overflow:auto;max-height:60vh}
+.sh-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:#f8fafc}
+.cand{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
+.cand:hover{border-color:var(--brand)}.cand.same{border-color:#10b981;background:#ecfdf5}
+.upload-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.upload-tools small{color:var(--muted)}
+.rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:8px;padding:10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
+.rw .wide{grid-column:1/-1}
+@media(min-width:640px){.rw{grid-template-columns:140px 140px 130px 1fr auto}.rw .wide{grid-column:auto}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar">
+    <div><h1>Cash &amp; Bank Reconciliation</h1><p id="sub">Match your books with the bank statement</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="bAuto">⚡ Auto-match</button><button class="btn" id="bAdd">＋ Add statement entries</button></div>
+  </header>
+
+  <div class="steps"><span><b>1</b>Account &amp; period chuniye</span><span><b>2</b>Statement upload karein</span><span><b>3</b>⚡ Auto-match chalayein</span><span><b>4</b>Baaki bank lines par tap karke match karein</span></div>
+
+  <div class="accs" id="accs"></div>
+
+  <section class="card range">
+    <div><label for="preset">Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="lastweek">Last week</option><option value="month" selected>This month</option><option value="lastmonth">Last month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom</option></select></div>
+    <div><label for="from">From</label><input type="date" id="from"></div>
+    <div><label for="to">To</label><input type="date" id="to"></div>
+    <div style="align-self:end;color:var(--muted);font-size:13px">Bank statement ki wahi period chuniye jise check kar rahe hain.</div>
+  </section>
+
+  <section class="stats four" id="stats" data-feature="show_totals"></section>
+
+  <div class="seg" id="seg"><button data-t="books" aria-pressed="true">Our books</button><button data-t="bank" aria-pressed="false">Bank statement</button></div>
+
+  <div id="recon" data-view="books">
+    <div class="rgrid">
+      <div class="pane-title" data-side="books"><h3>📒 In our books (Day Book)</h3>
+        <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label><label title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="booksMerge" checked> Merge same receipt no.</label></span></div>
+      <div class="pane-title" data-side="bank"><h3>🏦 On the bank statement</h3>
+        <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span></div>
+    </div>
+    <div class="rgrid">
+      <div class="sortbar" id="sortBooks" data-side="books"></div>
+      <div class="sortbar" id="sortBank" data-side="bank"></div>
+    </div>
+    <div class="sec" id="secM" hidden></div>
+    <div class="rgrid" id="pairs"></div>
+    <div class="sec" id="secU"></div>
+    <div class="rgrid"><div id="books" data-side="books"></div><div id="bank" data-side="bank"></div></div>
+  </div>
+</main>
+
+<dialog id="addDlg" class="sheet"><div class="sh-head"><div><h2>Add bank statement entries</h2><p id="addSub"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body"><div class="upload-tools"><button type="button" class="btn soft" id="downloadBankTemplate">Download manual-entry template</button><button type="button" class="btn soft" id="uploadStatement">Upload bank CSV</button><button type="button" class="btn ghost" id="clearBankStage" hidden>Clear temporary entries</button><input type="file" id="statementFile" accept=".csv,text/csv" hidden><small id="uploadStatus">Upload a bank statement CSV; choose the account when prompted.</small></div><div id="addRows"></div><button class="btn soft" id="addRow" style="width:100%">＋ Add row</button><p style="font-size:12px;color:var(--muted)">Deposit = money came into the account. Withdrawal = money went out. Uploaded entries are temporary until saved and clear when this browser tab closes.</p></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="addSave">Save entries</button></div></dialog>
+
+<dialog id="bankAccountDlg" class="sheet"><div class="sh-head"><div><h2>Select bank account</h2><p>Which bank account does this statement belong to?</p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body"><label for="bankUploadAccount">Bank account</label><select id="bankUploadAccount" required></select></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="chooseStatementFile">Continue to file</button></div></dialog>
+
+<dialog id="mDlg" class="sheet"><div class="sh-head"><div><h2>Match this bank entry</h2><p id="mSub"></p></div><button class="x" data-close>✕</button></div>
+  <div class="sh-body"><div id="mList"></div></div><div class="sh-foot"><button class="btn danger" id="mDel" hidden style="margin-right:auto">Delete entry</button><button class="btn ghost" data-close>Close</button></div></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+
+<!-- =====================================================================
+  YAHAN apni ORIGINAL file ka aakhri <script> ... </script> block paste karein
+  (jo "const $ = id => document.getElementById(id)" se shuru hota hai).
+  Us mein koi change nahi chahiye: saare IDs aur class names same hain.
+  ===================================================================== -->
+</body>
+</html>
