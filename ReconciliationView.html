@@ -131,11 +131,6 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
 .ab-t{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.ab-t small{display:block;color:var(--muted);font-size:11px;font-weight:600}.ab-t b{font-size:14px}
 .ab-d{font-weight:700;font-size:13px;padding:4px 10px;border-radius:99px}.ab-d.ok{background:#d1fae5;color:#065f46}.ab-d.no{background:#fef3c7;color:#92400e}
 .ab-b{display:flex;gap:8px;flex-wrap:wrap}
-.totals{display:grid;gap:10px;grid-template-columns:1fr;margin-bottom:12px}
-@media(min-width:760px){.totals{grid-template-columns:repeat(3,1fr)}}
-.totals[hidden]{display:none}
-.tt{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow)}
-.tt small{display:block;color:var(--muted);font-size:12px;font-weight:600}.tt b{font-size:19px;font-variant-numeric:tabular-nums;display:block}
 </style>
 </head>
 <body>
@@ -159,7 +154,6 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
   <section class="stats four" id="stats" data-feature="show_totals"></section>
 
   <div class="tabs" id="tabs"></div>
-  <div class="totals" id="totals"></div>
   <div id="work">
     <div class="tool"><input id="q" type="search" placeholder="Search: naam, amount, date…"><label>Auto-match date farq <select id="tol"><option value="3" selected>±3 din</option><option value="7">±7 din</option><option value="15">±15 din</option><option value="31">±31 din</option><option value="99999">Koi bhi</option></select></label><label class="ck"><input type="checkbox" id="booksMerge" checked> Same receipt no. merge karein</label></div>
     <p class="hint">Bank ki line chunein → books ki same-amount entry khud chun li jati hai → <b>Match</b> dabayein (ya Enter). Match ke baad agli line khud aa jati hai.</p>
@@ -319,21 +313,15 @@ function render() {
   bg.filter(groupMatched).forEach(g => { const banks = []; g.parts.forEach(p => (bankByKey.get(kk(p)) || []).forEach(b => { if (!used.has(String(b.id))) { used.add(String(b.id)); banks.push(b); } })); pairs.push({ e: g, banks }); });
   bn.filter(b => b.match_src && !used.has(String(b.id))).forEach(b => { const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid)); pairs.push({ e: x ? { ...x, parts: [x] } : null, banks: [b] }); });
   const L = lists(), q = Q.trim().toLowerCase();
-  $("tabs").innerHTML = `<button data-t="work" class="${TAB === "work" ? "on" : ""}">Match karein <i>${um.length + ub.length}</i></button><button data-t="done" class="${TAB === "done" ? "on" : ""}">Matched <i>${pairs.length}</i></button><button data-t="all" class="${TAB === "all" ? "on" : ""}">Sab (All)</button>`;
-  $("work").hidden = TAB === "done"; $("done").hidden = TAB !== "done";
+  $("tabs").innerHTML = `<button data-t="work" class="${TAB === "work" ? "on" : ""}">Match karein <i>${um.length + ub.length}</i></button><button data-t="done" class="${TAB === "done" ? "on" : ""}">Matched <i>${pairs.length}</i></button>`;
+  $("work").hidden = TAB !== "work"; $("done").hidden = TAB !== "done";
 
   const refB = L.sk ? sg(L.sk) : null, refK = L.sl ? N(L.sl.amount) : null;
-  const bankRow = b => `<div class="it ${b.match_src ? "m" : TAB === "work" ? "pick" : ""} ${String(b.id) === SELB && TAB === "work" ? "sel" : ""}" ${b.match_src || TAB !== "work" ? "" : `data-b="${b.id}"`}><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div>${b.match_src ? '<div class="st"><span class="badge ok">✓ Matched</span></div>' : TAB === "work" && refB !== null && Math.abs(N(b.amount) - refB) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
-  const bookRow = g => `<div class="it ${groupMatched(g) ? "m" : TAB === "work" ? "pick" : ""} ${kk(g) === SELK && TAB === "work" ? "sel" : ""}" ${groupMatched(g) || TAB !== "work" ? "" : `data-k="${E(kk(g))}"`}><div><b>${gName(g)}</b><br><small>${E(g.date)} · ${E(g.kind)} ${E(g.voucher_no)}${g.remarks ? " · " + E(g.remarks) : ""}${g.parts.length > 1 ? " · " + g.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(g))}</div>${groupMatched(g) ? '<div class="st"><span class="badge ok">✓ Matched</span></div>' : TAB === "work" && refK !== null && Math.abs(sg(g) - refK) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
-  const mt = s => !q || s.toLowerCase().includes(q);
-  let dB = L.fb, dK = L.fg;
-  if (TAB === "all") {
-    dB = bn.filter(b => mt([b.remarks, b.date, Math.abs(N(b.amount))].join(" "))).sort((x, y) => x.date.localeCompare(y.date));
-    dK = bg.filter(g => sg(g) !== 0 && mt([g.party, g.head, g.kind, g.voucher_no, g.remarks, g.date, Math.abs(sg(g))].join(" "))).sort((x, y) => x.date.localeCompare(y.date));
-  }
-  $("cntBank").textContent = dB.length; $("cntBooks").textContent = dK.length;
-  $("lstBank").innerHTML = dB.map(bankRow).join("") || '<div class="empty">Koi entry nahi.</div>';
-  $("lstBooks").innerHTML = dK.map(bookRow).join("") || '<div class="empty">Koi entry nahi.</div>';
+  const bankRow = b => `<div class="it pick ${String(b.id) === SELB ? "sel" : ""}" data-b="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div>${refB !== null && Math.abs(N(b.amount) - refB) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
+  const bookRow = g => `<div class="it pick ${kk(g) === SELK ? "sel" : ""}" data-k="${E(kk(g))}"><div><b>${gName(g)}</b><br><small>${E(g.date)} · ${E(g.kind)} ${E(g.voucher_no)}${g.remarks ? " · " + E(g.remarks) : ""}${g.parts.length > 1 ? " · " + g.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(g))}</div>${refK !== null && Math.abs(sg(g) - refK) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
+  $("cntBank").textContent = L.fb.length; $("cntBooks").textContent = L.fg.length;
+  $("lstBank").innerHTML = L.fb.map(bankRow).join("") || '<div class="empty">🎉 Bank ki sab lines match hain.</div>';
+  $("lstBooks").innerHTML = L.fg.map(bookRow).join("") || '<div class="empty">🎉 Books ki sab entries match hain.</div>';
 
   const dn = pairs.filter(p => !q || JSON.stringify([p.e && [p.e.party, p.e.voucher_no, p.e.date], p.banks.map(b => [b.remarks, b.date])]).toLowerCase().includes(q))
     .sort((x, y) => String((x.e || x.banks[0]).date).localeCompare(String((y.e || y.banks[0]).date)));
@@ -342,15 +330,9 @@ function render() {
     <div class="pl"><small>🏦 Bank</small>${p.banks.map(b => `<b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small><div class="am">${amt(N(b.amount))}</div>`).join("") || "<small>Is period se bahar</small>"}</div>
     <div class="pr"><span class="badge ${eq ? "ok" : "warn"}">${eq ? "✓ barabar" : "⚠ amount ka farq"}</span>${canEdit ? p.banks.map(b => `<button class="btn sm ghost" data-un="${b.id}">Unmatch</button>`).join("") : ""}</div></div>`; }).join("") || '<div class="empty">Abhi koi match nahi.</div>';
 
-  const tot = (arr, f) => { let i = 0, o = 0; arr.forEach(x => { const v = f(x); if (v >= 0) i += v; else o -= v; }); return { n: arr.length, i, o, net: i - o }; };
-  const sgn = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}Rs ${M(Math.abs(v))}</span>`;
-  const tK = TAB === "done" ? tot(dn.filter(p => p.e).map(p => p.e), sg) : tot(dK, sg), tB = TAB === "done" ? tot(dn.flatMap(p => p.banks), b => N(b.amount)) : tot(dB, b => N(b.amount));
-  const lab = { work: "Unmatched", done: "Matched", all: "Sab (Matched + Unmatched)" }[TAB], ft = t => `<b>${sgn(t.net)}</b><small>${t.n} entries · In ${M(t.i)} · Out ${M(t.o)}</small>`;
-  $("totals").hidden = !showTotals;
-  $("totals").innerHTML = showTotals ? `<div class="tt"><small>📒 Books — ${lab}</small>${ft(tK)}</div><div class="tt"><small>🏦 Bank — ${lab}</small>${ft(tB)}</div><div class="tt"><small>Farq (Books − Bank)</small><b>${sgn(tK.net - tB.net)}</b><small>Chuni hui period ka</small></div>` : "";
   /* action bar */
   const ab = $("abar"), sl = L.sl, sk = L.sk;
-  if (TAB !== "work" || (!sl && !sk)) { ab.hidden = true; return; }
+  if (!sl && !sk) { ab.hidden = true; return; }
   ab.hidden = false;
   if (sl && sk) { const d = sg(sk) - N(sl.amount), same = Math.abs(d) < 0.005;
     ab.innerHTML = `<div class="ab-t"><div><small>Bank</small><b>${E(sl.date)} · ${amt(N(sl.amount))}</b></div><span>↔</span><div><small>Books</small><b>${gName(sk)} · ${amt(sg(sk))}</b></div><div class="ab-d ${same ? "ok" : "no"}">${same ? "✓ Amount barabar" : "Farq Rs " + M(Math.abs(d))}</div></div>
@@ -374,7 +356,7 @@ $("abar").onclick = async e => { const a = e.target.closest("[data-a]"); if (!a)
   else if (a.dataset.a === "del") { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([SELB]); SELB = SELK = null; load(); } catch (er) { ERP.ui.toast(er.message, "err"); } } };
 $("done").onclick = async e => { const u = e.target.closest("[data-un]"); if (!u) return;
   try { await ERP.db.bank.setMatch(u.dataset.un, null, null); ERP.ui.toast("Match hata diya"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
-$("tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) { TAB = b.dataset.t; Q = ""; $("q").value = ""; render(); } };
+$("tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) { TAB = b.dataset.t; render(); } };
 $("q").oninput = () => { Q = $("q").value; render(); };
 $("booksMerge").onchange = () => { SELB = SELK = null; render(); };
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; SELB = SELK = null; render(); } };
