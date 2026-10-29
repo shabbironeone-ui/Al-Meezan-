@@ -6,53 +6,137 @@
 <title>Reconciliation</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .accs{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;-webkit-overflow-scrolling:touch}
-  .ac{flex:0 0 auto;min-width:170px;text-align:left;background:#fff;border:2px solid var(--line);border-radius:var(--radius);padding:10px 14px;font:inherit;cursor:pointer;box-shadow:var(--shadow)}
-  .ac small{color:var(--muted);font-weight:600;display:block}.ac b{font-size:17px;font-variant-numeric:tabular-nums}.ac[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
-  .ac .bd{display:inline-block;margin-top:4px;font-size:11px;padding:1px 8px;border-radius:99px;background:#fee2e2;color:#991b1b;font-weight:600}.ac .bd.ok{background:#d1fae5;color:#065f46}
-  .range{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px}
-  .range>div:first-child{grid-column:1/-1}
-  @media(min-width:760px){.range{grid-template-columns:170px 160px 160px 1fr}.range>div:first-child{grid-column:auto}}
-  .stats.four{grid-template-columns:1fr 1fr}@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
-  .stat.diff{grid-column:1/-1}.stat.diff b{font-size:20px}.stat.diff small:last-child{display:block;margin-top:2px}.stat.good b{color:#047857}
-  .stat.bad b{color:var(--danger)}
-  .rgrid{display:grid;column-gap:12px;row-gap:0;grid-template-columns:1fr}@media(min-width:1000px){.rgrid{grid-template-columns:1fr 1fr}}
-  .sortbar{display:flex;justify-content:space-between;gap:4px;background:#e8edf3;border-radius:10px;padding:4px;margin-bottom:8px}
-  .sortbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:5px 8px;border-radius:7px;white-space:nowrap}
-  .sortbar button:nth-child(3){text-align:right}.sortbar button:hover{color:var(--brand-dark)}.sortbar button.on{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
-  .sec{font-size:13px;font-weight:700;margin:12px 0 6px;color:var(--muted)}
-  .it.mg{border-left-width:5px}
-  .it.ph{border-left-color:#cbd5e1;border-style:dashed;background:#f8fafc;color:var(--muted);font-size:13px;align-content:center}
-  @media(max-width:999px){#recon[data-view="books"] [data-side="bank"],#recon[data-view="bank"] [data-side="books"]{display:none}}
-  .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:#fff;border:1px solid var(--line);border-left:5px solid #f59e0b;border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:14px}
-  .it.m{border-left-color:#10b981}.it.clk{cursor:pointer}.it.clk:hover{border-color:var(--brand)}
-  .it small{color:var(--muted)}.it .am{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}.in{color:#047857}.out{color:var(--warn)}
-  .it .st{grid-column:1/-1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .seg{display:none;background:#e8edf3;border-radius:12px;padding:4px;margin-bottom:10px}.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}.seg button[aria-pressed="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
-  @media(max-width:999px){.seg{display:flex}}
-  .cand{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px;font:inherit;cursor:pointer}.cand:hover{border-color:var(--brand)}.cand.same{border-color:#10b981;background:#ecfdf5}
-  .rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:10px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px}.rw .wide{grid-column:1/-1}
-  @media(min-width:640px){.rw{grid-template-columns:150px 140px 150px 1fr auto}.rw .wide{grid-column:auto}}
-  .upload-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.upload-tools small{color:var(--muted)}
-  .pane-title{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
-  .pane-title h3{margin:0;font-size:14px}
-  .match-filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-  .match-filters label{display:inline-flex;gap:4px;align-items:center;cursor:pointer}
+:root{--brand:#1d4ed8;--brand-dark:#1e3a8a;--brand-soft:#eaf1ff;--line:#e3e8ef;--muted:#64748b;--ink:#0f172a;--bg:#f4f6fa;--danger:#dc2626;--warn:#b45309;--ok:#047857;--radius:14px;--shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.05)}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
+.page{max-width:1280px;margin:0 auto;padding:0 14px 40px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto}
+input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px}
+.btn{font:inherit;font-weight:600;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:10px;padding:9px 14px;cursor:pointer}
+.btn:hover{background:var(--brand-dark)}
+.btn.ghost{background:#fff;color:var(--brand);border-color:#c7d6f5}.btn.ghost:hover{background:var(--brand-soft)}
+.btn.soft{background:var(--brand-soft);color:var(--brand-dark);border-color:transparent}
+.btn.danger{background:#fff;color:var(--danger);border-color:#fecaca}
+.btn.sm{padding:6px 10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* header */
+.appbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(244,246,250,.92);backdrop-filter:blur(8px);padding:14px 0 12px;margin-bottom:4px}
+.appbar h1{margin:0;font-size:20px;letter-spacing:-.01em}
+.appbar p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.bar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.steps span{background:#fff;border:1px solid var(--line);border-radius:99px;padding:4px 12px}
+.steps b{color:var(--brand);margin-right:4px}
+
+/* accounts */
+.accs{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 12px;-webkit-overflow-scrolling:touch}
+.ac{flex:0 0 auto;min-width:176px;text-align:left;background:#fff;border:2px solid transparent;border-radius:var(--radius);padding:12px 14px;font:inherit;cursor:pointer;box-shadow:var(--shadow);transition:.15s}
+.ac:hover{border-color:#c7d6f5}
+.ac small{color:var(--muted);font-weight:600;display:block;font-size:12px}
+.ac b{font-size:18px;font-variant-numeric:tabular-nums}
+.ac[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.ac .bd{display:inline-block;margin-top:6px;font-size:11px;padding:2px 9px;border-radius:99px;background:#fee2e2;color:#991b1b;font-weight:700}
+.ac .bd.ok{background:#d1fae5;color:#065f46}
+
+/* period */
+.range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:14px;margin-bottom:12px}
+.range>div:first-child{grid-column:1/-1}
+@media(min-width:760px){.range{grid-template-columns:180px 160px 160px 1fr}.range>div:first-child{grid-column:auto}}
+
+/* stats */
+.stats.four{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-bottom:14px}
+@media(min-width:760px){.stats.four{grid-template-columns:repeat(4,1fr)}}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.stat small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.stat b{font-size:17px;font-variant-numeric:tabular-nums}
+.stat.bad b{color:var(--danger)}
+.stat.diff{grid-column:1/-1;border-width:2px}
+.stat.diff b{font-size:22px}
+.stat.diff.good{background:#ecfdf5;border-color:#6ee7b7}.stat.diff.good b{color:var(--ok)}
+.stat.diff.bad{background:#fef2f2;border-color:#fca5a5}
+.stat.diff small:last-child{margin-top:2px;font-weight:500}
+
+/* layout */
+.seg{display:none;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:10px}
+.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+@media(max-width:999px){.seg{display:flex}#recon[data-view="books"] [data-side="bank"],#recon[data-view="bank"] [data-side="books"]{display:none}}
+.rgrid{display:grid;column-gap:14px;row-gap:0;grid-template-columns:1fr}
+@media(min-width:1000px){.rgrid{grid-template-columns:1fr 1fr}}
+.pane-title{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 8px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+.pane-title h3{margin:0;font-size:15px}
+.match-filters{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.match-filters label{display:inline-flex;gap:5px;align-items:center;margin:0;cursor:pointer}
+.sortbar{display:flex;gap:4px;background:#e2e8f0;border-radius:10px;padding:4px;margin-bottom:10px}
+.sortbar button{flex:1;border:0;background:none;font:inherit;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:7px}
+.sortbar button:hover{color:var(--brand-dark)}
+.sortbar button.on{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+.sec{font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--ink)}
+.sec[hidden]{display:none}
+#secM{color:var(--ok)}
+
+/* entries */
+.it{display:grid;grid-template-columns:1fr auto;gap:3px 10px;background:#fff;border:1px solid var(--line);border-left:5px solid #f59e0b;border-radius:12px;padding:10px 13px;margin-bottom:8px;font-size:14px;box-shadow:var(--shadow)}
+.it.m{border-left-color:#10b981}
+.it.mg{border-left-width:5px;border-left-style:double}
+.it.clk{cursor:pointer}.it.clk:hover{border-color:var(--brand)}
+.it small{color:var(--muted);font-size:12px}
+.it .am{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.in{color:var(--ok)}.out{color:var(--warn)}
+.it .st{grid-column:1/-1;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.it.ph{border-style:dashed;border-left-color:#cbd5e1;background:#f8fafc;color:var(--muted);font-size:13px;box-shadow:none;align-content:center}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:#f1f5f9;color:var(--muted)}
+.badge.ok{background:#d1fae5;color:#065f46}.badge.warn{background:#fef3c7;color:#92400e}
+.empty{text-align:center;color:var(--muted);padding:24px 10px;background:#fff;border:1px dashed var(--line);border-radius:12px;font-size:13px}
+.skeleton{height:90px;border-radius:12px;background:linear-gradient(90deg,#e8edf3,#f4f6fa,#e8edf3);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* dialogs */
+dialog.sheet{border:0;border-radius:18px;padding:0;width:min(640px,94vw);max-height:90vh;box-shadow:0 20px 50px rgba(15,23,42,.3)}
+dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
+.sh-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.sh-head h2{margin:0;font-size:17px}.sh-head p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.sh-head .x{border:0;background:#f1f5f9;border-radius:8px;width:32px;height:32px;cursor:pointer}
+.sh-body{padding:16px 18px;overflow:auto;max-height:60vh}
+.sh-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:#f8fafc}
+.cand{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
+.cand:hover{border-color:var(--brand)}.cand.same{border-color:#10b981;background:#ecfdf5}
+.upload-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.upload-tools small{color:var(--muted)}
+.rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:8px;padding:10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
+.rw .wide{grid-column:1/-1}
+@media(min-width:640px){.rw{grid-template-columns:140px 140px 130px 1fr auto}.rw .wide{grid-column:auto}}
 </style>
 </head>
 <body>
 <main class="page">
-  <header class="appbar"><div><h1>Cash &amp; Bank Reconciliation</h1><p id="sub">Match your books with the bank statement</p></div>
-    <div class="bar-actions"><button class="btn ghost" id="bAuto">⚡ Auto-match</button><button class="btn" id="bAdd">＋ Add statement entries</button></div></header>
+  <header class="appbar">
+    <div><h1>Cash &amp; Bank Reconciliation</h1><p id="sub">Match your books with the bank statement</p></div>
+    <div class="bar-actions"><button class="btn ghost" id="bAuto">⚡ Auto-match</button><button class="btn" id="bAdd">＋ Add statement entries</button></div>
+  </header>
+
+  <div class="steps"><span><b>1</b>Account &amp; period chuniye</span><span><b>2</b>Statement upload karein</span><span><b>3</b>⚡ Auto-match chalayein</span><span><b>4</b>Baaki bank lines par tap karke match karein</span></div>
+
   <div class="accs" id="accs"></div>
-  <section class="card range"><div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="lastweek">Last week</option><option value="month" selected>This month</option><option value="lastmonth">Last month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom</option></select></div><div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div><div style="align-self:end;color:var(--muted);font-size:13px">Pick the period of the bank statement you are checking.</div></section>
+
+  <section class="card range">
+    <div><label for="preset">Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="lastweek">Last week</option><option value="month" selected>This month</option><option value="lastmonth">Last month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom</option></select></div>
+    <div><label for="from">From</label><input type="date" id="from"></div>
+    <div><label for="to">To</label><input type="date" id="to"></div>
+    <div style="align-self:end;color:var(--muted);font-size:13px">Bank statement ki wahi period chuniye jise check kar rahe hain.</div>
+  </section>
+
   <section class="stats four" id="stats" data-feature="show_totals"></section>
+
   <div class="seg" id="seg"><button data-t="books" aria-pressed="true">Our books</button><button data-t="bank" aria-pressed="false">Bank statement</button></div>
+
   <div id="recon" data-view="books">
     <div class="rgrid">
-      <div class="pane-title" data-side="books"><h3>In our books (Day Book)</h3>
+      <div class="pane-title" data-side="books"><h3>📒 In our books (Day Book)</h3>
         <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label><label title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="booksMerge" checked> Merge same receipt no.</label></span></div>
-      <div class="pane-title" data-side="bank"><h3>On the bank statement</h3>
+      <div class="pane-title" data-side="bank"><h3>🏦 On the bank statement</h3>
         <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span></div>
     </div>
     <div class="rgrid">
@@ -79,6 +163,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+
 <script>
 const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N = v => Number(v) || 0, acctOf = e => e.account || "(none)";
 const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1";
@@ -88,8 +173,7 @@ let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), 
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
 const sg = e => N(e.money_in) - N(e.money_out), kk = e => e.src + ":" + e.rid;
-const bankUploadAccounts_ = () => [...new Set([...(PM.bank || []), ...(PM.all || [])])]
-  .filter(account => !/\bcash\b/i.test(account));
+const bankUploadAccounts_ = () => [...new Set([...(PM.bank || []), ...(PM.all || [])])].filter(a => !/\bcash\b/i.test(a));
 
 async function load() {
   const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
@@ -103,9 +187,8 @@ async function load() {
 }
 const booksOf = a => EN.filter(e => acctOf(e) === a && (sg(e) !== 0 || e.needs_review));
 
-/* Receipts that share one receipt no. (one customer deposit split across several customer accounts) are merged
-   into one row with the total so they reconcile with the single bank statement line.
-   Never merged: quick-receipt tags and receipt nos. containing "Advance processing fee" or "1st installment". */
+/* Receipts sharing one receipt no. are merged into one row (total) so they match one bank line.
+   Never merged: quick-receipt tags, "Advance processing fee", "1st installment". */
 const NO_MERGE_RE = /advance\s*processing\s*fee|1st\s*install?ment/i;
 const normText = x => String(x == null ? "" : x).replace(/[\s\u00a0\u200b-\u200d\ufeff]+/g, " ").trim().toLowerCase();
 const TAG_SET = new Set(((typeof ERP_CONFIG !== "undefined" && Array.isArray(ERP_CONFIG.QUICK_RECEIPT_TAGS)) ? ERP_CONFIG.QUICK_RECEIPT_TAGS : []).map(normText));
@@ -129,23 +212,18 @@ function groupsOf(a) {
   return out;
 }
 const groupMatched = g => g.parts.some(p => MATCH.has(kk(p)));
-/* A merged receipt (e.g. 4000 + 3000 + 2000) matches only a bank line equal to its full total (9000).
-   Old matches of a bank line to just one part of a merged receipt are ignored here (in memory only),
-   so the amounts inside a merged receipt never reconcile on their own and nothing has to be deleted by hand. */
-/* bank lines whose old partial match still holds a part of this merged receipt (they must be released before it can be re-matched) */
 const partHolders = (g, exceptId) => BANK_RAW.filter(x => String(x.id) !== String(exceptId) && x.match_src && g.parts.some(p => kk(p) === x.match_src + ":" + x.match_rid));
 async function releaseParts(g, bankId) {
   const ids = new Map(partHolders(g, bankId).map(x => [String(x.id), x.id]));
-  try {   /* also ask the database directly: a holder may not be in the loaded list */
+  try {
     const bySrc = new Map(); g.parts.forEach(p => { if (!bySrc.has(p.src)) bySrc.set(p.src, []); bySrc.get(p.src).push(p.rid); });
     for (const [src, rids] of bySrc) {
       const { data, error } = await ERP.db.sb.from("bank_statement").select("id").eq("match_src", src).in("match_rid", rids);
       if (!error && data) data.forEach(r => { if (String(r.id) !== String(bankId)) ids.set(String(r.id), r.id); });
     }
-  } catch (e) { /* fall back to the rows already loaded */ }
+  } catch (e) { /* use loaded rows only */ }
   await Promise.all([...ids.values()].map(id => ERP.db.bank.setMatch(id, null, null)));
 }
-/* match one bank line to a whole merged receipt; if the first entry's key is still taken, try the receipt's other entries */
 async function matchGroup(bankId, g) {
   await releaseParts(g, bankId);
   let last = null;
@@ -180,15 +258,13 @@ function render() {
   $("stats").style.display = showTotals ? "" : "none";
   $("stats").innerHTML = showTotals ? `<div class="stat"><small>Books (net in period)</small><b>Rs ${M(sum(bs, sg))}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(sum(bn, b => N(b.amount)))}</b></div>
     <div class="stat ${um.length ? "bad" : ""}"><small>Not on statement (books)</small><b>${um.length} · Rs ${M(sum(um, sg))}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Not in books (bank)</small><b>${ub.length} · Rs ${M(sum(ub, b => N(b.amount)))}</b></div>
-    <div class="stat diff ${Math.abs(diff) < 0.005 ? "good" : "bad"}"><small>Difference in this period (Books − Bank)</small><b>${Math.abs(diff) < 0.005 ? "✓ Rs 0 · fully reconciled" : (diff > 0 ? "+" : "−") + "Rs " + M(Math.abs(diff))}</b><small>${Math.abs(diff) < 0.005 ? "Books and bank statement agree" : diff > 0 ? "Books are higher than the bank statement" : "Bank statement is higher than the books"}</small></div>` : "";
+    <div class="stat diff ${Math.abs(diff) < 0.005 ? "good" : "bad"}"><small>Difference in this period (Books − Bank, opening balance excluded)</small><b>${Math.abs(diff) < 0.005 ? "✓ Rs 0 · fully reconciled" : (diff > 0 ? "+" : "−") + "Rs " + M(Math.abs(diff))}</b><small>${Math.abs(diff) < 0.005 ? "Books and bank statement agree" : diff > 0 ? "Books are higher than the bank statement" : "Bank statement is higher than the books"}</small></div>` : "";
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
   const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
   const bookItem = (e, m, warn) => `<div class="it ${m ? "m" : ""}${e.parts && e.parts.length > 1 ? " mg" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}${e.parts && e.parts.length > 1 ? " · " + e.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m && !warn ? "ok" : sg(e) ? "warn" : ""}">${m ? (warn ? "⚠ Matched · amount differs" : "✓ Matched") : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
   const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}${b.stale ? " · old partial match ignored" : ""}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
   const ph = (side, text) => `<div class="it ph" data-side="${side}"><div>${text}</div></div>`;
   const gap = side => `<div data-side="${side}"></div>`;
-
-  /* sort headings (shared by both sides) */
   const sortHtml = side => [["date", "Date"], ["name", side === "books" ? "Party" : "Description"], ["amount", "Amount"]]
     .map(([k, l]) => `<button type="button" data-k="${k}" class="${SORT.key === k ? "on" : ""}" title="Sort by ${l}">${l}${SORT.key === k ? (SORT.dir > 0 ? " ▲" : " ▼") : ""}</button>`).join("");
   $("sortBooks").innerHTML = sortHtml("books"); $("sortBank").innerHTML = sortHtml("bank");
@@ -198,7 +274,6 @@ function render() {
     const r = typeof ka === "number" ? ka - kb : ka.localeCompare(kb);
     return (r || String(a.date || "").localeCompare(String(b.date || ""))) * SORT.dir; };
 
-  /* matched pairs: book entry (merged if needed) and its bank entry on the same row */
   const bankByKey = new Map();
   BANK.filter(b => b.match_src).forEach(b => { const k = b.match_src + ":" + b.match_rid; if (!bankByKey.has(k)) bankByKey.set(k, []); bankByKey.get(k).push(b); });
   const pairs = [], usedBank = new Set();
@@ -220,18 +295,15 @@ function render() {
     (showMB ? (p.e ? bookItem(p.e, true, p.banks.length > 0 && Math.abs(p.banks.reduce((t, b) => t + N(b.amount), 0) - sg(p.e)) >= 0.005) : ph("books", "Book entry is outside this period")) : gap("books")) +
     (showMK ? (p.banks.length ? `<div data-side="bank">${p.banks.map(bankItem).join("")}</div>` : ph("bank", "Bank entry is outside this period / account")) : gap("bank"))).join("");
 
-  /* unmatched: independent columns */
   const visibleBooks = $("booksUnmatched").checked ? bg.filter(g => !groupMatched(g)).sort((x, y) => cmpItems("books", x, "books", y)) : [];
   const visibleBank = $("bankUnmatched").checked ? bn.filter(b => !b.match_src).sort((x, y) => cmpItems("bank", x, "bank", y)) : [];
   $("secU").textContent = `Not matched — books ${visibleBooks.length} · bank ${visibleBank.length}`;
   $("books").innerHTML = visibleBooks.map(e => bookItem(e, false)).join("") || '<div class="empty">No unmatched entries.</div>';
   $("bank").innerHTML = visibleBank.map(bankItem).join("") || '<div class="empty">No unmatched entries.</div>';
 }
-["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched", "booksMerge"].forEach(id => {
-  $(id).onchange = render;
-});
+["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched", "booksMerge"].forEach(id => { $(id).onchange = render; });
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; render(); } };
-/* ---------- period presets ---------- */
+
 const isoDate = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 function setPreset(p) {
   const t = new Date(), y = t.getFullYear(), m = t.getMonth(), day = (yy, mm, dd) => new Date(yy, mm, dd, 12);
@@ -253,10 +325,9 @@ $("seg").onclick = e => { const b = e.target.closest("button"); if (!b) return; 
 $("recon").addEventListener("click", e => { const b = e.target.closest(".sortbar button"); if (!b) return;
   if (SORT.key === b.dataset.k) SORT.dir = -SORT.dir; else { SORT.key = b.dataset.k; SORT.dir = 1; } render(); });
 
-/* ---------- auto match: same amount, dates within 3 days, closest first ---------- */
+/* auto match: same amount, dates within 3 days, closest first */
 $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
-  const DATE_TOL = 3;   /* amount must be exactly the same; dates may differ by up to 3 days */
-  const used = new Set(), pairs = [], groupsFor = [];
+  const DATE_TOL = 3, used = new Set(), pairs = [], groupsFor = [];
   const near = (g, b) => Math.min(...g.parts.map(p => days(p.date, b.date)));
   const free = groupsOf(acct).filter(g => !groupMatched(g) && sg(g) !== 0);
   bankOf(acct).filter(b => !b.match_src).sort((a, b) => a.date.localeCompare(b.date)).forEach(b => {
@@ -271,7 +342,7 @@ $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
     load();
   } catch (e) { ERP.ui.toast(e.message, "err"); } });
 
-/* ---------- match one bank entry by hand ---------- */
+/* match one bank entry by hand */
 $("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
   $("mSub").textContent = `${b.date} · ${b.amount >= 0 ? "+" : "−"}${M(Math.abs(b.amount))} · ${b.remarks || ""}`; $("mDel").hidden = !ERP.auth.can("delete");
   if (b.match_src) { const mk = b.match_src + ":" + b.match_rid, x = groupsOf(b.account).find(g => g.parts.some(p => kk(p) === mk)) || EN.find(en => kk(en) === mk);
@@ -285,7 +356,7 @@ $("mList").onclick = async e => { const c = e.target.closest(".cand"); if (!c ||
   try { const g = groupsOf(cur.account).find(x => kk(x) === c.dataset.s + ":" + c.dataset.r); if (g) await matchGroup(cur.id, g); else await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
 $("mDel").onclick = async () => { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([cur.id]); $("mDlg").close(); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
 
-/* ---------- add statement entries ---------- */
+/* add statement entries */
 function addRow(v = {}, focus = true) { const d = document.createElement("div"); d.className = "rw";
   d.innerHTML = `<input class="rd" type="date" value="${v.date || $("to").value}"><select class="rt"><option value="1">Deposit (in)</option><option value="-1">Withdrawal (out)</option></select><input class="ra" type="number" inputmode="decimal" min="0" placeholder="Amount"><input class="rr wide" placeholder="Description (as on the statement)"><button type="button" class="btn sm ghost x" style="color:var(--danger)" aria-label="Remove row">✕</button>`;
   d.dataset.sourceRow = v.source_row === undefined ? "" : String(v.source_row);
@@ -317,16 +388,13 @@ $("addRows").onkeydown = e => { if (e.key === "Enter" && e.target.classList.cont
 $("uploadStatement").onclick = () => {
   const bankAccounts = bankUploadAccounts_();
   if (!bankAccounts.length) return ERP.ui.toast("No active bank accounts are configured in Settings.", "err");
-  $("bankUploadAccount").innerHTML = '<option value="">Select a bank account</option>' +
-    bankAccounts.map(account => `<option value="${E(account)}">${E(account)}</option>`).join("");
+  $("bankUploadAccount").innerHTML = '<option value="">Select a bank account</option>' + bankAccounts.map(a => `<option value="${E(a)}">${E(a)}</option>`).join("");
   $("bankUploadAccount").value = "";
   $("bankAccountDlg").showModal();
 };
 $("chooseStatementFile").onclick = () => {
   const account = $("bankUploadAccount").value;
-  if (!account || !bankUploadAccounts_().includes(account)) {
-    return ERP.ui.toast("Select a valid bank account before choosing the statement file.", "err");
-  }
+  if (!account || !bankUploadAccounts_().includes(account)) return ERP.ui.toast("Select a valid bank account before choosing the statement file.", "err");
   pendingImportAccount = account;
   $("bankAccountDlg").close();
   $("statementFile").click();
@@ -343,36 +411,23 @@ $("statementFile").onchange = async () => {
   const file = $("statementFile").files[0]; if (!file) return;
   try {
     const importAccount = pendingImportAccount;
-    if (!importAccount || !bankUploadAccounts_().includes(importAccount)) {
-      throw new Error("Choose a valid bank account before uploading a statement.");
-    }
-    const text = await file.text();
-    const parsed = parseBankStatementCsv_(text);
-    const rows = parsed.rows;
+    if (!importAccount || !bankUploadAccounts_().includes(importAccount)) throw new Error("Choose a valid bank account before uploading a statement.");
+    const parsed = parseBankStatementCsv_(await file.text()), rows = parsed.rows;
     if (!rows.length) throw new Error("No dated statement transactions with valid amounts were found.");
     acct = importAccount;
     render();
-    writeStage_(BANK_STAGE_KEY, {
-      fileName: file.name,
-      fileKey: importFileKey_("bank_statement", parsed.importScope, importAccount),
-      account: importAccount,
-      rows
-    });
+    writeStage_(BANK_STAGE_KEY, { fileName: file.name, fileKey: importFileKey_("bank_statement", parsed.importScope, importAccount), account: importAccount, rows });
     $("addSub").textContent = importAccount;
     $("uploadStatus").textContent = `${file.name}: ${rows.length} entries staged for ${importAccount}. Review before saving.`;
     showBankStage_();
   } catch (e) {
     $("uploadStatus").textContent = "Could not load the file. Select a supported ABL or UBL CSV statement.";
     ERP.ui.toast(e.message, "err");
-  } finally {
-    pendingImportAccount = "";
-    $("statementFile").value = "";
-  }
+  } finally { pendingImportAccount = ""; $("statementFile").value = ""; }
 };
 
 function parseBankStatementCsv_(text) {
   const records = parseCsvRecords_(text);
-
   const norm = value => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
   const headerIndex = records.findIndex(r => {
     const h = r.map(norm);
@@ -383,37 +438,29 @@ function parseBankStatementCsv_(text) {
   if (headerIndex < 0) throw new Error("Could not identify the ABL/UBL statement columns.");
   const headers = records[headerIndex].map(norm);
   const col = name => headers.findIndex(x => x === name);
-  const dateCol = col("date"), descCol = col("description");
-  const amountCol = col("amount"), drcrCol = col("drcr"), directionCol = col("direction");
-  const sourceType = amountCol >= 0
-    ? (drcrCol >= 0 ? "abl" : "manual")
-    : "ubl";
-  const withdrawCol = headers.findIndex(x => x.startsWith("withdraw"));
-  const depositCol = headers.findIndex(x => x.startsWith("deposit"));
+  const dateCol = col("date"), descCol = col("description"), amountCol = col("amount"), drcrCol = col("drcr"), directionCol = col("direction");
+  const sourceType = amountCol >= 0 ? (drcrCol >= 0 ? "abl" : "manual") : "ubl";
+  const withdrawCol = headers.findIndex(x => x.startsWith("withdraw")), depositCol = headers.findIndex(x => x.startsWith("deposit"));
   const parseAmount = raw => {
     const s = String(raw || "").trim().replace(/,/g, "").replace(/^(?:PKR|Rs\.?)\s*/i, "");
     if (!/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(s)) return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
+    const n = Number(s); return Number.isFinite(n) ? n : null;
   };
   const parseDate = raw => {
-    const s = String(raw || "").trim();
-    const m = s.match(/^(\d{1,2})[-\s/]([A-Za-z]{3,9})[-\s/](\d{2,4})$/);
+    const s = String(raw || "").trim(), m = s.match(/^(\d{1,2})[-\s/]([A-Za-z]{3,9})[-\s/](\d{2,4})$/);
     if (!m) return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
     const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, sept:9, oct:10, nov:11, dec:12 };
     const month = months[m[2].toLowerCase().slice(0, 4)] || months[m[2].toLowerCase().slice(0, 3)];
-    const year = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]);
-    const day = Number(m[1]);
+    const year = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]), day = Number(m[1]);
     if (!month || day < 1 || day > 31) return "";
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
-
   const result = [];
   records.slice(headerIndex + 1).forEach((r, rowOffset) => {
     const rawDate = String(r[dateCol] || "").trim();
     if (!rawDate) return;
-    const date = parseDate(rawDate);
-    if (!date) throw new Error(`CSV row ${headerIndex + rowOffset + 2} has an unrecognized date: ${rawDate}`);
+    const date = parseDate(rawDate), rowNo = headerIndex + rowOffset + 2;
+    if (!date) throw new Error(`CSV row ${rowNo} has an unrecognized date: ${rawDate}`);
     const description = String(r[descCol] || "").replace(/\s+/g, " ").trim();
     if (!description || /^opening balance$/i.test(description)) return;
     let amount, sign;
@@ -422,29 +469,21 @@ function parseBankStatementCsv_(text) {
       const direction = String(r[directionCol >= 0 ? directionCol : drcrCol] || "").trim().toLowerCase();
       if (/^(?:dr|debit|withdrawal|withdraw|out)$/.test(direction)) sign = -1;
       else if (/^(?:cr|credit|deposit|in)$/.test(direction)) sign = 1;
-      else throw new Error(`CSV row ${headerIndex + rowOffset + 2} has no valid direction or Dr/Cr value.`);
-      if (amount === null) throw new Error(`CSV row ${headerIndex + rowOffset + 2} has an invalid amount.`);
+      else throw new Error(`CSV row ${rowNo} has no valid direction or Dr/Cr value.`);
+      if (amount === null) throw new Error(`CSV row ${rowNo} has an invalid amount.`);
     } else {
       const withdrawal = parseAmount(r[withdrawCol]), deposit = parseAmount(r[depositCol]);
-      if (withdrawal === null || deposit === null || (withdrawal > 0 && deposit > 0)) {
-        throw new Error(`CSV row ${headerIndex + rowOffset + 2} has invalid withdrawal/deposit amounts.`);
-      }
+      if (withdrawal === null || deposit === null || (withdrawal > 0 && deposit > 0)) throw new Error(`CSV row ${rowNo} has invalid withdrawal/deposit amounts.`);
       if (withdrawal > 0) { amount = withdrawal; sign = -1; }
       else if (deposit > 0) { amount = deposit; sign = 1; }
       else return;
     }
-    if (amount <= 0) throw new Error(`CSV row ${headerIndex + rowOffset + 2} has a non-positive transaction amount.`);
+    if (amount <= 0) throw new Error(`CSV row ${rowNo} has a non-positive transaction amount.`);
     result.push({ date, sign, amount, description, source_row: rowOffset + 1 });
   });
   if (!result.length) return { rows: [], importScope: sourceType + ":empty" };
-  const firstTransactionDate = result.reduce(
-    (first, entry) => entry.date < first ? entry.date : first,
-    result[0].date
-  );
-  return {
-    rows: result,
-    importScope: sourceType + ":" + firstTransactionDate
-  };
+  const first = result.reduce((f, x) => x.date < f ? x.date : f, result[0].date);
+  return { rows: result, importScope: sourceType + ":" + first };
 }
 
 function parseCsvRecords_(text) {
@@ -462,34 +501,26 @@ function parseCsvRecords_(text) {
     else if (ch === "\r" || ch === "\n") {
       if (ch === "\r" && text[i + 1] === "\n") i++;
       row.push(cell); cell = "";
-      if (row.some(value => String(value).trim())) records.push(row.slice());
+      if (row.some(v => String(v).trim())) records.push(row.slice());
       row.length = 0;
     } else cell += ch;
   }
   if (quoted) throw new Error("The CSV has an unclosed quoted field.");
   row.push(cell);
-  if (row.some(value => String(value).trim())) records.push(row);
+  if (row.some(v => String(v).trim())) records.push(row);
   return records;
 }
 function setPeriodForRows_(rows) {
   if (!rows.length) return;
   $("preset").value = "custom";
-  $("from").value = rows.reduce((date, row) => row.date < date ? row.date : date, rows[0].date);
-  $("to").value = rows.reduce((date, row) => row.date > date ? row.date : date, rows[0].date);
+  $("from").value = rows.reduce((d, r) => r.date < d ? r.date : d, rows[0].date);
+  $("to").value = rows.reduce((d, r) => r.date > d ? r.date : d, rows[0].date);
 }
-
-function readStage_(key) {
-  const value = sessionStorage.getItem(key);
-  return value ? JSON.parse(value) : null;
-}
+function readStage_(key) { const v = sessionStorage.getItem(key); return v ? JSON.parse(v) : null; }
 function importFileKey_(kind, fileName, account) {
-  return [kind, String(account || "").trim().toLowerCase(), String(fileName || "").trim().toLowerCase()]
-    .map(value => encodeURIComponent(value))
-    .join(":");
+  return [kind, String(account || "").trim().toLowerCase(), String(fileName || "").trim().toLowerCase()].map(v => encodeURIComponent(v)).join(":");
 }
-function writeStage_(key, value) {
-  sessionStorage.setItem(key, JSON.stringify(value));
-}
+function writeStage_(key, value) { sessionStorage.setItem(key, JSON.stringify(value)); }
 function showBankStage_() {
   const stage = readStage_(BANK_STAGE_KEY);
   $("clearBankStage").hidden = !(stage && stage.rows && stage.rows.length);
@@ -499,10 +530,8 @@ function showBankStage_() {
   $("uploadStatus").textContent = `${stage.fileName || "Bank entries"}: ${stage.rows.length} entries staged for ${stage.account}. Review before saving.`;
 }
 function writeBankFormStage_() {
-  const controls = [...$("addRows").querySelectorAll(".rw")];
-  const previous = readStage_(BANK_STAGE_KEY);
-  const fileKey = previous && previous.fileKey ||
-    importFileKey_("bank_statement", "manual-" + Date.now(), acct);
+  const controls = [...$("addRows").querySelectorAll(".rw")], previous = readStage_(BANK_STAGE_KEY);
+  const fileKey = previous && previous.fileKey || importFileKey_("bank_statement", "manual-" + Date.now(), acct);
   const rows = controls.map((row, index) => ({
     date: row.querySelector(".rd").value,
     sign: Number(row.querySelector(".rt").value),
@@ -510,57 +539,28 @@ function writeBankFormStage_() {
     description: row.querySelector(".rr").value.trim(),
     source_row: Number(row.dataset.sourceRow) || index + 1
   })).filter(row => row.date || row.amount !== "" || row.description);
-  if (!rows.length) {
-    sessionStorage.removeItem(BANK_STAGE_KEY);
-    return;
-  }
-  writeStage_(BANK_STAGE_KEY, {
-    fileName: previous && previous.fileName || "Manual entries",
-    fileKey,
-    account: previous && previous.account || acct,
-    rows
-  });
+  if (!rows.length) { sessionStorage.removeItem(BANK_STAGE_KEY); return; }
+  writeStage_(BANK_STAGE_KEY, { fileName: previous && previous.fileName || "Manual entries", fileKey, account: previous && previous.account || acct, rows });
 }
 function downloadTemplate_(name, columns) {
-  const row = {};
-  columns.forEach(column => { row[column] = ""; });
-  ERP.ui.downloadCSV(name, [row]);
+  const row = {}; columns.forEach(c => { row[c] = ""; }); ERP.ui.downloadCSV(name, [row]);
 }
-
-$("downloadBankTemplate").onclick = () =>
-  downloadTemplate_("bank_statement_manual_template.csv", ["date", "direction", "amount", "description"]);
+$("downloadBankTemplate").onclick = () => downloadTemplate_("bank_statement_manual_template.csv", ["date", "direction", "amount", "description"]);
 $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
   const stage = readStage_(BANK_STAGE_KEY), saveAccount = stage && stage.account || acct;
-  const formRows = [...$("addRows").querySelectorAll(".rw")];
   const rows = []; let bad = false;
-  formRows.forEach((r, index) => {
+  [...$("addRows").querySelectorAll(".rw")].forEach((r, index) => {
     const a = +r.querySelector(".ra").value, d = r.querySelector(".rd").value;
     if (!a && !r.querySelector(".rr").value.trim()) return;
     if (!d || !(a > 0)) { bad = true; return; }
-    rows.push({
-      account: saveAccount,
-      date: d,
-      amount: a * +r.querySelector(".rt").value,
-      remarks: r.querySelector(".rr").value.trim(),
-      row_key: String(Number(r.dataset.sourceRow) || index + 1)
-    });
+    rows.push({ account: saveAccount, date: d, amount: a * +r.querySelector(".rt").value, remarks: r.querySelector(".rr").value.trim(), row_key: String(Number(r.dataset.sourceRow) || index + 1) });
   });
   if (bad) return ERP.ui.toast("Every row needs a date and an amount", "err"); if (!rows.length) return ERP.ui.toast("Add at least one row", "err");
   if (!saveAccount) return ERP.ui.toast("Select a bank account first", "err");
-  const fileKey = stage && stage.fileKey ||
-    importFileKey_("bank_statement", "manual-" + Date.now(), saveAccount);
+  const fileKey = stage && stage.fileKey || importFileKey_("bank_statement", "manual-" + Date.now(), saveAccount);
   if (!confirm(`Save/update ${rows.length} bank entries for ${saveAccount}? Rows from the same account, statement period, and CSV position will update. Removed rows will remain in the database.`)) return;
   try {
-    for (const row of rows) {
-      await ERP.db.bank.upsertImported({
-        account: row.account,
-        date: row.date,
-        amount: row.amount,
-        remarks: row.remarks,
-        import_file_key: fileKey,
-        import_row_key: row.row_key
-      });
-    }
+    for (const row of rows) await ERP.db.bank.upsertImported({ account: row.account, date: row.date, amount: row.amount, remarks: row.remarks, import_file_key: fileKey, import_row_key: row.row_key });
     sessionStorage.removeItem(BANK_STAGE_KEY);
     $("clearBankStage").hidden = true;
     setPeriodForRows_(rows);
@@ -572,9 +572,7 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
   } });
 
 (async () => { await ERP.auth.guard(); $("preset").value = "month"; setPreset("month");
-  if (!ERP.auth.can("write")) {
-    $("bAdd").hidden = $("bAuto").hidden = true;
-  }
+  if (!ERP.auth.can("write")) { $("bAdd").hidden = $("bAuto").hidden = true; }
   load();
 })();
 </script>
