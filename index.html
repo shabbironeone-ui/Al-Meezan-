@@ -12,15 +12,15 @@
   .brand{display:block;width:100%;text-align:left;padding:16px;background:var(--nav-deep);color:#5eead4;font:inherit;font-weight:700;font-size:16px;border:0;border-bottom:1px solid var(--nav-hover);cursor:pointer}
   .menu{flex:1;overflow-y:auto;padding:6px 0}
   .menu h4{margin:12px 16px 4px;font-size:12px;color:#94a3b8;font-weight:600}
-  .menu button{display:flex;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:8px 16px;background:none;border:0;border-left:4px solid transparent;color:inherit;font:inherit;font-size:14px;text-align:left;cursor:pointer}
-  .menu button:hover{background:var(--nav-hover)}
-  .menu button[aria-current="page"]{background:var(--nav-hover);border-left-color:#5eead4}
-  .menu button[draggable="true"]{cursor:grab;touch-action:none}
-  .menu button[draggable="true"]::after{content:"⋮⋮";margin-left:auto;color:#94a3b8;font-size:13px;letter-spacing:-3px;opacity:.75}
-  .menu button[draggable="true"]:hover::after{color:#5eead4;opacity:1}
-  .menu button.dragging{opacity:.4;cursor:grabbing}
-  .menu button.drop-before{box-shadow:inset 0 3px #5eead4}
-  .menu button.drop-after{box-shadow:inset 0 -3px #5eead4}
+  .menu button,.menu a{display:flex;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:8px 16px;background:none;border:0;border-left:4px solid transparent;color:inherit;font:inherit;font-size:14px;text-align:left;text-decoration:none;cursor:pointer}
+  .menu button:hover,.menu a:hover{background:var(--nav-hover)}
+  .menu button[aria-current="page"],.menu a[aria-current="page"]{background:var(--nav-hover);border-left-color:#5eead4}
+  .menu button[draggable="true"],.menu a[draggable="true"]{cursor:grab;touch-action:none}
+  .menu button[draggable="true"]::after,.menu a[draggable="true"]::after{content:"⋮⋮";margin-left:auto;color:#94a3b8;font-size:13px;letter-spacing:-3px;opacity:.75}
+  .menu button[draggable="true"]:hover::after,.menu a[draggable="true"]:hover::after{color:#5eead4;opacity:1}
+  .menu button.dragging,.menu a.dragging{opacity:.4;cursor:grabbing}
+  .menu button.drop-before,.menu a.drop-before{box-shadow:inset 0 3px #5eead4}
+  .menu button.drop-after,.menu a.drop-after{box-shadow:inset 0 -3px #5eead4}
   .main{flex:1;display:flex;flex-direction:column;min-width:0}
   .topbar{height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 12px;flex-shrink:0}
   .topbar h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -150,31 +150,29 @@ function orderedPages_(name, pages) {
 }
 function saveSidebarOrder_(group) {
   const order = readSidebarOrder_();
-  order[group] = [...$("menu").querySelectorAll(`button[data-group="${CSS.escape(group)}"]`)].map(button => button.dataset.p);
+  order[group] = [...$("menu").querySelectorAll(`[data-group="${CSS.escape(group)}"]`)].map(button => button.dataset.p);
   try { localStorage.setItem(SIDEBAR_ORDER_KEY, JSON.stringify(order)); }
   catch (e) { ERP.ui.toast("Could not save sidebar order: " + e.message, "err"); }
 }
 
 /* sidebar */
-function openSidebarPage_(target) {
-  const file = target ? target.split("?")[0] : "";
-  if (file && ALL[file] && !ERP.auth.can("read", ERP.auth.pageKey(file))) {
-    ERP.ui.toast("You do not have permission to open this page.", "err");
-    return;
-  }
-  const url = new URL("index.html", window.location.href);
-  if (target) url.hash = target;
-  window.open(url.toString(), "_blank", "noopener");
-}
-$("menu").appendChild(mk("", "🏠  Home", () => openSidebarPage_(null), ""));
+$("menu").appendChild(mk("", "🏠  Home", () => go(null), ""));
 GROUPS.forEach(([name, pages]) => {
   const h = document.createElement("h4"); h.textContent = name; $("menu").appendChild(h);
   orderedPages_(name, pages).forEach(p => {
-    const button = mk("", p[1] + "  " + p[2], () => openSidebarPage_(p[0]), p[0]);
-    button.dataset.group = name;
-    button.draggable = true;
-    button.title = "Drag to reorder within " + name;
-    $("menu").appendChild(button);
+    const link = document.createElement("a");
+    link.href = "index.html#" + p[0];
+    link.innerHTML = p[1] + "  " + p[2];
+    link.dataset.p = p[0];
+    link.dataset.group = name;
+    link.draggable = true;
+    link.title = "Click to open here; right-click to open in a new tab. Drag to reorder.";
+    link.addEventListener("click", event => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      go(p[0]);
+    });
+    $("menu").appendChild(link);
   });
 });
 { const h = document.createElement("h4"); h.textContent = "Data"; $("menu").appendChild(h);
@@ -182,15 +180,15 @@ GROUPS.forEach(([name, pages]) => {
   $("menu").appendChild(bk); }
 { const c = mk("", "🩺  Connection check", () => window.open("status.html", "_blank"), "status"); $("menu").appendChild(c); }
 $("menu").addEventListener("dragstart", event => {
-  const button = event.target.closest('button[draggable="true"]');
+  const button = event.target.closest('[draggable="true"][data-group]');
   if (!button) return;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", button.dataset.p);
   button.classList.add("dragging");
 });
 $("menu").addEventListener("dragover", event => {
-  const target = event.target.closest('button[draggable="true"]');
-  const dragged = $("menu").querySelector("button.dragging");
+  const target = event.target.closest('[draggable="true"][data-group]');
+  const dragged = $("menu").querySelector('[draggable="true"].dragging[data-group]');
   if (!target || !dragged || target === dragged || target.dataset.group !== dragged.dataset.group) return;
   event.preventDefault();
   const rect = target.getBoundingClientRect();
@@ -199,8 +197,8 @@ $("menu").addEventListener("dragover", event => {
   target.classList.add(before ? "drop-before" : "drop-after");
 });
 $("menu").addEventListener("drop", event => {
-  const target = event.target.closest('button[draggable="true"]');
-  const dragged = $("menu").querySelector("button.dragging");
+  const target = event.target.closest('[draggable="true"][data-group]');
+  const dragged = $("menu").querySelector('[draggable="true"].dragging[data-group]');
   if (!target || !dragged || target === dragged || target.dataset.group !== dragged.dataset.group) return;
   event.preventDefault();
   const rect = target.getBoundingClientRect();
