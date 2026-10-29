@@ -161,8 +161,25 @@ ERP.auth = (function () {
     return !(override && override[action] === false);
   }
 
+  function canFeature(feature, page) {
+    if (ERP_CONFIG.OPEN_ACCESS === true) return true;
+    if (!profile || page !== "reconciliation" || feature !== "show_totals") return false;
+    if (profile.role === "admin") return true;
+
+    const rolePermissions = profile.roleDefinition && profile.roleDefinition.permissions;
+    const canRead = ROLE_RULES[profile.role]
+      ? ROLE_RULES[profile.role].includes("read")
+      : !!(rolePermissions && rolePermissions.reconciliation && rolePermissions.reconciliation.read === true);
+    if (!canRead) return false;
+    if (rolePermissions && rolePermissions.reconciliation
+      && rolePermissions.reconciliation.show_totals === false) return false;
+
+    const override = profile.permissions && profile.permissions.reconciliation;
+    return !(override && override.show_totals === false);
+  }
+
   return {
-    session, signIn, signOut, changePassword, sendPasswordReset, adminManageUser, guard, can, pageKey,
+    session, signIn, signOut, changePassword, sendPasswordReset, adminManageUser, guard, can, canFeature, pageKey,
     pages: PAGES.map(([file, key, label]) => ({ file, key, label })),
     actions: ACTIONS.slice(),
     roles: Object.keys(ROLE_RULES),
