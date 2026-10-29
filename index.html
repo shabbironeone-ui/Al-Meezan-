@@ -156,11 +156,21 @@ function saveSidebarOrder_(group) {
 }
 
 /* sidebar */
-$("menu").appendChild(mk("", "🏠  Home", () => go(null), ""));
+function openSidebarPage_(target) {
+  const file = target ? target.split("?")[0] : "";
+  if (file && ALL[file] && !ERP.auth.can("read", ERP.auth.pageKey(file))) {
+    ERP.ui.toast("You do not have permission to open this page.", "err");
+    return;
+  }
+  const url = new URL("index.html", window.location.href);
+  if (target) url.hash = target;
+  window.open(url.toString(), "_blank", "noopener");
+}
+$("menu").appendChild(mk("", "🏠  Home", () => openSidebarPage_(null), ""));
 GROUPS.forEach(([name, pages]) => {
   const h = document.createElement("h4"); h.textContent = name; $("menu").appendChild(h);
   orderedPages_(name, pages).forEach(p => {
-    const button = mk("", p[1] + "  " + p[2], () => go(p[0]), p[0]);
+    const button = mk("", p[1] + "  " + p[2], () => openSidebarPage_(p[0]), p[0]);
     button.dataset.group = name;
     button.draggable = true;
     button.title = "Drag to reorder within " + name;
