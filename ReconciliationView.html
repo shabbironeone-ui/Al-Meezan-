@@ -46,7 +46,7 @@
     <div class="bar-actions"><button class="btn ghost" id="bAuto">⚡ Auto-match</button><button class="btn" id="bAdd">＋ Add statement entries</button></div></header>
   <div class="accs" id="accs"></div>
   <section class="card range"><div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="lastweek">Last week</option><option value="month" selected>This month</option><option value="lastmonth">Last month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom</option></select></div><div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div><div style="align-self:end;color:var(--muted);font-size:13px">Pick the period of the bank statement you are checking.</div></section>
-  <section class="stats four" id="stats"></section>
+  <section class="stats four" id="stats" data-feature="show_totals"></section>
   <div class="seg" id="seg"><button data-t="books" aria-pressed="true">Our books</button><button data-t="bank" aria-pressed="false">Bank statement</button></div>
   <div id="recon" data-view="books">
     <div class="rgrid">
