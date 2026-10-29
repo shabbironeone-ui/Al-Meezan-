@@ -108,6 +108,29 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
 .rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:8px;padding:10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
 .rw .wide{grid-column:1/-1}
 @media(min-width:640px){.rw{grid-template-columns:140px 140px 130px 1fr auto}.rw .wide{grid-column:auto}}
+
+.tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:2px solid var(--line)}
+.tabs button{border:0;background:none;font:inherit;font-weight:700;color:var(--muted);padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button.on{color:var(--brand);border-color:var(--brand)}
+.tabs i{font-style:normal;background:#e2e8f0;border-radius:99px;padding:1px 8px;font-size:12px;margin-left:4px}
+.tool{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.tool input[type=search]{flex:1;min-width:200px;width:auto}
+.tool label{display:flex;gap:6px;align-items:center;margin:0;font-size:12px}.tool select{width:auto;padding:6px 8px}
+.hint{margin:0 0 10px;padding:8px 12px;background:var(--brand-soft);border-radius:10px;font-size:13px;color:var(--brand-dark)}
+.wgrid{display:grid;gap:14px;grid-template-columns:1fr;padding-bottom:110px}
+@media(min-width:900px){.wgrid{grid-template-columns:1fr 1fr}.lst{max-height:calc(100vh - 260px);overflow:auto;padding:2px}}
+.pane h3{margin:0 0 8px;font-size:15px}.pane h3 i{font-style:normal;background:#e2e8f0;border-radius:99px;padding:1px 8px;font-size:12px}
+.it.pick{cursor:pointer}.it.pick:hover{border-color:var(--brand)}
+.it.sel{outline:3px solid var(--brand);background:var(--brand-soft);border-left-color:var(--brand)}
+.pair{display:grid;grid-template-columns:1fr;gap:8px;background:#fff;border:1px solid var(--line);border-left:5px solid #10b981;border-radius:12px;padding:10px 13px;margin-bottom:8px;box-shadow:var(--shadow);font-size:14px}
+@media(min-width:900px){.pair{grid-template-columns:1fr 1fr auto;align-items:center}}
+.pair small{color:var(--muted)}.pl small:first-child{display:block;font-weight:700;margin-bottom:2px}.pair .am{font-weight:700;font-variant-numeric:tabular-nums}
+.pr{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.abar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border-top:2px solid var(--brand);padding:10px 16px;box-shadow:0 -6px 20px rgba(15,23,42,.12)}
+.abar[hidden]{display:none}
+.ab-t{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.ab-t small{display:block;color:var(--muted);font-size:11px;font-weight:600}.ab-t b{font-size:14px}
+.ab-d{font-weight:700;font-size:13px;padding:4px 10px;border-radius:99px}.ab-d.ok{background:#d1fae5;color:#065f46}.ab-d.no{background:#fef3c7;color:#92400e}
+.ab-b{display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -117,7 +140,7 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
     <div class="bar-actions"><button class="btn ghost" id="bAuto">⚡ Auto-match</button><button class="btn" id="bAdd">＋ Add statement entries</button></div>
   </header>
 
-  <div class="steps"><span><b>1</b>Account &amp; period chuniye</span><span><b>2</b>Statement upload karein</span><span><b>3</b>⚡ Auto-match chalayein</span><span><b>4</b>Baaki bank lines par tap karke match karein</span></div>
+  <div class="steps"><span><b>1</b>Account &amp; period chunein</span><span><b>2</b>Bank CSV upload karein</span><span><b>3</b>⚡ Auto-match</span><span><b>4</b>Baaki: bank line chunein → Match dabayein</span></div>
 
   <div class="accs" id="accs"></div>
 
@@ -130,24 +153,17 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
 
   <section class="stats four" id="stats" data-feature="show_totals"></section>
 
-  <div class="seg" id="seg"><button data-t="books" aria-pressed="true">Our books</button><button data-t="bank" aria-pressed="false">Bank statement</button></div>
-
-  <div id="recon" data-view="books">
-    <div class="rgrid">
-      <div class="pane-title" data-side="books"><h3>📒 In our books (Day Book)</h3>
-        <span class="match-filters"><label><input type="checkbox" id="booksMatched" checked> Matched</label><label><input type="checkbox" id="booksUnmatched" checked> Unmatched</label><label title="Receipts with the same receipt no. are shown as one total (Advance processing fee and 1st installment are never merged)"><input type="checkbox" id="booksMerge" checked> Merge same receipt no.</label></span></div>
-      <div class="pane-title" data-side="bank"><h3>🏦 On the bank statement</h3>
-        <span class="match-filters"><label><input type="checkbox" id="bankMatched" checked> Matched</label><label><input type="checkbox" id="bankUnmatched" checked> Unmatched</label></span></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="work">
+    <div class="tool"><input id="q" type="search" placeholder="Search: naam, amount, date…"><label>Auto-match date farq <select id="tol"><option value="3" selected>±3 din</option><option value="7">±7 din</option><option value="15">±15 din</option><option value="31">±31 din</option><option value="99999">Koi bhi</option></select></label><label class="ck"><input type="checkbox" id="booksMerge" checked> Same receipt no. merge karein</label></div>
+    <p class="hint">Bank ki line chunein → books ki same-amount entry khud chun li jati hai → <b>Match</b> dabayein (ya Enter). Match ke baad agli line khud aa jati hai.</p>
+    <div class="wgrid">
+      <section class="pane" id="paneBank"><h3>🏦 Bank statement <i id="cntBank"></i></h3><div class="lst" id="lstBank"></div></section>
+      <section class="pane" id="paneBooks"><h3>📒 Hamari books <i id="cntBooks"></i></h3><div class="lst" id="lstBooks"></div></section>
     </div>
-    <div class="rgrid">
-      <div class="sortbar" id="sortBooks" data-side="books"></div>
-      <div class="sortbar" id="sortBank" data-side="bank"></div>
-    </div>
-    <div class="sec" id="secM" hidden></div>
-    <div class="rgrid" id="pairs"></div>
-    <div class="sec" id="secU"></div>
-    <div class="rgrid"><div id="books" data-side="books"></div><div id="bank" data-side="bank"></div></div>
   </div>
+  <div id="done" hidden></div>
+  <div class="abar" id="abar" hidden></div>
 </main>
 
 <dialog id="addDlg" class="sheet"><div class="sh-head"><div><h2>Add bank statement entries</h2><p id="addSub"></p></div><button class="x" data-close>✕</button></div>
@@ -158,8 +174,6 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
   <div class="sh-body"><label for="bankUploadAccount">Bank account</label><select id="bankUploadAccount" required></select></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="chooseStatementFile">Continue to file</button></div></dialog>
 
-<dialog id="mDlg" class="sheet"><div class="sh-head"><div><h2>Match this bank entry</h2><p id="mSub"></p></div><button class="x" data-close>✕</button></div>
-  <div class="sh-body"><div id="mList"></div></div><div class="sh-foot"><button class="btn danger" id="mDel" hidden style="margin-right:auto">Delete entry</button><button class="btn ghost" data-close>Close</button></div></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
@@ -177,13 +191,13 @@ const bankUploadAccounts_ = () => [...new Set([...(PM.bank || []), ...(PM.all ||
 
 async function load() {
   const from = $("from").value, to = $("to").value; if (!from || !to || from > to) return ERP.ui.toast("Check the dates", "err");
-  $("pairs").innerHTML = ""; $("books").innerHTML = $("bank").innerHTML = '<div class="skeleton"></div>';
+  $("lstBank").innerHTML = $("lstBooks").innerHTML = '<div class="skeleton"></div>';
   try {
     const [en, op, bk, settings] = await Promise.all([ERP.db.accounts.entries({ from, to }), ERP.db.accounts.opening(from), ERP.db.bank.listAll(), ERP.db.settings()]);
     PM = settings.paymentModes;
     if (!acct) acct = PM.bank[0] || PM.cash[0] || "";
     EN = en; OPEN = new Map(op.map(r => [r.account || "(none)", N(r.opening)])); BANK_RAW = bk; BANK = bk; MATCH = new Set(bk.filter(b => b.match_src).map(b => b.match_src + ":" + b.match_rid)); render();
-  } catch (e) { $("books").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/12_bank.sql if this mentions bank_statement.</small></div>`; $("bank").innerHTML = ""; }
+  } catch (e) { $("lstBooks").innerHTML = `<div class="empty">Could not load.<br><small>${E(e.message)}</small><br><small>Run sql/12_bank.sql if this mentions bank_statement.</small></div>`; $("lstBank").innerHTML = ""; }
 }
 const booksOf = a => EN.filter(e => acctOf(e) === a && (sg(e) !== 0 || e.needs_review));
 
@@ -247,62 +261,106 @@ function applyMatchRules() {
 }
 const bankOf = a => BANK.filter(b => b.account === a && b.date >= $("from").value && b.date <= $("to").value);
 
+let SELB = null, SELK = null, TAB = "work", Q = "";
+const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
+const gd = (g, date) => Math.min(...g.parts.map(p => days(p.date, date)));
+const nearScore = (a1, a2, d) => (Math.abs(a1 - a2) < 0.005 ? 0 : 1) * 1e6 + d;
+const gName = g => E(g.party || g.head || g.kind);
+
+function lists() {
+  const bn = bankOf(acct).filter(b => !b.match_src), bg = groupsOf(acct).filter(g => !groupMatched(g) && sg(g) !== 0), q = Q.trim().toLowerCase();
+  const fb = bn.filter(b => !q || [b.remarks, b.date, Math.abs(N(b.amount))].join(" ").toLowerCase().includes(q));
+  const fg = bg.filter(g => !q || [g.party, g.head, g.kind, g.voucher_no, g.remarks, g.date, Math.abs(sg(g))].join(" ").toLowerCase().includes(q));
+  const sl = SELB && bn.find(b => String(b.id) === SELB), sk = SELK && bg.find(g => kk(g) === SELK);
+  fb.sort(sk ? (x, y) => nearScore(N(x.amount), sg(sk), gd(sk, x.date)) - nearScore(N(y.amount), sg(sk), gd(sk, y.date)) : (x, y) => x.date.localeCompare(y.date));
+  fg.sort(sl ? (x, y) => nearScore(sg(x), N(sl.amount), gd(x, sl.date)) - nearScore(sg(y), N(sl.amount), gd(y, sl.date)) : (x, y) => x.date.localeCompare(y.date));
+  return { bn, bg, fb, fg, sl, sk };
+}
+function pickBank(id) {
+  SELB = String(id); SELK = null;
+  const { fg, sl } = lists(), top = fg[0];
+  SELK = top && sl && Math.abs(sg(top) - N(sl.amount)) < 0.005 ? kk(top) : null;
+  render(); if (innerWidth < 900) $("paneBooks").scrollIntoView({ behavior: "smooth" });
+}
+function pickBook(k) {
+  SELK = k; SELB = null;
+  const { fb, sk } = lists(), top = fb[0];
+  SELB = top && sk && Math.abs(N(top.amount) - sg(sk)) < 0.005 ? String(top.id) : null;
+  render(); if (innerWidth < 900) $("paneBank").scrollIntoView({ behavior: "smooth" });
+}
+function clearSel() { SELB = SELK = null; render(); }
+
 function render() {
   applyMatchRules();
-  const showTotals = ERP.auth.canFeature("show_totals", "reconciliation");
+  const showTotals = ERP.auth.canFeature("show_totals", "reconciliation"), canEdit = ERP.auth.can("edit");
   const modes = [...new Set([...(PM.all || [...PM.bank, ...PM.cash]), ...EN.map(acctOf), ...BANK.map(b => b.account)])];
   $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = groupsOf(a).filter(g => !groupMatched(g) && sg(g) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
     return `<button class="ac" data-a="${E(a)}" aria-pressed="${a === acct}"><small>${E(a)}</small>${showTotals ? `<b>Rs ${M(close)}</b>` : ""}<br>${bn.length || bs.length ? (um + ub ? `<span class="bd">${um + ub} unmatched</span>` : '<span class="bd ok">✓ matched</span>') : ""}</button>`; }).join("");
-  const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), bg = groupsOf(acct), um = bg.filter(g => !groupMatched(g) && sg(g) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0), diff = sum(bs, sg) - sum(bn, b => N(b.amount));
-  $("stats").hidden = !showTotals;
-  $("stats").style.display = showTotals ? "" : "none";
-  $("stats").innerHTML = showTotals ? `<div class="stat"><small>Books (net in period)</small><b>Rs ${M(sum(bs, sg))}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(sum(bn, b => N(b.amount)))}</b></div>
-    <div class="stat ${um.length ? "bad" : ""}"><small>Not on statement (books)</small><b>${um.length} · Rs ${M(sum(um, sg))}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Not in books (bank)</small><b>${ub.length} · Rs ${M(sum(ub, b => N(b.amount)))}</b></div>
-    <div class="stat diff ${Math.abs(diff) < 0.005 ? "good" : "bad"}"><small>Difference in this period (Books − Bank, opening balance excluded)</small><b>${Math.abs(diff) < 0.005 ? "✓ Rs 0 · fully reconciled" : (diff > 0 ? "+" : "−") + "Rs " + M(Math.abs(diff))}</b><small>${Math.abs(diff) < 0.005 ? "Books and bank statement agree" : diff > 0 ? "Books are higher than the bank statement" : "Bank statement is higher than the books"}</small></div>` : "";
+  const bs = booksOf(acct), bn = bankOf(acct), bg = groupsOf(acct), sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+  const um = bg.filter(g => !groupMatched(g) && sg(g) !== 0), ub = bn.filter(b => !b.match_src);
+  const diff = sum(bs, sg) - sum(bn, b => N(b.amount)), uB = sum(um, sg), uK = sum(ub, b => N(b.amount)), mism = diff - (uB - uK), ok = Math.abs(diff) < 0.005;
+  $("stats").hidden = !showTotals; $("stats").style.display = showTotals ? "" : "none";
+  $("stats").innerHTML = showTotals ? `<div class="stat"><small>Books (net)</small><b>Rs ${M(sum(bs, sg))}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(sum(bn, b => N(b.amount)))}</b></div>
+    <div class="stat ${um.length ? "bad" : ""}"><small>Books mein hain, bank mein nahi</small><b>${um.length} · Rs ${M(uB)}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Bank mein hain, books mein nahi</small><b>${ub.length} · Rs ${M(uK)}</b></div>
+    <div class="stat diff ${ok ? "good" : "bad"}"><small>Farq (Books − Bank)</small><b>${ok ? "✓ Rs 0 · reconcile ho gaya" : (diff > 0 ? "+" : "−") + "Rs " + M(Math.abs(diff))}</b>
+    ${ok ? "" : `<small>= books ke unmatched Rs ${M(uB)} − bank ke unmatched Rs ${M(uK)}${Math.abs(mism) >= 0.005 ? ` ${mism > 0 ? "+" : "−"} matched entries ke amount ka farq Rs ${M(Math.abs(mism))}` : ""}</small>`}</div>` : "";
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
-  const amt = v => `<span class="${v >= 0 ? "in" : "out"}">${v >= 0 ? "+" : "−"}${M(Math.abs(v))}</span>`;
-  const bookItem = (e, m, warn) => `<div class="it ${m ? "m" : ""}${e.parts && e.parts.length > 1 ? " mg" : ""}" data-side="books"><div><b>${E(e.party || e.head || e.kind)}</b><br><small>${E(e.date)} · ${E(e.kind)} ${E(e.voucher_no)}${e.remarks ? " · " + E(e.remarks) : ""}${e.parts && e.parts.length > 1 ? " · " + e.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(e))}</div><div class="st"><span class="badge ${m && !warn ? "ok" : sg(e) ? "warn" : ""}">${m ? (warn ? "⚠ Matched · amount differs" : "✓ Matched") : e.needs_review ? "Check (old transfer)" : "Not on statement"}</span></div></div>`;
-  const bankItem = b => { const m = !!b.match_src; return `<div class="it clk ${m ? "m" : ""}" data-side="bank" data-id="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}${b.stale ? " · old partial match ignored" : ""}</small></div><div class="am">${amt(N(b.amount))}</div><div class="st"><span class="badge ${m ? "ok" : "warn"}">${m ? "✓ Matched · tap to change" : "Not in books · tap to match"}</span></div></div>`; };
-  const ph = (side, text) => `<div class="it ph" data-side="${side}"><div>${text}</div></div>`;
-  const gap = side => `<div data-side="${side}"></div>`;
-  const sortHtml = side => [["date", "Date"], ["name", side === "books" ? "Party" : "Description"], ["amount", "Amount"]]
-    .map(([k, l]) => `<button type="button" data-k="${k}" class="${SORT.key === k ? "on" : ""}" title="Sort by ${l}">${l}${SORT.key === k ? (SORT.dir > 0 ? " ▲" : " ▼") : ""}</button>`).join("");
-  $("sortBooks").innerHTML = sortHtml("books"); $("sortBank").innerHTML = sortHtml("bank");
-  const keyOf = (side, x) => SORT.key === "amount" ? (side === "books" ? sg(x) : N(x.amount))
-    : SORT.key === "name" ? String(side === "books" ? (x.party || x.head || x.kind || "") : (x.remarks || "")).toLowerCase() : String(x.date || "");
-  const cmpItems = (sa, a, sb, b) => { const ka = keyOf(sa, a), kb = keyOf(sb, b);
-    const r = typeof ka === "number" ? ka - kb : ka.localeCompare(kb);
-    return (r || String(a.date || "").localeCompare(String(b.date || ""))) * SORT.dir; };
 
+  /* matched pairs */
   const bankByKey = new Map();
   BANK.filter(b => b.match_src).forEach(b => { const k = b.match_src + ":" + b.match_rid; if (!bankByKey.has(k)) bankByKey.set(k, []); bankByKey.get(k).push(b); });
-  const pairs = [], usedBank = new Set();
-  bg.filter(groupMatched).forEach(g => {
-    const banks = [];
-    g.parts.forEach(p => (bankByKey.get(kk(p)) || []).forEach(b => { if (!usedBank.has(String(b.id))) { usedBank.add(String(b.id)); banks.push(b); } }));
-    pairs.push({ e: g, banks });
-  });
-  bn.filter(b => b.match_src && !usedBank.has(String(b.id))).forEach(b => {
-    const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid));
-    pairs.push({ e: x ? { ...x, money_in: N(x.money_in), money_out: N(x.money_out), parts: [x] } : null, banks: [b] });
-  });
-  const showMB = $("booksMatched").checked, showMK = $("bankMatched").checked;
-  pairs.sort((p, q) => { const sp = p.e ? "books" : "bank", sq = q.e ? "books" : "bank"; return cmpItems(sp, p.e || p.banks[0], sq, q.e || q.banks[0]); });
-  const pairsVisible = (showMB || showMK) ? pairs : [];
-  $("secM").hidden = !pairsVisible.length;
-  $("secM").textContent = `✓ Matched (${pairsVisible.length}) — book entry and bank entry side by side`;
-  $("pairs").innerHTML = pairsVisible.map(p =>
-    (showMB ? (p.e ? bookItem(p.e, true, p.banks.length > 0 && Math.abs(p.banks.reduce((t, b) => t + N(b.amount), 0) - sg(p.e)) >= 0.005) : ph("books", "Book entry is outside this period")) : gap("books")) +
-    (showMK ? (p.banks.length ? `<div data-side="bank">${p.banks.map(bankItem).join("")}</div>` : ph("bank", "Bank entry is outside this period / account")) : gap("bank"))).join("");
+  const pairs = [], used = new Set();
+  bg.filter(groupMatched).forEach(g => { const banks = []; g.parts.forEach(p => (bankByKey.get(kk(p)) || []).forEach(b => { if (!used.has(String(b.id))) { used.add(String(b.id)); banks.push(b); } })); pairs.push({ e: g, banks }); });
+  bn.filter(b => b.match_src && !used.has(String(b.id))).forEach(b => { const x = EN.find(en => en.src === b.match_src && String(en.rid) === String(b.match_rid)); pairs.push({ e: x ? { ...x, parts: [x] } : null, banks: [b] }); });
+  const L = lists(), q = Q.trim().toLowerCase();
+  $("tabs").innerHTML = `<button data-t="work" class="${TAB === "work" ? "on" : ""}">Match karein <i>${um.length + ub.length}</i></button><button data-t="done" class="${TAB === "done" ? "on" : ""}">Matched <i>${pairs.length}</i></button>`;
+  $("work").hidden = TAB !== "work"; $("done").hidden = TAB !== "done";
 
-  const visibleBooks = $("booksUnmatched").checked ? bg.filter(g => !groupMatched(g)).sort((x, y) => cmpItems("books", x, "books", y)) : [];
-  const visibleBank = $("bankUnmatched").checked ? bn.filter(b => !b.match_src).sort((x, y) => cmpItems("bank", x, "bank", y)) : [];
-  $("secU").textContent = `Not matched — books ${visibleBooks.length} · bank ${visibleBank.length}`;
-  $("books").innerHTML = visibleBooks.map(e => bookItem(e, false)).join("") || '<div class="empty">No unmatched entries.</div>';
-  $("bank").innerHTML = visibleBank.map(bankItem).join("") || '<div class="empty">No unmatched entries.</div>';
+  const refB = L.sk ? sg(L.sk) : null, refK = L.sl ? N(L.sl.amount) : null;
+  const bankRow = b => `<div class="it pick ${String(b.id) === SELB ? "sel" : ""}" data-b="${b.id}"><div><b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small></div><div class="am">${amt(N(b.amount))}</div>${refB !== null && Math.abs(N(b.amount) - refB) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
+  const bookRow = g => `<div class="it pick ${kk(g) === SELK ? "sel" : ""}" data-k="${E(kk(g))}"><div><b>${gName(g)}</b><br><small>${E(g.date)} · ${E(g.kind)} ${E(g.voucher_no)}${g.remarks ? " · " + E(g.remarks) : ""}${g.parts.length > 1 ? " · " + g.parts.length + " entries merged" : ""}</small></div><div class="am">${amt(sg(g))}</div>${refK !== null && Math.abs(sg(g) - refK) < 0.005 ? '<div class="st"><span class="badge ok">same amount ✓</span></div>' : ""}</div>`;
+  $("cntBank").textContent = L.fb.length; $("cntBooks").textContent = L.fg.length;
+  $("lstBank").innerHTML = L.fb.map(bankRow).join("") || '<div class="empty">🎉 Bank ki sab lines match hain.</div>';
+  $("lstBooks").innerHTML = L.fg.map(bookRow).join("") || '<div class="empty">🎉 Books ki sab entries match hain.</div>';
+
+  const dn = pairs.filter(p => !q || JSON.stringify([p.e && [p.e.party, p.e.voucher_no, p.e.date], p.banks.map(b => [b.remarks, b.date])]).toLowerCase().includes(q))
+    .sort((x, y) => String((x.e || x.banks[0]).date).localeCompare(String((y.e || y.banks[0]).date)));
+  $("done").innerHTML = dn.map(p => { const bt = p.banks.reduce((t, b) => t + N(b.amount), 0), eq = p.e && p.banks.length && Math.abs(bt - sg(p.e)) < 0.005;
+    return `<div class="pair"><div class="pl"><small>📒 Books</small>${p.e ? `<b>${gName(p.e)}</b><br><small>${E(p.e.date)} · ${E(p.e.kind)} ${E(p.e.voucher_no)}${p.e.parts.length > 1 ? " · " + p.e.parts.length + " merged" : ""}</small><div class="am">${amt(sg(p.e))}</div>` : "<small>Is period se bahar</small>"}</div>
+    <div class="pl"><small>🏦 Bank</small>${p.banks.map(b => `<b>${E(b.remarks || "(no description)")}</b><br><small>${E(b.date)}</small><div class="am">${amt(N(b.amount))}</div>`).join("") || "<small>Is period se bahar</small>"}</div>
+    <div class="pr"><span class="badge ${eq ? "ok" : "warn"}">${eq ? "✓ barabar" : "⚠ amount ka farq"}</span>${canEdit ? p.banks.map(b => `<button class="btn sm ghost" data-un="${b.id}">Unmatch</button>`).join("") : ""}</div></div>`; }).join("") || '<div class="empty">Abhi koi match nahi.</div>';
+
+  /* action bar */
+  const ab = $("abar"), sl = L.sl, sk = L.sk;
+  if (!sl && !sk) { ab.hidden = true; return; }
+  ab.hidden = false;
+  if (sl && sk) { const d = sg(sk) - N(sl.amount), same = Math.abs(d) < 0.005;
+    ab.innerHTML = `<div class="ab-t"><div><small>Bank</small><b>${E(sl.date)} · ${amt(N(sl.amount))}</b></div><span>↔</span><div><small>Books</small><b>${gName(sk)} · ${amt(sg(sk))}</b></div><div class="ab-d ${same ? "ok" : "no"}">${same ? "✓ Amount barabar" : "Farq Rs " + M(Math.abs(d))}</div></div>
+    <div class="ab-b"><button class="btn ghost" data-a="clear">Clear</button>${ERP.auth.can("delete") ? '<button class="btn danger" data-a="del">Bank line delete</button>' : ""}${canEdit ? `<button class="btn" data-a="match">${same ? "Match ✓ (Enter)" : "Phir bhi match karein"}</button>` : ""}</div>`;
+  } else ab.innerHTML = `<div class="ab-t"><div><small>${sl ? "Bank line chuni" : "Books entry chuni"}</small><b>${sl ? E(sl.date) + " · " + amt(N(sl.amount)) : gName(sk) + " · " + amt(sg(sk))}</b></div><div class="ab-d no">Ab ${sl ? "books" : "bank"} ki entry chunein (same amount wali sab se upar hain)</div></div>
+    <div class="ab-b"><button class="btn ghost" data-a="clear">Clear</button>${sl && ERP.auth.can("delete") ? '<button class="btn danger" data-a="del">Bank line delete</button>' : ""}</div>`;
 }
-["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched", "booksMerge"].forEach(id => { $(id).onchange = render; });
-$("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; render(); } };
+
+async function doMatch() {
+  const { fb, sl, sk } = lists(); if (!sl || !sk) return;
+  const i = fb.findIndex(b => String(b.id) === SELB), next = (fb[i + 1] || fb[i - 1] || {}).id;
+  try { await matchGroup(sl.id, sk); ERP.ui.toast("Matched ✓"); SELB = SELK = null; await load(); if (next !== undefined && BANK.find(b => String(b.id) === String(next) && !b.match_src)) pickBank(next); }
+  catch (e) { ERP.ui.toast(e.message, "err"); }
+}
+$("lstBank").onclick = e => { const r = e.target.closest("[data-b]"); if (!r) return; const id = r.dataset.b;
+  if (SELB === id) clearSel(); else if (SELK && !SELB) { SELB = id; render(); } else pickBank(id); };
+$("lstBooks").onclick = e => { const r = e.target.closest("[data-k]"); if (!r) return; const k = r.dataset.k;
+  if (SELK === k) { SELK = null; render(); } else if (SELB) { SELK = k; render(); } else pickBook(k); };
+$("abar").onclick = async e => { const a = e.target.closest("[data-a]"); if (!a) return;
+  if (a.dataset.a === "clear") clearSel(); else if (a.dataset.a === "match") doMatch();
+  else if (a.dataset.a === "del") { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([SELB]); SELB = SELK = null; load(); } catch (er) { ERP.ui.toast(er.message, "err"); } } };
+$("done").onclick = async e => { const u = e.target.closest("[data-un]"); if (!u) return;
+  try { await ERP.db.bank.setMatch(u.dataset.un, null, null); ERP.ui.toast("Match hata diya"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
+$("tabs").onclick = e => { const b = e.target.closest("[data-t]"); if (b) { TAB = b.dataset.t; render(); } };
+$("q").oninput = () => { Q = $("q").value; render(); };
+$("booksMerge").onchange = () => { SELB = SELK = null; render(); };
+$("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; SELB = SELK = null; render(); } };
+document.addEventListener("keydown", e => { if (e.key === "Enter" && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName) && !document.querySelector("dialog[open]") && SELB && SELK) doMatch(); });
 
 const isoDate = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 function setPreset(p) {
@@ -320,41 +378,20 @@ function setPreset(p) {
 }
 $("preset").onchange = () => { setPreset($("preset").value); load(); };
 $("from").onchange = $("to").onchange = () => { $("preset").value = "custom"; load(); };
-$("seg").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("seg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
-  $("recon").dataset.view = b.dataset.t === "bank" ? "bank" : "books"; };
-$("recon").addEventListener("click", e => { const b = e.target.closest(".sortbar button"); if (!b) return;
-  if (SORT.key === b.dataset.k) SORT.dir = -SORT.dir; else { SORT.key = b.dataset.k; SORT.dir = 1; } render(); });
 
-/* auto match: same amount, dates within 3 days, closest first */
+/* auto match: same amount, date within chosen days, closest first */
 $("bAuto").onclick = () => ERP.ui.busy($("bAuto"), async () => {
-  const DATE_TOL = 3, used = new Set(), pairs = [], groupsFor = [];
+  const DATE_TOL = +$("tol").value, used = new Set(), pairs = [], groupsFor = [];
   const near = (g, b) => Math.min(...g.parts.map(p => days(p.date, b.date)));
   const free = groupsOf(acct).filter(g => !groupMatched(g) && sg(g) !== 0);
   bankOf(acct).filter(b => !b.match_src).sort((a, b) => a.date.localeCompare(b.date)).forEach(b => {
     const c = free.filter(g => !used.has(kk(g)) && Math.abs(sg(g) - N(b.amount)) < 0.005 && near(g, b) <= DATE_TOL).sort((x, y) => near(x, b) - near(y, b))[0];
     if (c) { used.add(kk(c)); pairs.push([b.id, c.src, c.rid]); groupsFor.push(c); } });
-  if (!pairs.length) return ERP.ui.toast("Nothing to match automatically (same amount and date within 3 days)", "err");
-  try {
-    const res = await Promise.allSettled(pairs.map((p, i) => matchGroup(p[0], groupsFor[i])));
-    const ok = res.filter(r => r.status === "fulfilled").length, bad = res.filter(r => r.status === "rejected");
-    if (bad.length) ERP.ui.toast(`${ok} matched, ${bad.length} could not be saved: ${bad[0].reason && bad[0].reason.message}`, "err");
-    else ERP.ui.toast(ok + " entries matched");
-    load();
-  } catch (e) { ERP.ui.toast(e.message, "err"); } });
-
-/* match one bank entry by hand */
-$("recon").onclick = e => { const el = e.target.closest(".it[data-id]"); if (!el) return; const b = BANK.find(x => String(x.id) === el.dataset.id); cur = b; const edit = ERP.auth.can("edit");
-  $("mSub").textContent = `${b.date} · ${b.amount >= 0 ? "+" : "−"}${M(Math.abs(b.amount))} · ${b.remarks || ""}`; $("mDel").hidden = !ERP.auth.can("delete");
-  if (b.match_src) { const mk = b.match_src + ":" + b.match_rid, x = groupsOf(b.account).find(g => g.parts.some(p => kk(p) === mk)) || EN.find(en => kk(en) === mk);
-    $("mList").innerHTML = `<p>Matched with: <b>${x ? E(x.party || x.head || x.kind) + " · " + E(x.date) + " · " + E(x.voucher_no) + (x.parts && x.parts.length > 1 ? " · " + x.parts.length + " entries · Rs " + M(Math.abs(sg(x))) : "") : E(b.match_src) + " #" + E(b.match_rid)}</b></p>${edit ? '<button class="btn danger" id="unm">Remove the match</button>' : ""}`;
-    const u = $("unm"); if (u) u.onclick = async () => { try { await ERP.db.bank.setMatch(b.id, null, null); $("mDlg").close(); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
-  } else { const c = groupsOf(acct).filter(x => !groupMatched(x) && sg(x) !== 0).map(x => ({ x, same: Math.abs(sg(x) - N(b.amount)) < 0.005, d: Math.min(...x.parts.map(p => days(p.date, b.date))) })).sort((p, q) => q.same - p.same || p.d - q.d).slice(0, 15);
-    $("mList").innerHTML = (c.length ? `<p style="font-size:13px;color:var(--muted)">Choose the entry from your books that this bank line belongs to. Same-amount entries are shown first.</p>` : '<div class="empty">No unmatched entry in your books for this period.</div>')
-      + c.map(o => `<button class="cand ${o.same ? "same" : ""}" data-s="${E(o.x.src)}" data-r="${E(o.x.rid)}" ${edit ? "" : "disabled"}><span><b>${E(o.x.party || o.x.head || o.x.kind)}</b><br><small>${E(o.x.date)} · ${E(o.x.voucher_no)}${o.x.parts.length > 1 ? " · " + o.x.parts.length + " entries merged" : ""}</small></span><span class="${sg(o.x) >= 0 ? "in" : "out"}"><b>${sg(o.x) >= 0 ? "+" : "−"}${M(Math.abs(sg(o.x)))}</b>${o.same ? "<br><small>same amount ✓</small>" : ""}</span></button>`).join(""); }
-  $("mDlg").showModal(); };
-$("mList").onclick = async e => { const c = e.target.closest(".cand"); if (!c || !cur) return;
-  try { const g = groupsOf(cur.account).find(x => kk(x) === c.dataset.s + ":" + c.dataset.r); if (g) await matchGroup(cur.id, g); else await ERP.db.bank.setMatch(cur.id, c.dataset.s, c.dataset.r); $("mDlg").close(); ERP.ui.toast("Matched"); load(); } catch (er) { ERP.ui.toast(er.message, "err"); } };
-$("mDel").onclick = async () => { if (!confirm("Delete this bank statement entry?")) return; try { await ERP.db.bank.remove([cur.id]); $("mDlg").close(); load(); } catch (e) { ERP.ui.toast(e.message, "err"); } };
+  if (!pairs.length) return ERP.ui.toast("Auto-match ke liye koi same-amount jori nahi mili", "err");
+  const res = await Promise.allSettled(pairs.map((p, i) => matchGroup(p[0], groupsFor[i])));
+  const ok = res.filter(r => r.status === "fulfilled").length, bad = res.filter(r => r.status === "rejected");
+  if (bad.length) ERP.ui.toast(`${ok} matched, ${bad.length} save nahi hue: ${bad[0].reason && bad[0].reason.message}`, "err"); else ERP.ui.toast(ok + " entries matched");
+  SELB = SELK = null; load(); });
 
 /* add statement entries */
 function addRow(v = {}, focus = true) { const d = document.createElement("div"); d.className = "rw";
