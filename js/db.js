@@ -13,7 +13,7 @@ ERP.db = (function () {
     const totalAmount = Number(row && row.total_amt);
     return row && row.total_amt != null && Number.isFinite(totalAmount) ? totalAmount : 0;
   };
-  const saleContractTotal = (rows, includeAdvances = false) => {
+  const saleContractTotal = rows => {
     const originals = rows.filter(row => !row.return_of_id);
     const returns = rows.filter(row => row.return_of_id);
     const itemTotal = originals.reduce((sum, row) => sum + saleTotalAmount(row), 0);
@@ -25,10 +25,7 @@ ERP.db = (function () {
       ? storedTotals[0]
       : storedTotals.reduce((sum, amount) => sum + (Number.isFinite(amount) ? amount : 0), 0);
     const gross = allTotalsPresent ? Math.max(itemTotal, repeatedContractTotal) : itemTotal;
-    const advances = includeAdvances
-      ? originals.reduce((sum, row) => sum + (Number(row.advance) || 0), 0)
-      : 0;
-    return gross + advances + returns.reduce((sum, row) => sum + saleTotalAmount(row), 0);
+    return gross + returns.reduce((sum, row) => sum + saleTotalAmount(row), 0);
   };
 
   /* Reads ALL rows page by page (fixes the silent 1000-row limit). `build` may add filters; ALWAYS pass a stable `order`. */
@@ -113,7 +110,7 @@ ERP.db = (function () {
           salesByAccount.get(account).push(row);
         });
         salesByAccount.forEach((rows, account) => {
-          getBalance(account).total_sale = saleContractTotal(rows, true);
+          getBalance(account).total_sale = saleContractTotal(rows);
         });
         return customers.map(customer => {
           const account = String(customer.account_no || "").trim();
