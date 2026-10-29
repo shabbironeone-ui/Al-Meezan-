@@ -25,6 +25,67 @@ ERP.auth = (function () {
     ["UserAccess.html", "user_access", "User Roles"]
   ];
   const ACTIONS = ["read", "write", "edit", "delete", "export"];
+  const FEATURES = {
+    receipts: [
+      { key: "show_receipt_summary", label: "Receipt summary", description: "Selected-filter receipt count and total amount." }
+    ],
+    dashboard: [
+      { key: "show_financial_summary", label: "Financial overview", description: "Sales, collections, receivables, payables and cash-flow cards." }
+    ],
+    customers: [
+      { key: "show_balance_summary", label: "Customer balance summary", description: "Customer balance totals and summary cards." }
+    ],
+    ledger: [
+      { key: "show_balance_summary", label: "Account balance summary", description: "Customer outstanding balance and account summary cards." },
+      { key: "show_installment_plan", label: "Installment plan", description: "View the customer's installment schedule." }
+    ],
+    sales: [
+      { key: "show_installment_plan", label: "Installment schedule", description: "Show the proposed payment schedule while creating a sale." },
+      { key: "show_entry_totals", label: "Sale entry totals", description: "Show item, advance, installment and grand-total figures in the entry bar." }
+    ],
+    purchases: [
+      { key: "show_entry_totals", label: "Purchase entry total", description: "Show the purchase quantity and total while entering a purchase." },
+      { key: "quick_product_add", label: "Add a product from Purchases", description: "Allow quick product creation from the purchase item picker." }
+    ],
+    vouchers: [
+      { key: "show_entry_totals", label: "Voucher entry totals", description: "Show the number of entries and combined amount before saving." }
+    ],
+    accounts: [
+      { key: "show_totals", label: "Day-book summary totals", description: "Opening, received, paid and closing totals for the selected period." }
+    ],
+    reconciliation: [
+      { key: "show_totals", label: "Account balances and summary totals", description: "Account closing balances and reconciliation summary cards." }
+    ],
+    products: [
+      { key: "show_product_summary", label: "Product and stock summary", description: "Product stock summary cards." },
+      { key: "show_cost_prices", label: "Product cost and sale prices", description: "Cost and MRP values in the product list and details." }
+    ],
+    stock: [
+      { key: "show_stock_summary", label: "Stock summary cards", description: "Stock movement and valuation summary cards." },
+      { key: "show_detailed_view", label: "Detailed stock view", description: "Detailed stock audit columns and filters." }
+    ],
+    vendors: [
+      { key: "show_balance_summary", label: "Vendor balance summary", description: "Purchase, paid and payable balance summary cards." }
+    ],
+    settings: [
+      { key: "show_settings_summary", label: "Settings summary", description: "Show the total, active and category counts at the top of Settings." }
+    ],
+    business_reports: [
+      { key: "show_profitability", label: "Profit and loss report", description: "Profitability figures and the Profit & Loss report." }
+    ],
+    aging: [
+      { key: "show_balance_summary", label: "Recovery balance summary", description: "Outstanding, overdue and recovery summary totals." }
+    ],
+    aging_report: [
+      { key: "show_balance_summary", label: "Recovery balance summary", description: "Outstanding, overdue and recovery summary totals." }
+    ],
+    cro_report: [
+      { key: "show_balance_columns", label: "Financial columns and report totals", description: "Sale, paid, overdue, balance and monthly collection figures." }
+    ],
+    followup: [
+      { key: "show_collection_summary", label: "Collection summary", description: "Monthly due, received and remaining collection totals." }
+    ]
+  };
   const ROLE_RULES = {
     admin: ACTIONS,
     accountant: ["read", "write", "edit", "export"],
@@ -136,6 +197,7 @@ ERP.auth = (function () {
       (self !== top ? top : window).location.replace("index.html");
       return new Promise(() => {});
     }
+    applyFeatureVisibility();
     return profile;
   }
 
@@ -163,24 +225,36 @@ ERP.auth = (function () {
 
   function canFeature(feature, page) {
     if (ERP_CONFIG.OPEN_ACCESS === true) return true;
-    if (!profile || page !== "reconciliation" || feature !== "show_totals") return false;
+    const key = page || pageKey(location.pathname);
+    if (!profile || !FEATURES[key] || !FEATURES[key].some(item => item.key === feature)) return false;
     if (profile.role === "admin") return true;
 
     const rolePermissions = profile.roleDefinition && profile.roleDefinition.permissions;
-    const canRead = ROLE_RULES[profile.role]
-      ? ROLE_RULES[profile.role].includes("read")
-      : !!(rolePermissions && rolePermissions.reconciliation && rolePermissions.reconciliation.read === true);
+    const canRead = can("read", key);
     if (!canRead) return false;
-    if (rolePermissions && rolePermissions.reconciliation
-      && rolePermissions.reconciliation.show_totals === false) return false;
+    if (rolePermissions && rolePermissions[key] && rolePermissions[key][feature] === false) return false;
 
-    const override = profile.permissions && profile.permissions.reconciliation;
-    return !(override && override.show_totals === false);
+    const override = profile.permissions && profile.permissions[key];
+    return !(override && override[feature] === false);
+  }
+
+  function applyFeatureVisibility(root) {
+    const scope = root || document;
+    scope.querySelectorAll("[data-feature]").forEach(element => {
+      const feature = element.dataset.feature;
+      const page = element.dataset.featurePage || pageKey(location.pathname);
+      const visible = canFeature(feature, page);
+      if (!visible) {
+        element.hidden = true;
+        element.style.display = "none";
+      }
+    });
   }
 
   return {
-    session, signIn, signOut, changePassword, sendPasswordReset, adminManageUser, guard, can, canFeature, pageKey,
+    session, signIn, signOut, changePassword, sendPasswordReset, adminManageUser, guard, can, canFeature, applyFeatureVisibility, pageKey,
     pages: PAGES.map(([file, key, label]) => ({ file, key, label })),
+    features: JSON.parse(JSON.stringify(FEATURES)),
     actions: ACTIONS.slice(),
     roles: Object.keys(ROLE_RULES),
     roleRules: ROLE_RULES,
