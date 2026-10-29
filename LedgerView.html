@@ -82,7 +82,7 @@
           <div class="pr-details"><span>Account No: <strong id="prAccount"></strong></span><span>Approved by: <strong id="prApproved"></strong> &nbsp; | &nbsp; CRO: <strong id="prCro"></strong></span><span>Mobile: <strong id="prMobile"></strong></span></div>
           <div class="pr-outstanding"><span>Outstanding balance</span><strong id="prBalance"></strong></div>
         </section>
-        <section class="pr-installment">
+        <section class="pr-installment" data-feature="show_installment_plan">
           <h3 class="pr-installment-title">Installment summary</h3>
           <div class="pr-plan-row"><span>Total amount</span><strong id="prTotal"></strong></div>
           <div class="pr-plan-row"><span>No. of months</span><strong id="prMonths"></strong></div>
@@ -94,12 +94,12 @@
     </div>
     <div class="card"><div class="prof"><div class="grow"><h2 id="pName"></h2><p id="pSub"></p><p id="pSub2"></p></div>
       <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="bWa">WhatsApp</button><button class="btn ghost" id="bPrint">Print</button><a class="btn" id="bRec" style="text-decoration:none;display:inline-grid;place-items:center" href="receipts.html">＋ Receipt</a></div></div></div>
-    <div class="balbox" id="bal"></div>
-    <section class="stats six" id="stats"></section>
-    <div class="tabs"><button id="tL" aria-selected="true">Ledger</button><button id="tP" aria-selected="false">Installment plan</button></div>
+    <div class="balbox" id="bal" data-feature="show_balance_summary"></div>
+    <section class="stats six" id="stats" data-feature="show_balance_summary"></section>
+    <div class="tabs"><button id="tL" aria-selected="true">Ledger</button><button id="tP" data-feature="show_installment_plan" aria-selected="false">Installment plan</button></div>
     <h3 class="print-section-title">Account activity</h3>
     <div id="ledTab" class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Voucher No</th><th>Particulars / Description</th><th class="num">Debit (In)</th><th class="num">Credit (Out)</th><th class="num">Balance</th></tr></thead><tbody id="lBody"></tbody></table></div>
-    <div id="planTab" hidden><div class="card no-print" id="fmBox" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:170px"><label for="fmIn">First installment month</label><input type="month" id="fmIn"></div><button class="btn sm soft" id="fmSet">Set</button><button class="btn sm ghost" id="fmAuto">Automatic</button><small id="fmNote" style="flex-basis:100%;color:var(--muted)"></small></div><h3 class="print-section-title">Installment schedule</h3><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
+    <div id="planTab" data-feature="show_installment_plan" hidden><div class="card no-print" id="fmBox" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:170px"><label for="fmIn">First installment month</label><input type="month" id="fmIn"></div><button class="btn sm soft" id="fmSet">Set</button><button class="btn sm ghost" id="fmAuto">Automatic</button><small id="fmNote" style="flex-basis:100%;color:var(--muted)"></small></div><h3 class="print-section-title">Installment schedule</h3><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
   </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -126,7 +126,7 @@ function buildLedger(acc, sales, rcs) {   // same money rule as the database: ba
   const originalSales = sales.filter(r => !r.return_of_id), returns = sales.filter(r => r.return_of_id);
   if (originalSales.length) {
     const d = originalSales.map(r => r.date).sort()[0], ts = originalSales.map(r => r.created_at || "").sort()[0];
-    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales, true), credit: 0, ts });
+    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts });
     const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
     if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts });
   }
@@ -209,7 +209,7 @@ async function setFm(v) { try { await ERP.db.setFirstMonth(cur.c.account_no, v);
 $("fmSet").onclick = () => { if (!$("fmIn").value) return ERP.ui.toast("Choose a month", "err"); setFm($("fmIn").value + "-01"); };
 $("fmAuto").onclick = () => setFm(null);
 $("tL").onclick = () => { $("tL").setAttribute("aria-selected", true); $("tP").setAttribute("aria-selected", false); $("ledTab").hidden = false; $("planTab").hidden = true; };
-$("tP").onclick = () => { $("tP").setAttribute("aria-selected", true); $("tL").setAttribute("aria-selected", false); $("ledTab").hidden = true; $("planTab").hidden = false; };
+$("tP").onclick = () => { if (!ERP.auth.canFeature("show_installment_plan", "ledger")) return; $("tP").setAttribute("aria-selected", true); $("tL").setAttribute("aria-selected", false); $("ledTab").hidden = true; $("planTab").hidden = false; };
 (async () => { await ERP.auth.guard(); try { LIST = await ERP.db.customers.balances(); } catch (e) { ERP.ui.toast("Could not load customers: " + e.message, "err"); }
   const a = new URLSearchParams(location.search).get("accNo") || new URLSearchParams(location.search).get("acc"); if (a) pick(a); else $("q").focus(); })();
 </script>

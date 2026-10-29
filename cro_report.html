@@ -167,7 +167,7 @@ async function load() {
       const account = String(row.account_no || "").trim();
       const sales = salesByAccount.get(account);
       if (!sales) return row;
-      const totalSale = ERP.db.sales.contractTotal(sales, true);
+      const totalSale = ERP.db.sales.contractTotal(sales);
       const totalPaid = N(row.total_paid);
       return { ...row, total_sale: totalSale, balance: totalSale - totalPaid };
     });
@@ -215,6 +215,15 @@ function render() {
         <tr class="tot"><td class="c1" data-k="acc"></td><td class="c2" data-k="title">Total · ${M(rs.length)}</td><td data-k="aprv"></td><td data-k="cro"></td><td data-k="mobile"></td><td class="n" data-k="minst">${M(sum(rs, r => N(r.installment)))}</td><td data-k="remarks"></td><td class="n" data-k="cmd">${M(sum(rs, cmdOf))}</td><td data-k="late"></td><td class="n" data-k="overdue">${M(sum(rs, r => N(r.overdue_amt)))}</td><td data-k="plan"></td><td class="n" data-k="sale">${M(sum(rs, r => N(r.total_sale)))}</td><td class="n" data-k="paid">${M(sum(rs, r => N(r.total_paid)))}</td><td class="n" data-k="bal">${M(sum(rs, r => N(r.balance)))}</td><td data-k="deliv"></td><td data-k="end"></td><td data-k="lpa"></td><td data-k="lpd"></td><td data-k="product"></td>${mt.map((v, i) => `<td class="mc" data-k="m${i}">${M(v)}</td>`).join("")}</tr></tbody></table></section>`; }).join("")
     + (rows.length ? '<p class="legend">Month columns: amount received that month · — nothing received although an installment was due · * less than the installment due · advance and processing fee not counted · CMD = overdue + this month</p>' : "")) || '<div class="empty">No customers match these filters.</div>';
   applyW();
+  const financialKeys = new Set(["minst", "cmd", "late", "overdue", "plan", "sale", "paid", "bal", "lpa"]);
+  $("out").querySelectorAll("[data-k]").forEach(element => {
+    if (financialKeys.has(element.dataset.k) || /^m\d+$/.test(element.dataset.k))
+      element.dataset.feature = "show_balance_columns";
+  });
+  $("out").querySelectorAll(".gh > span:not(:first-child)").forEach(element => {
+    element.dataset.feature = "show_balance_columns";
+  });
+  ERP.auth.applyFeatureVisibility($("out"));
 }
 function applyW() {
   document.querySelectorAll("#out col").forEach(c => { c.style.width = wOf(c.dataset.k) + "px"; });
