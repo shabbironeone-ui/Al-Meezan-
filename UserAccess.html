@@ -200,6 +200,11 @@
                 </table>
                 <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
               </div>
+              <div class="box" style="margin-top:12px">
+                <h2>Feature access</h2>
+                <p class="sub">Control visibility of reconciliation account balances and summary totals.</p>
+                <label class="scope"><input id="userReconTotals" type="checkbox"> Show reconciliation balance totals</label>
+              </div>
             </div>
           </div>
         </section>
@@ -239,6 +244,11 @@
             <thead><tr><th scope="col">Page</th><th scope="col">View</th><th scope="col">Add</th><th scope="col">Edit</th><th scope="col">Delete</th><th scope="col">Export</th></tr></thead>
             <tbody id="customRolePermissionsBody"></tbody>
           </table>
+        </div>
+        <div class="box" style="margin-top:12px">
+          <h2>Feature access</h2>
+          <p class="sub">Set the maximum reconciliation features users with this custom role can see.</p>
+          <label class="scope"><input id="roleReconTotals" type="checkbox"> Allow reconciliation balance totals</label>
         </div>
       </div>
 
@@ -318,6 +328,12 @@
       return definition && definition.permissions[pageKey]
         ? ERP.auth.actions.filter(action => definition.permissions[pageKey][action] === true)
         : [];
+    }
+    function roleAllowsReconTotals(role) {
+      if (!roleActions(role, "reconciliation").includes("read")) return false;
+      if (ERP.auth.roleRules[role]) return true;
+      const feature = customRole(role)?.permissions?.reconciliation?.show_totals;
+      return feature !== false;
     }
     function userNeedsCro(role) { return role === "cro" || !!(customRole(role) && customRole(role).cro_scoped); }
     function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
@@ -411,6 +427,7 @@
         permissions[page.key] = {};
         ERP.auth.actions.forEach(action => { permissions[page.key][action] = false; });
       });
+      permissions.reconciliation.show_totals = false;
       return permissions;
     }
     function roleEditorSnapshot() {
@@ -454,6 +471,9 @@
         });
         body.appendChild(row);
       });
+      const reconTotals = $("roleReconTotals");
+      reconTotals.checked = !!roleDraftPermissions.reconciliation?.show_totals;
+      reconTotals.disabled = !roleDraftPermissions.reconciliation?.read;
       updateRoleEditorStatus();
     }
     function applyRoleTemplate(template) {
@@ -464,6 +484,7 @@
           roleDraftPermissions[page.key][action] = base.includes(action);
         });
       });
+      roleDraftPermissions.reconciliation.show_totals = base.includes("read");
       $("croScope").checked = template === "cro";
       renderRoleEditor();
     }
@@ -476,6 +497,9 @@
       roleDraftPermissions = selected
         ? JSON.parse(JSON.stringify(selected.permissions || emptyRolePermissions()))
         : emptyRolePermissions();
+      roleDraftPermissions.reconciliation = roleDraftPermissions.reconciliation || {};
+      if (roleDraftPermissions.reconciliation.show_totals === undefined)
+        roleDraftPermissions.reconciliation.show_totals = !!roleDraftPermissions.reconciliation.read;
       if (!selected) {
         const template = $("roleTemplate").value || "viewer";
         const base = ERP.auth.roleRules[template] || [];
@@ -483,6 +507,7 @@
           roleDraftPermissions[page.key] = roleDraftPermissions[page.key] || {};
           ERP.auth.actions.forEach(action => { roleDraftPermissions[page.key][action] = base.includes(action); });
         });
+        roleDraftPermissions.reconciliation.show_totals = base.includes("read");
         $("croScope").checked = false;
       }
       roleSavedState = roleEditorSnapshot();
@@ -530,6 +555,7 @@
           permissions[pageKey][action] = !!(roleDraftPermissions[pageKey] && roleDraftPermissions[pageKey][action]);
         });
       });
+      permissions.reconciliation.show_totals = $("roleReconTotals").checked;
       return permissions;
     }
     async function saveCustomRole() {
@@ -773,6 +799,9 @@
       $("croAssign").hidden = !userNeedsCro(role);
       $("croSelect").disabled = !user || isAdmin || selfAdmin;
       $("defaultsBtn").disabled = !user || isAdmin || selfAdmin;
+      $("userReconTotals").checked = !!(draftPermissions.reconciliation && draftPermissions.reconciliation.show_totals);
+      $("userReconTotals").disabled = !user || isAdmin || selfAdmin
+        || !draftPermissions.reconciliation?.read || !roleAllowsReconTotals(role);
       const hasAnyPageAccess = ERP.auth.pages.some(page => roleActions(role, page.key).includes("read"));
       $("allowAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
       $("clearAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
@@ -811,6 +840,9 @@
             && !(override && override[action] === false);
         });
       });
+      draftPermissions.reconciliation.show_totals = !!draftPermissions.reconciliation.read
+        && roleAllowsReconTotals(role)
+        && !(user.permissions && user.permissions.reconciliation && user.permissions.reconciliation.show_totals === false);
       renderPermissions(user);
       savedState = snapshot();
       updateChangeStatus();
@@ -822,6 +854,7 @@
           draftPermissions[page.key][action] = page.key !== "user_access" && roleActions(role, page.key).includes(action);
         });
       });
+      draftPermissions.reconciliation.show_totals = roleAllowsReconTotals(role);
     }
     function applyBulk(value) {
       const role = $("roleSelect").value;
@@ -831,6 +864,7 @@
           draftPermissions[page.key][action] = action === "read" ? value : value && draftPermissions[page.key].read;
         });
       });
+      if (!value) draftPermissions.reconciliation.show_totals = false;
       renderPermissions(currentUser());
     }
     function resetToDefaults() {
@@ -987,6 +1021,10 @@
       renderPermissions(currentUser());
     });
     $("croSelect").addEventListener("change", updateChangeStatus);
+    $("userReconTotals").addEventListener("change", event => {
+      draftPermissions.reconciliation.show_totals = event.target.checked;
+      updateChangeStatus();
+    });
     $("pageSearch").addEventListener("input", () => renderPermissions(currentUser()));
     $("permissionsBody").addEventListener("change", event => {
       const input = event.target.closest("input[data-page]");
@@ -996,6 +1034,7 @@
           ERP.auth.actions.filter(action => action !== "read").forEach(action => {
             draftPermissions[input.dataset.page][action] = false;
           });
+          if (input.dataset.page === "reconciliation") draftPermissions.reconciliation.show_totals = false;
           renderPermissions(currentUser());
         }
         updateChangeStatus();
@@ -1010,6 +1049,10 @@
     });
     $("customRoleName").addEventListener("input", updateRoleEditorStatus);
     $("croScope").addEventListener("change", updateRoleEditorStatus);
+    $("roleReconTotals").addEventListener("change", event => {
+      roleDraftPermissions.reconciliation.show_totals = event.target.checked;
+      updateRoleEditorStatus();
+    });
     $("customRolePermissionsBody").addEventListener("change", event => {
       const input = event.target.closest("input[data-role-page]");
       if (!input) return;
@@ -1020,6 +1063,7 @@
         ERP.auth.actions.filter(item => item !== "read").forEach(item => {
           roleDraftPermissions[pageKey][item] = false;
         });
+        if (pageKey === "reconciliation") roleDraftPermissions.reconciliation.show_totals = false;
       }
       renderRoleEditor();
     });
