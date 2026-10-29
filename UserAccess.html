@@ -79,6 +79,19 @@
     .perm-check:disabled{opacity:.4;cursor:not-allowed}
     .na{color:#94a3b8}
     .table-empty{padding:24px;text-align:center;color:var(--mut)}
+    .feature-groups{display:grid;gap:8px}
+    .feature-page{border:1px solid var(--line);border-radius:10px;background:#fff}
+    .feature-page summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;cursor:pointer;font-weight:650;list-style:none}
+    .feature-page summary::-webkit-details-marker{display:none}
+    .feature-page summary:after{content:"＋";color:var(--mut);font-weight:700}
+    .feature-page[open] summary:after{content:"−"}
+    .feature-count{color:var(--mut);font-size:12px;font-weight:500;white-space:nowrap}
+    .feature-list{display:grid;gap:8px;padding:0 12px 12px}
+    .feature-item{display:flex;align-items:flex-start;gap:10px;margin:0!important;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--soft)}
+    .feature-item input{width:18px;height:18px;flex:none;margin:1px 0 0;accent-color:var(--b)}
+    .feature-copy{display:grid;gap:2px}
+    .feature-copy strong{font-size:13px}
+    .feature-copy small{color:var(--mut);font-size:12px;font-weight:400}
 
     .rb{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-items:end;margin-bottom:12px}
     .scope{display:flex;align-items:center;gap:8px;min-height:40px;margin:0!important}
@@ -200,12 +213,13 @@
                 </table>
                 <div id="noPages" class="table-empty" hidden>No pages match this search.</div>
               </div>
-              <div class="box" style="margin-top:12px">
-                <h2>Feature access</h2>
-                <p class="sub">Control visibility of reconciliation account balances and summary totals.</p>
-                <label class="scope"><input id="userReconTotals" type="checkbox"> Show reconciliation balance totals</label>
-              </div>
             </div>
+            <section class="box">
+              <h2>Page features</h2>
+              <p class="sub">Turn optional summaries and tools on or off for this user. Page access and Add/Edit/Delete/Export rights are managed separately.</p>
+              <input id="userFeatureSearch" type="search" placeholder="Find a page feature…" autocomplete="off" aria-label="Find a page feature" style="margin-bottom:10px">
+              <div class="feature-groups" id="userFeatureGroups"></div>
+            </section>
           </div>
         </section>
       </div>
@@ -245,11 +259,12 @@
             <tbody id="customRolePermissionsBody"></tbody>
           </table>
         </div>
-        <div class="box" style="margin-top:12px">
-          <h2>Feature access</h2>
-          <p class="sub">Set the maximum reconciliation features users with this custom role can see.</p>
-          <label class="scope"><input id="roleReconTotals" type="checkbox"> Allow reconciliation balance totals</label>
-        </div>
+        <section class="box">
+          <h2>Page features</h2>
+          <p class="sub">Choose which optional summaries and tools this role may use. A user's own settings can only turn these off.</p>
+          <input id="roleFeatureSearch" type="search" placeholder="Find a page feature…" autocomplete="off" aria-label="Find a page feature" style="margin-bottom:10px">
+          <div class="feature-groups" id="roleFeatureGroups"></div>
+        </section>
       </div>
 
       <!-- SAVE BAR -->
@@ -329,11 +344,10 @@
         ? ERP.auth.actions.filter(action => definition.permissions[pageKey][action] === true)
         : [];
     }
-    function roleAllowsReconTotals(role) {
-      if (!roleActions(role, "reconciliation").includes("read")) return false;
+    function roleAllowsFeature(role, pageKey, featureKey) {
+      if (!roleActions(role, pageKey).includes("read")) return false;
       if (ERP.auth.roleRules[role]) return true;
-      const feature = customRole(role)?.permissions?.reconciliation?.show_totals;
-      return feature !== false;
+      return customRole(role)?.permissions?.[pageKey]?.[featureKey] !== false;
     }
     function userNeedsCro(role) { return role === "cro" || !!(customRole(role) && customRole(role).cro_scoped); }
     function currentUser() { return users.find(user => user.user_id === selectedId) || null; }
@@ -427,7 +441,10 @@
         permissions[page.key] = {};
         ERP.auth.actions.forEach(action => { permissions[page.key][action] = false; });
       });
-      permissions.reconciliation.show_totals = false;
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        permissions[pageKey] = permissions[pageKey] || {};
+        features.forEach(feature => { permissions[pageKey][feature.key] = true; });
+      });
       return permissions;
     }
     function roleEditorSnapshot() {
@@ -447,6 +464,72 @@
       $("roleEditorMessage").className = "rb-msg" + (dirty ? " dirty" : "");
       $("saveRoleBtn").disabled = loading || !$("customRoleName").value.trim();
       $("deleteRoleBtn").hidden = !selected;
+    }
+    function renderFeatureControls(containerId, permissions, scope) {
+      const container = $(containerId);
+      container.replaceChildren();
+      const search = $(scope === "user" ? "userFeatureSearch" : "roleFeatureSearch").value.trim().toLowerCase();
+      let rendered = 0;
+      ERP.auth.pages.forEach(page => {
+        const pageKey = page.key;
+        const features = ERP.auth.features[pageKey] || [];
+        const visibleFeatures = features.filter(feature =>
+          !search || (page.label + " " + feature.label + " " + feature.description).toLowerCase().includes(search));
+        if (search && !visibleFeatures.length && !page.label.toLowerCase().includes(search)) return;
+        rendered += 1;
+        const group = document.createElement("details");
+        group.className = "feature-page";
+        group.open = !!search || rendered === 1;
+        const summary = document.createElement("summary");
+        const title = document.createElement("span");
+        title.textContent = page.label;
+        const count = document.createElement("span");
+        count.className = "feature-count";
+        count.textContent = visibleFeatures.length
+          ? visibleFeatures.length + (visibleFeatures.length === 1 ? " feature" : " features")
+          : "Page actions only";
+        summary.append(title, count);
+        group.appendChild(summary);
+        const list = document.createElement("div");
+        list.className = "feature-list";
+        if (!visibleFeatures.length) {
+          const note = document.createElement("p");
+          note.className = "note";
+          note.textContent = "No separate optional feature controls. Use this page's access and action settings above.";
+          list.appendChild(note);
+        }
+        visibleFeatures.forEach(feature => {
+          const item = document.createElement("label");
+          item.className = "feature-item";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.dataset.featurePage = pageKey;
+          input.dataset.featureKey = feature.key;
+          input.checked = permissions[pageKey]?.[feature.key] !== false;
+          const role = $("roleSelect").value;
+          input.disabled = scope === "user"
+            ? !currentUser() || role === "admin" || isSelf(currentUser())
+              || !draftPermissions[pageKey]?.read || !roleAllowsFeature(role, pageKey, feature.key)
+            : !roleDraftPermissions[pageKey]?.read;
+          const copy = document.createElement("span");
+          copy.className = "feature-copy";
+          const label = document.createElement("strong");
+          label.textContent = feature.label;
+          const description = document.createElement("small");
+          description.textContent = feature.description;
+          copy.append(label, description);
+          item.append(input, copy);
+          list.appendChild(item);
+        });
+        group.appendChild(list);
+        container.appendChild(group);
+      });
+      if (!rendered) {
+        const empty = document.createElement("p");
+        empty.className = "note";
+        empty.textContent = search ? "No page features match your search." : "No optional features are available.";
+        container.appendChild(empty);
+      }
     }
     function renderRoleEditor() {
       const body = $("customRolePermissionsBody");
@@ -471,9 +554,7 @@
         });
         body.appendChild(row);
       });
-      const reconTotals = $("roleReconTotals");
-      reconTotals.checked = !!roleDraftPermissions.reconciliation?.show_totals;
-      reconTotals.disabled = !roleDraftPermissions.reconciliation?.read;
+      renderFeatureControls("roleFeatureGroups", roleDraftPermissions, "role");
       updateRoleEditorStatus();
     }
     function applyRoleTemplate(template) {
@@ -484,7 +565,12 @@
           roleDraftPermissions[page.key][action] = base.includes(action);
         });
       });
-      roleDraftPermissions.reconciliation.show_totals = base.includes("read");
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        roleDraftPermissions[pageKey] = roleDraftPermissions[pageKey] || {};
+        features.forEach(feature => {
+          roleDraftPermissions[pageKey][feature.key] = base.includes("read");
+        });
+      });
       $("croScope").checked = template === "cro";
       renderRoleEditor();
     }
@@ -498,8 +584,15 @@
         ? JSON.parse(JSON.stringify(selected.permissions || emptyRolePermissions()))
         : emptyRolePermissions();
       roleDraftPermissions.reconciliation = roleDraftPermissions.reconciliation || {};
-      if (roleDraftPermissions.reconciliation.show_totals === undefined)
-        roleDraftPermissions.reconciliation.show_totals = !!roleDraftPermissions.reconciliation.read;
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        roleDraftPermissions[pageKey] = roleDraftPermissions[pageKey] || {};
+        features.forEach(feature => {
+          if (roleDraftPermissions[pageKey][feature.key] === undefined)
+            roleDraftPermissions[pageKey][feature.key] = !!roleDraftPermissions[pageKey].read;
+          if (!roleDraftPermissions[pageKey].read)
+            roleDraftPermissions[pageKey][feature.key] = false;
+        });
+      });
       if (!selected) {
         const template = $("roleTemplate").value || "viewer";
         const base = ERP.auth.roleRules[template] || [];
@@ -507,7 +600,10 @@
           roleDraftPermissions[page.key] = roleDraftPermissions[page.key] || {};
           ERP.auth.actions.forEach(action => { roleDraftPermissions[page.key][action] = base.includes(action); });
         });
-        roleDraftPermissions.reconciliation.show_totals = base.includes("read");
+        Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+          roleDraftPermissions[pageKey] = roleDraftPermissions[pageKey] || {};
+          features.forEach(feature => { roleDraftPermissions[pageKey][feature.key] = base.includes("read"); });
+        });
         $("croScope").checked = false;
       }
       roleSavedState = roleEditorSnapshot();
@@ -555,7 +651,11 @@
           permissions[pageKey][action] = !!(roleDraftPermissions[pageKey] && roleDraftPermissions[pageKey][action]);
         });
       });
-      permissions.reconciliation.show_totals = $("roleReconTotals").checked;
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        features.forEach(feature => {
+          permissions[pageKey][feature.key] = !!roleDraftPermissions[pageKey]?.[feature.key];
+        });
+      });
       return permissions;
     }
     async function saveCustomRole() {
@@ -799,9 +899,7 @@
       $("croAssign").hidden = !userNeedsCro(role);
       $("croSelect").disabled = !user || isAdmin || selfAdmin;
       $("defaultsBtn").disabled = !user || isAdmin || selfAdmin;
-      $("userReconTotals").checked = !!(draftPermissions.reconciliation && draftPermissions.reconciliation.show_totals);
-      $("userReconTotals").disabled = !user || isAdmin || selfAdmin
-        || !draftPermissions.reconciliation?.read || !roleAllowsReconTotals(role);
+      renderFeatureControls("userFeatureGroups", draftPermissions, "user");
       const hasAnyPageAccess = ERP.auth.pages.some(page => roleActions(role, page.key).includes("read"));
       $("allowAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
       $("clearAllBtn").disabled = !user || isAdmin || selfAdmin || !hasAnyPageAccess;
@@ -840,9 +938,14 @@
             && !(override && override[action] === false);
         });
       });
-      draftPermissions.reconciliation.show_totals = !!draftPermissions.reconciliation.read
-        && roleAllowsReconTotals(role)
-        && !(user.permissions && user.permissions.reconciliation && user.permissions.reconciliation.show_totals === false);
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        const override = user.permissions && user.permissions[pageKey];
+        features.forEach(feature => {
+          draftPermissions[pageKey][feature.key] = !!draftPermissions[pageKey].read
+            && roleAllowsFeature(role, pageKey, feature.key)
+            && !(override && override[feature.key] === false);
+        });
+      });
       renderPermissions(user);
       savedState = snapshot();
       updateChangeStatus();
@@ -854,7 +957,12 @@
           draftPermissions[page.key][action] = page.key !== "user_access" && roleActions(role, page.key).includes(action);
         });
       });
-      draftPermissions.reconciliation.show_totals = roleAllowsReconTotals(role);
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        draftPermissions[pageKey] = draftPermissions[pageKey] || {};
+        features.forEach(feature => {
+          draftPermissions[pageKey][feature.key] = roleAllowsFeature(role, pageKey, feature.key);
+        });
+      });
     }
     function applyBulk(value) {
       const role = $("roleSelect").value;
@@ -864,7 +972,14 @@
           draftPermissions[page.key][action] = action === "read" ? value : value && draftPermissions[page.key].read;
         });
       });
-      if (!value) draftPermissions.reconciliation.show_totals = false;
+      Object.entries(ERP.auth.features).forEach(([pageKey, features]) => {
+        draftPermissions[pageKey] = draftPermissions[pageKey] || {};
+        features.forEach(feature => {
+          draftPermissions[pageKey][feature.key] = value
+            && !!draftPermissions[pageKey].read
+            && roleAllowsFeature(role, pageKey, feature.key);
+        });
+      });
       renderPermissions(currentUser());
     }
     function resetToDefaults() {
@@ -1021,8 +1136,12 @@
       renderPermissions(currentUser());
     });
     $("croSelect").addEventListener("change", updateChangeStatus);
-    $("userReconTotals").addEventListener("change", event => {
-      draftPermissions.reconciliation.show_totals = event.target.checked;
+    $("userFeatureSearch").addEventListener("input", () =>
+      renderFeatureControls("userFeatureGroups", draftPermissions, "user"));
+    $("userFeatureGroups").addEventListener("change", event => {
+      const input = event.target.closest("input[data-feature-page]");
+      if (!input) return;
+      draftPermissions[input.dataset.featurePage][input.dataset.featureKey] = input.checked;
       updateChangeStatus();
     });
     $("pageSearch").addEventListener("input", () => renderPermissions(currentUser()));
@@ -1034,7 +1153,15 @@
           ERP.auth.actions.filter(action => action !== "read").forEach(action => {
             draftPermissions[input.dataset.page][action] = false;
           });
-          if (input.dataset.page === "reconciliation") draftPermissions.reconciliation.show_totals = false;
+          (ERP.auth.features[input.dataset.page] || []).forEach(feature => {
+            draftPermissions[input.dataset.page][feature.key] = false;
+          });
+          renderPermissions(currentUser());
+        } else if (input.dataset.action === "read" && input.checked) {
+          (ERP.auth.features[input.dataset.page] || []).forEach(feature => {
+            draftPermissions[input.dataset.page][feature.key] =
+              roleAllowsFeature($("roleSelect").value, input.dataset.page, feature.key);
+          });
           renderPermissions(currentUser());
         }
         updateChangeStatus();
@@ -1049,8 +1176,12 @@
     });
     $("customRoleName").addEventListener("input", updateRoleEditorStatus);
     $("croScope").addEventListener("change", updateRoleEditorStatus);
-    $("roleReconTotals").addEventListener("change", event => {
-      roleDraftPermissions.reconciliation.show_totals = event.target.checked;
+    $("roleFeatureSearch").addEventListener("input", () =>
+      renderFeatureControls("roleFeatureGroups", roleDraftPermissions, "role"));
+    $("roleFeatureGroups").addEventListener("change", event => {
+      const input = event.target.closest("input[data-feature-page]");
+      if (!input) return;
+      roleDraftPermissions[input.dataset.featurePage][input.dataset.featureKey] = input.checked;
       updateRoleEditorStatus();
     });
     $("customRolePermissionsBody").addEventListener("change", event => {
@@ -1063,7 +1194,13 @@
         ERP.auth.actions.filter(item => item !== "read").forEach(item => {
           roleDraftPermissions[pageKey][item] = false;
         });
-        if (pageKey === "reconciliation") roleDraftPermissions.reconciliation.show_totals = false;
+        (ERP.auth.features[pageKey] || []).forEach(feature => {
+          roleDraftPermissions[pageKey][feature.key] = false;
+        });
+      } else if (action === "read" && input.checked) {
+        (ERP.auth.features[pageKey] || []).forEach(feature => {
+          roleDraftPermissions[pageKey][feature.key] = true;
+        });
       }
       renderRoleEditor();
     });
