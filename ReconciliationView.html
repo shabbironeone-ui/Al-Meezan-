@@ -58,6 +58,9 @@ input:focus,select:focus{outline:2px solid var(--brand);outline-offset:1px}
 .stat.diff.good{background:#ecfdf5;border-color:#6ee7b7}.stat.diff.good b{color:var(--ok)}
 .stat.diff.bad{background:#fef2f2;border-color:#fca5a5}
 .stat.diff small:last-child{margin-top:2px;font-weight:500}
+.stat.action{cursor:pointer;transition:border-color .15s,transform .15s}
+.stat.action:hover{border-color:var(--brand);transform:translateY(-1px)}
+.stat.action:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 
 /* layout */
 .seg{display:none;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:10px}
@@ -108,6 +111,32 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
 .rw{display:grid;gap:6px;grid-template-columns:1fr 1fr;margin-bottom:8px;padding:10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
 .rw .wide{grid-column:1/-1}
 @media(min-width:640px){.rw{grid-template-columns:140px 140px 130px 1fr auto}.rw .wide{grid-column:auto}}
+.entry-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.entry-tools>div{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.entry-tools label{display:flex;align-items:center;gap:6px;margin:0}
+.entry-tools input[type=checkbox],.entry-check{width:auto}
+.entry-search{flex:1 1 220px;min-width:180px;max-width:360px}
+.entry-list{display:grid;gap:7px}
+.entry-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.entry-row small{display:block;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.entry-row .entry-amount{text-align:right;font-weight:700;white-space:nowrap}
+.entry-row .entry-actions{display:flex;gap:5px}
+.match-status{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.match-status.matched{background:#d1fae5;color:#065f46}
+.match-status.mismatch{background:#fee2e2;color:#991b1b}
+.match-status.unmatched{background:#f1f5f9;color:#64748b}
+.entry-edit-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.entry-edit-grid .wide{grid-column:1/-1}
+dialog.upload-overlay{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;margin:0;padding:20px;border:0;border-radius:0;background:transparent;color:var(--ink);overflow:auto;place-content:center}
+dialog.upload-overlay[open]{display:grid}
+dialog.upload-overlay::backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(2px)}
+.upload-status-card{width:min(420px,92vw);padding:24px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 60px rgba(15,23,42,.28)}
+.upload-spinner{width:54px;height:54px;margin:0 auto 16px;border:5px solid #dbeafe;border-top-color:var(--brand);border-radius:50%;animation:upload-spin .8s linear infinite}
+.upload-status-card h2{margin:0 0 8px;font-size:19px}
+.upload-status-card p{margin:0;color:var(--muted);line-height:1.5}
+.upload-status-card .btn{min-width:100px;margin-top:18px}
+.upload-status-card.error h2{color:var(--danger)}
+@keyframes upload-spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -161,6 +190,16 @@ dialog.sheet::backdrop{background:rgba(15,23,42,.5)}
 <dialog id="mDlg" class="sheet"><div class="sh-head"><div><h2>Match this bank entry</h2><p id="mSub"></p></div><button class="x" data-close>✕</button></div>
   <div class="sh-body"><div id="mList"></div></div><div class="sh-foot"><button class="btn danger" id="mDel" hidden style="margin-right:auto">Delete entry</button><button class="btn ghost" data-close>Close</button></div></dialog>
 
+<dialog id="summaryDlg" class="sheet"><div class="sh-head"><div><h2 id="summaryTitle">Entries</h2><p id="summarySub"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="sh-body"><div class="entry-tools"><label><input id="entrySelectAll" type="checkbox"> Select all shown</label><input id="summarySearch" class="entry-search" type="search" placeholder="Search date, party, account, amount..." aria-label="Search entries"><div><button class="btn sm ghost" id="entryEditSelected">Edit selected</button><button class="btn sm danger" id="entryDeleteSelected">Delete selected</button></div></div><div id="summaryList" class="entry-list"></div></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div></dialog>
+<dialog id="entryEditDlg" class="sheet"><div class="sh-head"><div><h2>Edit selected entries</h2><p id="entryEditSub"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="sh-body"><div class="entry-edit-grid"><div><label for="entryEditDate">Date (blank keeps existing)</label><input id="entryEditDate" type="date"></div><div><label for="entryEditAmount">Amount (blank keeps existing)</label><input id="entryEditAmount" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div id="entryEditDirectionWrap" hidden><label for="entryEditDirection">Direction</label><select id="entryEditDirection"><option value="1">In / Deposit</option><option value="-1">Out / Withdrawal</option></select></div><div id="entryEditAccountWrap" class="wide"><label id="entryEditAccountLabel" for="entryEditAccount">Payment account / mode</label><select id="entryEditAccount"><option value="">Keep existing</option></select></div><div id="entryEditPartyWrap"><label for="entryEditParty">Party (blank keeps existing)</label><input id="entryEditParty"></div><div class="wide"><label for="entryEditRemarks">Description / remarks (blank keeps existing)</label><input id="entryEditRemarks"></div></div></div>
+  <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="entryEditSave">Save changes</button></div></dialog>
+<dialog id="uploadOverlay" class="upload-overlay" aria-labelledby="uploadOverlayTitle" aria-describedby="uploadOverlayMessage">
+  <div class="upload-status-card" id="uploadStatusCard"><div class="upload-spinner" id="uploadSpinner" aria-hidden="true"></div><h2 id="uploadOverlayTitle">Uploading bank entries</h2><p id="uploadOverlayMessage" role="status" aria-live="polite">Please wait while entries are saved.</p><button class="btn" id="uploadOverlayOk" type="button" hidden>OK</button></div>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 
@@ -169,8 +208,29 @@ const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money, N
 const BANK_STAGE_KEY = "erp_reconciliation_bank_stage_v1";
 sessionStorage.removeItem("erp_reconciliation_daybook_stage_v1");
 const SORT = { key: "date", dir: 1 };
-let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), BANK_RAW = [], BANK = [], MATCH = new Set(), cur = null, pendingImportAccount = "";
+let PM = { cash: [], bank: [], all: [] }, acct = "", EN = [], OPEN = new Map(), BANK_RAW = [], BANK = [], MATCH = new Set(), cur = null, pendingImportAccount = "", SUMMARY_ROWS = [], SUMMARY_VISIBLE_ROWS = [], SUMMARY_SELECTED_KEYS = new Set(), SUMMARY_SIDE = "", SUMMARY_FLOW = "", summarySelectedForEdit_ = [];
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
+$("uploadOverlay").addEventListener("cancel", event => event.preventDefault());
+$("uploadOverlayOk").onclick = () => $("uploadOverlay").close();
+function showUploadProgress_(total, current = 0) {
+  $("uploadStatusCard").classList.remove("error");
+  $("uploadSpinner").hidden = false;
+  $("uploadOverlayOk").hidden = true;
+  $("uploadOverlayTitle").textContent = "Uploading bank entries";
+  $("uploadOverlayMessage").textContent = current
+    ? `Saving entry ${current} of ${total}. Please keep this page open.`
+    : `Saving ${total} bank entries. Please keep this page open.`;
+  if (!$("uploadOverlay").open) $("uploadOverlay").showModal();
+}
+function showUploadResult_(success, message) {
+  $("uploadSpinner").hidden = true;
+  $("uploadStatusCard").classList.toggle("error", !success);
+  $("uploadOverlayTitle").textContent = success ? "Upload successful" : "Upload could not be completed";
+  $("uploadOverlayMessage").textContent = message;
+  $("uploadOverlayOk").hidden = false;
+  $("uploadOverlayOk").focus();
+}
+const nextPaint_ = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
 const days = (a, b) => Math.abs((new Date(a + "T12:00") - new Date(b + "T12:00")) / 864e5);
 const sg = e => N(e.money_in) - N(e.money_out), kk = e => e.src + ":" + e.rid;
 const bankUploadAccounts_ = () => [...new Set([...(PM.bank || []), ...(PM.all || [])])].filter(a => !/\bcash\b/i.test(a));
@@ -197,8 +257,8 @@ function mergeKeyFor(e) {
   if (normText(e.kind) !== "receipt" || !v || NO_MERGE_RE.test(v) || TAG_SET.has(v)) return null;
   return normText(acctOf(e)) + "|" + v;
 }
-function groupsOf(a) {
-  const mergeOn = $("booksMerge").checked, out = [], by = new Map();
+function groupsOf(a, mergeOn = $("booksMerge").checked) {
+  const out = [], by = new Map();
   booksOf(a).forEach(e => {
     const key = mergeOn ? mergeKeyFor(e) : null, g = key && by.get(key);
     if (g) { g.money_in += N(e.money_in); g.money_out += N(e.money_out); g.parts.push(e); g.needs_review = g.needs_review || e.needs_review; return; }
@@ -253,10 +313,16 @@ function render() {
   const modes = [...new Set([...(PM.all || [...PM.bank, ...PM.cash]), ...EN.map(acctOf), ...BANK.map(b => b.account)])];
   $("accs").innerHTML = modes.map(a => { const bs = booksOf(a), bn = bankOf(a), um = groupsOf(a).filter(g => !groupMatched(g) && sg(g) !== 0).length, ub = bn.filter(b => !b.match_src).length, close = (OPEN.get(a) || 0) + EN.filter(e => acctOf(e) === a).reduce((s, e) => s + sg(e), 0);
     return `<button class="ac" data-a="${E(a)}" aria-pressed="${a === acct}"><small>${E(a)}</small>${showTotals ? `<b>Rs ${M(close)}</b>` : ""}<br>${bn.length || bs.length ? (um + ub ? `<span class="bd">${um + ub} unmatched</span>` : '<span class="bd ok">✓ matched</span>') : ""}</button>`; }).join("");
-  const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), bg = groupsOf(acct), um = bg.filter(g => !groupMatched(g) && sg(g) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0), diff = sum(bs, sg) - sum(bn, b => N(b.amount));
+  const bs = booksOf(acct), bn = bankOf(acct), ub = bn.filter(b => !b.match_src), bg = groupsOf(acct), um = bg.filter(g => !groupMatched(g) && sg(g) !== 0), sum = (a, f) => a.reduce((s, x) => s + f(x), 0),
+    booksIn = sum(bs, e => N(e.money_in)), booksOut = sum(bs, e => N(e.money_out)),
+    bankIn = sum(bn.filter(b => N(b.amount) > 0), b => N(b.amount)),
+    bankOut = sum(bn.filter(b => N(b.amount) < 0), b => Math.abs(N(b.amount))),
+    booksNet = booksIn - booksOut, bankNet = bankIn - bankOut, diff = booksNet - bankNet;
   $("stats").hidden = !showTotals;
   $("stats").style.display = showTotals ? "" : "none";
-  $("stats").innerHTML = showTotals ? `<div class="stat"><small>Books (net in period)</small><b>Rs ${M(sum(bs, sg))}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(sum(bn, b => N(b.amount)))}</b></div>
+  $("stats").innerHTML = showTotals ? `<div class="stat action" role="button" tabindex="0" data-summary-side="books" data-summary-flow="in"><small>Books · In (selected period)</small><b class="in">Rs ${M(booksIn)}</b></div><div class="stat action" role="button" tabindex="0" data-summary-side="books" data-summary-flow="out"><small>Books · Out (selected period)</small><b class="out">Rs ${M(booksOut)}</b></div>
+    <div class="stat action" role="button" tabindex="0" data-summary-side="bank" data-summary-flow="in"><small>Bank statement · In (selected period)</small><b class="in">Rs ${M(bankIn)}</b></div><div class="stat action" role="button" tabindex="0" data-summary-side="bank" data-summary-flow="out"><small>Bank statement · Out (selected period)</small><b class="out">Rs ${M(bankOut)}</b></div>
+    <div class="stat"><small>Books (net in period)</small><b>Rs ${M(booksNet)}</b></div><div class="stat"><small>Bank statement (net)</small><b>Rs ${M(bankNet)}</b></div>
     <div class="stat ${um.length ? "bad" : ""}"><small>Not on statement (books)</small><b>${um.length} · Rs ${M(sum(um, sg))}</b></div><div class="stat ${ub.length ? "bad" : ""}"><small>Not in books (bank)</small><b>${ub.length} · Rs ${M(sum(ub, b => N(b.amount)))}</b></div>
     <div class="stat diff ${Math.abs(diff) < 0.005 ? "good" : "bad"}"><small>Difference in this period (Books − Bank, opening balance excluded)</small><b>${Math.abs(diff) < 0.005 ? "✓ Rs 0 · fully reconciled" : (diff > 0 ? "+" : "−") + "Rs " + M(Math.abs(diff))}</b><small>${Math.abs(diff) < 0.005 ? "Books and bank statement agree" : diff > 0 ? "Books are higher than the bank statement" : "Bank statement is higher than the books"}</small></div>` : "";
   $("sub").textContent = `${acct} · ${$("from").value} to ${$("to").value}`;
@@ -301,6 +367,277 @@ function render() {
   $("books").innerHTML = visibleBooks.map(e => bookItem(e, false)).join("") || '<div class="empty">No unmatched entries.</div>';
   $("bank").innerHTML = visibleBank.map(bankItem).join("") || '<div class="empty">No unmatched entries.</div>';
 }
+const isSummaryEditable_ = row => SUMMARY_SIDE === "bank" || summaryParts_(row).every(part =>
+  part.src !== "sales" && part.src !== "contra" && Object.prototype.hasOwnProperty.call(ERP.db.accounts.TABLE, part.src)
+);
+const isSummaryDeletable_ = row => SUMMARY_SIDE === "bank" || summaryParts_(row).every(part =>
+  part.src !== "sales" && (part.src === "contra" ? !!part.voucher_no : Object.prototype.hasOwnProperty.call(ERP.db.accounts.TABLE, part.src))
+);
+const summaryKey_ = (row, bank = SUMMARY_SIDE === "bank") => bank
+  ? `bank:${String(row.id)}`
+  : summaryParts_(row).map(part => kk(part)).sort().join("|");
+const summaryParts_ = row => Array.isArray(row.parts) ? row.parts : [row];
+const summarySelected_ = () => SUMMARY_ROWS.filter(row => SUMMARY_SELECTED_KEYS.has(summaryKey_(row)));
+const entryMatchStatus_ = (row, bank, bookGroups) => {
+  if (!bank) {
+    const group = bookGroups.find(item => item.parts.some(part => kk(part) === kk(row)));
+    if (!group) return { key: "unmatched", label: "Unmatched" };
+    if (!groupMatched(group)) {
+      const staleRows = BANK_RAW.filter(item => item.match_src && group.parts.some(part => kk(part) === `${item.match_src}:${item.match_rid}`));
+      if (!staleRows.length) return { key: "unmatched", label: "Unmatched" };
+      const staleAmount = staleRows.reduce((total, item) => total + N(item.amount), 0);
+      return { key: "mismatch", label: `Mismatch · Rs ${M(Math.abs(sg(group) - staleAmount))}` };
+    }
+    const bankRows = BANK.filter(item => item.match_src && group.parts.some(part => kk(part) === `${item.match_src}:${item.match_rid}`));
+    const amount = bankRows.reduce((total, item) => total + N(item.amount), 0);
+    return Math.abs(amount - sg(group)) < 0.005
+      ? { key: "matched", label: "Matched" }
+      : { key: "mismatch", label: `Mismatch · Rs ${M(Math.abs(sg(group) - amount))}` };
+  }
+  if (!row.match_src) return row.stale
+    ? { key: "mismatch", label: "Mismatch · previous match amount differs" }
+    : { key: "unmatched", label: "Unmatched" };
+  const sourceKey = `${row.match_src}:${row.match_rid}`;
+  const group = bookGroups.find(item => item.parts.some(part => kk(part) === sourceKey));
+  if (!group) return { key: "matched", label: "Matched · book outside selected period" };
+  const bankRows = BANK.filter(item => item.match_src && group.parts.some(part => kk(part) === `${item.match_src}:${item.match_rid}`));
+  const amount = bankRows.reduce((total, item) => total + N(item.amount), 0);
+  return Math.abs(amount - sg(group)) < 0.005
+    ? { key: "matched", label: "Matched" }
+    : { key: "mismatch", label: `Mismatch · Rs ${M(Math.abs(sg(group) - amount))}` };
+};
+function renderSummaryEntries_() {
+  const isBank = SUMMARY_SIDE === "bank", sign = SUMMARY_FLOW === "in" ? 1 : -1;
+  SUMMARY_ROWS = isBank
+    ? bankOf(acct).filter(row => Math.sign(N(row.amount)) === sign)
+    : groupsOf(acct, true).filter(row => (SUMMARY_FLOW === "in" ? N(row.money_in) : N(row.money_out)) > 0);
+  const bookGroups = groupsOf(acct, true), query = $("summarySearch").value.trim().toLowerCase();
+  SUMMARY_VISIBLE_ROWS = SUMMARY_ROWS.map((row, index) => ({ row, index, match: entryMatchStatus_(row, isBank, bookGroups) }))
+    .filter(({ row, match }) => {
+      const text = isBank
+        ? [row.date, row.account, row.remarks, row.amount, M(Math.abs(N(row.amount))), match.label]
+        : [row.date, row.account, row.party, row.head, row.kind, row.voucher_no, row.remarks, row.money_in, row.money_out, M(N(row.money_in) || N(row.money_out)), ...summaryParts_(row).map(part => `${part.date || ""} ${part.account || ""} ${part.party || ""} ${part.head || ""} ${part.voucher_no || ""} ${part.money_in || ""} ${part.money_out || ""} ${part.remarks || ""}`), match.label];
+      return !query || text.some(value => String(value == null ? "" : value).toLowerCase().includes(query));
+    });
+  $("summaryTitle").textContent = `${isBank ? "Bank statement" : "Books"} · ${SUMMARY_FLOW === "in" ? "In" : "Out"} entries`;
+  $("summarySub").textContent = `${acct} · ${$("from").value} to ${$("to").value} · ${SUMMARY_VISIBLE_ROWS.length} shown of ${SUMMARY_ROWS.length} entries`;
+  $("summaryList").innerHTML = SUMMARY_VISIBLE_ROWS.map(({ row, index, match }) => {
+    const bank = SUMMARY_SIDE === "bank", amount = bank ? Math.abs(N(row.amount)) : SUMMARY_FLOW === "in" ? N(row.money_in) : N(row.money_out);
+    const title = bank ? row.remarks || "(no description)" : row.party || row.head || row.kind || "(entry)";
+    const detail = bank
+      ? `${row.date} · ${row.account || ""}`
+      : `${row.date} · ${row.kind || row.src}${row.account ? " · " + row.account : ""}${row.voucher_no ? " · " + row.voucher_no : ""}${row.remarks ? " · " + row.remarks : ""}`;
+    const editable = ERP.auth.can("edit") && isSummaryEditable_(row);
+    const deletable = ERP.auth.can("delete") && isSummaryDeletable_(row);
+    const merged = !bank && summaryParts_(row).length > 1;
+    const editTitle = !ERP.auth.can("edit") ? "You do not have edit permission"
+      : editable ? "Edit this entry"
+        : summaryParts_(row).some(part => part.src === "sales") ? "Sale advances are managed from Sales"
+          : "Transfers cannot be edited here";
+    const deleteTitle = !ERP.auth.can("delete") ? "You do not have delete permission"
+      : deletable ? "Delete this entry"
+        : summaryParts_(row).some(part => part.src === "sales") ? "Sale advances cannot be deleted here" : "This entry cannot be deleted here";
+    return `<article class="entry-row"><input class="entry-check" type="checkbox" data-index="${index}" aria-label="Select entry ${index + 1}" ${SUMMARY_SELECTED_KEYS.has(summaryKey_(row, bank)) ? "checked" : ""}>
+      <div><b>${E(title)}</b><small>${E(detail)}${merged ? ` · ${summaryParts_(row).length} receipts merged` : ""}</small><span class="match-status ${match.key}">${E(match.label)}</span></div><div class="entry-actions"><span class="entry-amount ${SUMMARY_FLOW === "in" ? "in" : "out"}">Rs ${M(amount)}</span>
+      <button class="btn sm ghost" type="button" title="${E(editTitle)}" data-entry-edit="${index}" ${editable ? "" : "disabled"}>Edit</button><button class="btn sm danger" type="button" title="${E(deleteTitle)}" data-entry-delete="${index}" ${deletable ? "" : "disabled"}>Delete</button></div></article>`;
+  }).join("") || `<div class="empty">${query ? "No entries match your search." : "No entries for this direction in the selected period."}</div>`;
+  const visibleSelected = SUMMARY_VISIBLE_ROWS.filter(({ row }) => SUMMARY_SELECTED_KEYS.has(summaryKey_(row, isBank))).length;
+  $("entrySelectAll").checked = SUMMARY_VISIBLE_ROWS.length > 0 && visibleSelected === SUMMARY_VISIBLE_ROWS.length;
+  updateSummaryActions_();
+}
+function updateSummaryActions_() {
+  const selected = summarySelected_();
+  $("entryEditSelected").disabled = !selected.some(isSummaryEditable_) || !ERP.auth.can("edit");
+  $("entryDeleteSelected").disabled = !selected.some(isSummaryDeletable_) || !ERP.auth.can("delete");
+}
+function openSummaryEntries_(side, flow) {
+  SUMMARY_SIDE = side; SUMMARY_FLOW = flow;
+  SUMMARY_SELECTED_KEYS.clear();
+  $("summarySearch").value = "";
+  renderSummaryEntries_();
+  if (!$("summaryDlg").open) $("summaryDlg").showModal();
+}
+function summaryAccountOptions_(rows, bank) {
+  const configured = bank
+    ? [...(PM.bank || [])]
+    : [...(PM.all || []), ...(PM.bank || []), ...(PM.cash || [])];
+  const current = rows.map(row => String(row.account || "").trim()).filter(Boolean);
+  const accounts = [...new Set([...configured, ...current])];
+  const selected = rows.length === 1 ? current[0] || "" : "";
+  $("entryEditAccountLabel").textContent = bank ? "Bank account" : "Payment account / mode";
+  $("entryEditAccount").innerHTML = '<option value="">Keep existing</option>' +
+    accounts.map(account => `<option value="${E(account)}">${E(account)}</option>`).join("");
+  $("entryEditAccount").value = selected;
+}
+function openSummaryEdit_(rows) {
+  if (!rows.length) return;
+  const editableRows = rows.filter(isSummaryEditable_);
+  const skipped = rows.length - editableRows.length;
+  if (!editableRows.length || !ERP.auth.can("edit")) return ERP.ui.toast("No selected entries can be edited here.", "err");
+  if (skipped) ERP.ui.toast(`${skipped} protected entr${skipped === 1 ? "y was" : "ies were"} skipped`, "err");
+  const bank = SUMMARY_SIDE === "bank", single = editableRows.length === 1, row = editableRows[0];
+  const parts = summaryParts_(row), sameValue = field => {
+    const values = [...new Set(parts.map(part => String(part[field] || "")))];
+    return values.length === 1 ? values[0] : "";
+  };
+  summarySelectedForEdit_ = editableRows;
+  $("entryEditSub").textContent = `${editableRows.length} selected ${editableRows.length === 1 ? "entry" : "entries"}${!bank && parts.length > 1 && single ? ` · ${parts.length} merged receipt lines` : ""} · blank fields keep existing values`;
+  $("entryEditDate").value = single ? sameValue("date") : "";
+  const entryAmount = bank ? Math.abs(N(row.amount)) : SUMMARY_FLOW === "in" ? N(row.money_in) : N(row.money_out);
+  $("entryEditAmount").value = single ? String(entryAmount) : "";
+  $("entryEditDirectionWrap").hidden = !bank;
+  $("entryEditAccountWrap").hidden = false;
+  summaryAccountOptions_(editableRows, bank);
+  $("entryEditPartyWrap").hidden = bank;
+  $("entryEditDirection").value = bank ? (N(row.amount) < 0 ? "-1" : "1") : (SUMMARY_FLOW === "in" ? "1" : "-1");
+  $("entryEditParty").value = single && !bank ? sameValue("party") : "";
+  $("entryEditRemarks").value = single ? (bank ? row.remarks || "" : sameValue("remarks")) : "";
+  $("entryEditDlg").dataset.count = String(editableRows.length);
+  $("entryEditDlg").showModal();
+}
+$("stats").addEventListener("click", event => {
+  const card = event.target.closest("[data-summary-side][data-summary-flow]");
+  if (card) openSummaryEntries_(card.dataset.summarySide, card.dataset.summaryFlow);
+});
+$("stats").addEventListener("keydown", event => {
+  if ((event.key === "Enter" || event.key === " ") && event.target.matches("[data-summary-side][data-summary-flow]")) {
+    event.preventDefault();
+    openSummaryEntries_(event.target.dataset.summarySide, event.target.dataset.summaryFlow);
+  }
+});
+$("summaryList").addEventListener("change", event => {
+  if (event.target.matches(".entry-check")) {
+    const row = SUMMARY_ROWS[Number(event.target.dataset.index)];
+    if (row) {
+      const key = summaryKey_(row);
+      if (event.target.checked) SUMMARY_SELECTED_KEYS.add(key);
+      else SUMMARY_SELECTED_KEYS.delete(key);
+    }
+    const visibleSelected = SUMMARY_VISIBLE_ROWS.filter(({ row }) => SUMMARY_SELECTED_KEYS.has(summaryKey_(row))).length;
+    $("entrySelectAll").checked = SUMMARY_VISIBLE_ROWS.length > 0 && visibleSelected === SUMMARY_VISIBLE_ROWS.length;
+    updateSummaryActions_();
+  }
+});
+$("entrySelectAll").onchange = () => {
+  SUMMARY_VISIBLE_ROWS.forEach(({ row }) => {
+    const key = summaryKey_(row);
+    if ($("entrySelectAll").checked) SUMMARY_SELECTED_KEYS.add(key);
+    else SUMMARY_SELECTED_KEYS.delete(key);
+  });
+  $("summaryList").querySelectorAll(".entry-check").forEach(input => { input.checked = $("entrySelectAll").checked; });
+  updateSummaryActions_();
+};
+$("summarySearch").addEventListener("input", renderSummaryEntries_);
+$("summaryList").addEventListener("click", event => {
+  const edit = event.target.closest("[data-entry-edit]"), del = event.target.closest("[data-entry-delete]");
+  if (edit) openSummaryEdit_([SUMMARY_ROWS[Number(edit.dataset.entryEdit)]].filter(Boolean));
+  if (del) deleteSummaryEntries_([SUMMARY_ROWS[Number(del.dataset.entryDelete)]].filter(Boolean));
+});
+$("entryEditSelected").onclick = () => openSummaryEdit_(summarySelected_());
+$("entryDeleteSelected").onclick = () => deleteSummaryEntries_(summarySelected_());
+async function deleteSummaryEntries_(rows) {
+  if (!rows.length) return;
+  if (!ERP.auth.can("delete")) return ERP.ui.toast("You do not have permission to delete entries.", "err");
+  const deletableRows = rows.filter(isSummaryDeletable_), skipped = rows.length - deletableRows.length;
+  if (!deletableRows.length) return ERP.ui.toast("No selected entries can be deleted here.", "err");
+  rows = deletableRows;
+  const skipNote = skipped ? ` ${skipped} protected ${skipped === 1 ? "entry will" : "entries will"} be skipped.` : "";
+  if (!confirm(`Delete ${rows.length} selected ${rows.length === 1 ? "entry" : "entries"}?${skipNote} This cannot be undone.`)) return;
+  let deleted = 0;
+  try {
+    if (SUMMARY_SIDE === "bank") {
+      await ERP.db.bank.remove(rows.map(row => row.id));
+      deleted = rows.length;
+    } else {
+      const unique = new Map();
+      rows.flatMap(summaryParts_).forEach(row => unique.set(row.src === "contra" ? `contra:${row.voucher_no}` : `${row.src}:${row.rid}`, row));
+      for (const row of unique.values()) {
+        if (row.src === "contra") await ERP.db.accounts.deleteTransfer(row.voucher_no);
+        else await ERP.db.accounts.remove(row.src, row.rid);
+        deleted++;
+        await ERP.db.bank.clearMatches(row.src, row.rid);
+      }
+    }
+    SUMMARY_SELECTED_KEYS.clear();
+    ERP.ui.toast(`${deleted} entr${deleted === 1 ? "y" : "ies"} deleted`);
+    await load();
+    renderSummaryEntries_();
+  } catch (error) {
+    ERP.ui.toast(`${deleted} deleted before the error: ${error.message}`, "err");
+    await load();
+    renderSummaryEntries_();
+  }
+}
+async function saveSummaryEntries_(rows) {
+  const date = $("entryEditDate").value, rawAmount = $("entryEditAmount").value.trim();
+  const amount = rawAmount === "" ? null : Number(rawAmount), account = $("entryEditAccount").value,
+    party = $("entryEditParty").value.trim(), remarks = $("entryEditRemarks").value.trim();
+  if (rawAmount !== "" && !(amount > 0)) return ERP.ui.toast("Amount must be greater than zero.", "err");
+  if (!date && rawAmount === "" && !account && !party && !remarks && (!SUMMARY_SIDE || $("entryEditDirection").value === (SUMMARY_FLOW === "in" ? "1" : "-1"))) {
+    return ERP.ui.toast("Enter at least one change.", "err");
+  }
+  if (rows.some(row => !isSummaryEditable_(row))) return ERP.ui.toast("Some selected entries cannot be edited here.", "err");
+  if (SUMMARY_SIDE !== "bank" && amount !== null) {
+    const invalid = rows.find(row => {
+      const parts = summaryParts_(row);
+      const currentTotal = parts.reduce((total, part) => total + (SUMMARY_FLOW === "in" ? N(part.money_in) : N(part.money_out)), 0);
+      const firstAmount = SUMMARY_FLOW === "in" ? N(parts[0].money_in) : N(parts[0].money_out);
+      return amount < currentTotal - firstAmount;
+    });
+    if (invalid) return ERP.ui.toast(`The new total for ${invalid.voucher_no || "a merged receipt"} is too small to keep its other receipt lines non-negative.`, "err");
+  }
+  let saved = 0;
+  try {
+    for (const row of rows) {
+      if (SUMMARY_SIDE === "bank") {
+        const nextAmount = (amount === null ? Math.abs(N(row.amount)) : amount) * Number($("entryEditDirection").value);
+        const fields = {};
+        if (date && date !== row.date) fields.date = date;
+        if (account && account !== String(row.account || "")) fields.account = account;
+        if (nextAmount !== N(row.amount)) fields.amount = nextAmount;
+        if (remarks && remarks !== String(row.remarks || "")) fields.remarks = remarks;
+        if (Object.keys(fields).length) {
+          fields.match_src = null; fields.match_rid = null;
+          await ERP.db.bank.update(row.id, fields); saved++;
+        }
+      } else {
+        const parts = summaryParts_(row);
+        const partAmount = part => SUMMARY_FLOW === "in" ? N(part.money_in) : N(part.money_out);
+        const firstNewAmount = amount === null ? null : amount - (parts.reduce((total, part) => total + partAmount(part), 0) - partAmount(parts[0]));
+        for (let index = 0; index < parts.length; index++) {
+          const part = parts[index], oldAmount = partAmount(part);
+          const fields = {
+            date: date || part.date,
+            account: account || part.account || acct,
+            party: party || part.party || "",
+            head: part.head || "",
+            amount: amount !== null && index === 0 ? firstNewAmount : oldAmount,
+            remarks: remarks || part.remarks || ""
+          };
+          const changed = fields.date !== part.date || fields.amount !== oldAmount ||
+            fields.account !== String(part.account || "") ||
+            fields.party !== String(part.party || "") || fields.remarks !== String(part.remarks || "");
+          if (changed) {
+            await ERP.db.accounts.update(part.src, part.rid, fields);
+            saved++;
+            await ERP.db.bank.clearMatches(part.src, part.rid);
+          }
+        }
+      }
+    }
+    SUMMARY_SELECTED_KEYS.clear();
+    $("entryEditDlg").close();
+    ERP.ui.toast(saved ? `${saved} entr${saved === 1 ? "y" : "ies"} updated` : "No changes to save");
+    await load();
+    renderSummaryEntries_();
+  } catch (error) {
+    ERP.ui.toast(`${saved} updated before the error: ${error.message}`, "err");
+    await load();
+    renderSummaryEntries_();
+  }
+}
+$("entryEditSave").onclick = () => ERP.ui.busy($("entryEditSave"), async () => saveSummaryEntries_(summarySelectedForEdit_));
+$("entryEditDlg").addEventListener("close", () => { summarySelectedForEdit_ = []; });
 ["booksMatched", "booksUnmatched", "bankMatched", "bankUnmatched", "booksMerge"].forEach(id => { $(id).onchange = render; });
 $("accs").onclick = e => { const b = e.target.closest(".ac"); if (b) { acct = b.dataset.a; render(); } };
 
@@ -559,16 +896,22 @@ $("addSave").onclick = () => ERP.ui.busy($("addSave"), async () => {
   if (!saveAccount) return ERP.ui.toast("Select a bank account first", "err");
   const fileKey = stage && stage.fileKey || importFileKey_("bank_statement", "manual-" + Date.now(), saveAccount);
   if (!confirm(`Save/update ${rows.length} bank entries for ${saveAccount}? Rows from the same account, statement period, and CSV position will update. Removed rows will remain in the database.`)) return;
+  showUploadProgress_(rows.length);
   try {
-    for (const row of rows) await ERP.db.bank.upsertImported({ account: row.account, date: row.date, amount: row.amount, remarks: row.remarks, import_file_key: fileKey, import_row_key: row.row_key });
+    for (let i = 0; i < rows.length; i++) {
+      showUploadProgress_(rows.length, i + 1);
+      await nextPaint_();
+      const row = rows[i];
+      await ERP.db.bank.upsertImported({ account: row.account, date: row.date, amount: row.amount, remarks: row.remarks, import_file_key: fileKey, import_row_key: row.row_key });
+    }
     sessionStorage.removeItem(BANK_STAGE_KEY);
     $("clearBankStage").hidden = true;
     setPeriodForRows_(rows);
-    ERP.ui.toast(rows.length + " entries saved");
     $("addDlg").close();
-    load();
+    await load();
+    showUploadResult_(true, `${rows.length} bank ${rows.length === 1 ? "entry has" : "entries have"} been saved successfully.`);
   } catch (e) {
-    ERP.ui.toast("Bank import stopped. Re-upload the same statement and account to safely retry without creating duplicate rows. If the error mentions import_file_key/import_row_key, run the updated sql/13_reconciliation_imports.sql in Supabase. " + e.message, "err");
+    showUploadResult_(false, "Bank import stopped. Re-upload the same statement and account to safely retry without creating duplicate rows. If the error mentions import_file_key/import_row_key, run the updated sql/13_reconciliation_imports.sql in Supabase. " + e.message);
   } });
 
 (async () => { await ERP.auth.guard(); $("preset").value = "month"; setPreset("month");
