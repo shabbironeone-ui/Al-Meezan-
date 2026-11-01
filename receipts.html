@@ -11,12 +11,18 @@
   .acts .btn{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-height:64px;text-align:left;padding:10px 14px}
   .acts .btn span{display:block}.acts .btn small{display:block;font-size:11px;font-weight:400;opacity:.82}
   body.receipts-page .acts{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .receipt-range-stat{min-width:0;min-height:64px;display:flex;flex-direction:column;justify-content:center;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--shadow)}
+  .receipt-range-stat{min-width:0;min-height:64px;display:flex;flex-direction:column;justify-content:center;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:var(--shadow)}
   .receipt-range-stat small{color:var(--muted);font-size:11px;font-weight:600}
-  .receipt-range-stat b{margin-top:3px;color:var(--ink);font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .receipt-range-stat b{margin-top:3px;color:var(--ink);font-size:18px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .receipt-range-stat.total{padding:9px 14px}
+  .receipt-range-stat.total>b{font-size:22px}
+  .receipt-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 10px;margin-top:8px}
+  .receipt-breakdown span{min-width:0;color:var(--muted);font-size:11px;white-space:nowrap}
+  .receipt-breakdown b{display:block;margin-top:2px;color:var(--ink);font-size:13px}
   .receipt-merge{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
   .receipt-merge input{width:16px;height:16px;margin:0;accent-color:var(--brand)}
-  @media(min-width:900px){body.receipts-page .acts{grid-template-columns:minmax(210px,1.3fr) repeat(3,minmax(145px,1fr)) auto;align-items:stretch}.receipt-merge{justify-self:end}}
+  @media(min-width:900px){body.receipts-page .acts{grid-template-columns:minmax(200px,1.25fr) minmax(88px,.55fr) minmax(88px,.55fr) minmax(340px,2fr) auto;align-items:stretch}.receipt-merge{justify-self:end}}
+  @media(min-width:900px) and (max-width:1150px){body.receipts-page .acts{grid-template-columns:minmax(170px,1fr) minmax(75px,.5fr) minmax(75px,.5fr) minmax(280px,1.7fr) auto;gap:7px}.receipt-range-stat{padding-inline:8px}.receipt-breakdown{gap:4px}}
   .btn.in{background:#047857}.btn.out{background:#b45309}.btn.xfer{background:#1d4ed8}
   .range{display:grid;gap:10px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}
   .range .wide{grid-column:1/-1}
@@ -43,6 +49,11 @@
   .ledger-toolbar .actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
   .head,.ent{display:grid;align-items:center;gap:10px;grid-template-columns:92px 90px 105px minmax(160px,2fr) minmax(130px,1fr) 95px 95px 105px}
   .head{padding:0 14px 6px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .head button{width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
+  .head button:hover{color:var(--brand-dark)}
+  .head button[aria-sort="ascending"]::after{content:" ↑";color:var(--brand)}
+  .head button[aria-sort="descending"]::after{content:" ↓";color:var(--brand)}
+  .head button.r{text-align:right}
   .head span.r,.ent .r{text-align:right}
   .ent{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:7px;cursor:pointer;box-shadow:var(--shadow);font-size:13px;transition:border-color .15s}
   .ent:hover{border-color:var(--brand)}.ent:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
@@ -96,6 +107,7 @@
     .ent .kind-mobile,.ent .amount-mobile{display:inline}
   }
   @media(max-width:520px){.acts{grid-template-columns:1fr 1fr;gap:7px}.acts .btn{min-width:0;padding:8px;font-size:13px}.acts .btn small{font-size:10px}.accs{grid-template-columns:repeat(2,minmax(0,1fr))}.ac{padding:10px}.range{gap:8px}}
+  @media(max-width:899px){.receipt-range-stat.total{grid-column:1/-1}}
   @media(max-width:520px){body.receipts-page .acts{grid-template-columns:1fr 1fr}.receipt-range-stat{min-height:56px;padding:8px 10px}.receipt-range-stat b{font-size:18px}.receipt-merge{grid-column:1/-1}}
   @media(max-width:899px){
     body.receipts-page .ent{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p amt" "m m"}
@@ -129,7 +141,9 @@
     <button class="btn in" data-k="receipt"><span>＋ Receipt<small>Record money received from a customer</small></span></button>
     <div class="receipt-range-stat"><small>Unique receipts · selected filters</small><b id="uniqueReceiptCount">0</b></div>
     <div class="receipt-range-stat"><small>Total entries · selected filters</small><b id="totalReceiptEntries">0</b></div>
-    <div class="receipt-range-stat"><small>Total amount · selected filters</small><b id="totalReceiptAmount">Rs 0</b></div>
+    <div class="receipt-range-stat total"><small>Total amount · selected filters</small><b id="totalReceiptAmount">Rs 0</b>
+      <div class="receipt-breakdown"><span>Advance<b id="totalAdvance">Rs 0</b></span><span>Processing fee<b id="totalProcessingFee">Rs 0</b></span><span>1st installment<b id="totalFirstInstallment">Rs 0</b></span></div>
+    </div>
     <label class="receipt-merge"><input type="checkbox" id="mergeReceipts" checked> Merge same receipt number</label>
   </div>
 
@@ -144,7 +158,14 @@
   <div class="card" id="cashReceiptMapWarning" hidden role="alert" style="margin-top:10px;border-color:#f59e0b;background:#fffbeb;color:#78350f"></div>
   <div class="ledger-toolbar no-print"><span id="cnt" style="color:var(--muted);font-size:13px"></span>
     <span class="actions"><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
-  <div class="head"><span>Date</span><span>Receipt No</span><span>Acc No</span><span>Customer Name</span><span>Pay Mode</span><span class="r">Amount</span></div>
+  <div class="head" role="row">
+    <span role="columnheader"><button type="button" data-sort="date">Date</button></span>
+    <span role="columnheader"><button type="button" data-sort="voucher_no">Receipt No</button></span>
+    <span role="columnheader"><button type="button" data-sort="party_no">Acc No</button></span>
+    <span role="columnheader"><button type="button" data-sort="party">Customer Name</button></span>
+    <span role="columnheader"><button type="button" data-sort="account">Pay Mode</button></span>
+    <span role="columnheader"><button type="button" class="r" data-sort="money_in">Amount</button></span>
+  </div>
   <section id="ledger"></section>
   <section id="printReport" aria-hidden="true">
     <header><h1>Al Meezan ERP - Receipts Report</h1><p id="printSub"></p></header>
@@ -257,7 +278,7 @@ function sortSettings(rows) {
   return rows.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
 }
 let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [], MERGED = null;
-let CASH_SALE_RECEIPT_NUMBERS = new Map();
+let CASH_SALE_RECEIPT_NUMBERS = new Map(), RECEIPT_SORT = { key: "date", direction: "desc" };
 const TEMP_PARTIES = { ACCOUNT_RECEIVABLE_HEAD: [], ACCOUNT_PAYABLE_HEAD: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -452,15 +473,16 @@ function render() {
     rows.push(next);
     if (key) byKey.set(key, next);
   });
-  VIEW = rows;
-  updateReceiptCounts_(rangeEntries);
-  renderPrintReport_(rows);
+  updateReceiptCounts_(entries);
+  const sortedRows = sortReceiptRows_(rows);
+  VIEW = sortedRows;
+  renderPrintReport_(sortedRows);
   $("cnt").textContent = $("mergeReceipts").checked && entries.length !== rows.length
     ? `${M(entries.length)} entries · ${M(rows.length)} rows shown`
     : `${M(entries.length)} ${entries.length === 1 ? "entry" : "entries"}`;
   $("sub").textContent = selectedRangeLabel_();
   $("btnClear").hidden = !q;
-  $("ledger").innerHTML = rows.map((entry, index) => `<article class="ent" data-r="${index}" tabindex="0">
+  $("ledger").innerHTML = sortedRows.map((entry, index) => `<article class="ent" data-r="${index}" tabindex="0">
     <span class="d">${E(entry.date)}</span>
     <span class="v">${E(entry.voucher_no || "")}</span>
     <span class="a">${E(mergedValues_(entry, "party_no"))}</span>
@@ -470,6 +492,7 @@ function render() {
     <span class="mm">${E(entry.date)} · ${E(entry.voucher_no || "")} · ${E(acct(entry))}</span>
   </article>`).join("")
     || `<div class="empty-state"><b>${q ? "No matching receipts" : "No receipts for these dates"}</b>${q ? "Try changing the search text." : "Use the Receipt button above to record a customer receipt."}</div>`;
+  updateReceiptSortHeadings_();
 }
 function receiptMergeKey_(entry) {
   const voucher = String(entry.voucher_no || "").trim();
@@ -480,17 +503,61 @@ function receiptMergeKey_(entry) {
 function mergedValues_(entry, field) {
   return [...new Set(entry.parts.map(part => String(part[field] || "").trim()).filter(Boolean))].join(", ");
 }
+function receiptCategory_(entry) {
+  const voucher = String(entry.voucher_no || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (voucher === "advance") return "advance";
+  if (voucher === "processingfee") return "processing";
+  if (voucher === "1stinstallment" || voucher === "firstinstallment") return "installment";
+  return "";
+}
+function receiptAmounts_(entries) {
+  return entries.reduce((totals, entry) => {
+    totals.total += Number(entry.money_in) || 0;
+    const category = receiptCategory_(entry);
+    if (category) totals[category] += Number(entry.money_in) || 0;
+    return totals;
+  }, { total: 0, advance: 0, processing: 0, installment: 0 });
+}
 function updateReceiptCounts_(entries) {
   const seen = new Set();
   let withoutReceiptNo = 0;
   entries.forEach(entry => {
     const voucher = String(entry.voucher_no || "").trim().toLowerCase();
-    if (voucher) seen.add(voucher);
+    if (voucher && receiptMergeKey_(entry)) seen.add(voucher);
     else withoutReceiptNo += 1;
   });
+  const amounts = receiptAmounts_(entries);
   $("uniqueReceiptCount").textContent = M(seen.size + withoutReceiptNo);
   $("totalReceiptEntries").textContent = M(entries.length);
-  $("totalReceiptAmount").textContent = `Rs ${M(entries.reduce((total, entry) => total + (Number(entry.money_in) || 0), 0))}`;
+  $("totalReceiptAmount").textContent = `Rs ${M(amounts.total)}`;
+  $("totalAdvance").textContent = `Rs ${M(amounts.advance)}`;
+  $("totalProcessingFee").textContent = `Rs ${M(amounts.processing)}`;
+  $("totalFirstInstallment").textContent = `Rs ${M(amounts.installment)}`;
+}
+function sortValue_(entry, key) {
+  if (key === "money_in") return Number(entry.money_in) || 0;
+  if (key === "date") return String(entry.date || "");
+  if (key === "party") return mergedValues_(entry, "party");
+  if (key === "party_no") return mergedValues_(entry, "party_no");
+  if (key === "account") return acct(entry);
+  return String(entry.voucher_no || "");
+}
+function sortReceiptRows_(rows) {
+  const direction = RECEIPT_SORT.direction === "asc" ? 1 : -1;
+  return rows.map((entry, index) => ({ entry, index })).sort((left, right) => {
+    const a = sortValue_(left.entry, RECEIPT_SORT.key), b = sortValue_(right.entry, RECEIPT_SORT.key);
+    const comparison = typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+    return comparison ? comparison * direction : left.index - right.index;
+  }).map(item => item.entry);
+}
+function updateReceiptSortHeadings_() {
+  document.querySelectorAll(".head [data-sort]").forEach(button => {
+    button.parentElement.setAttribute("aria-sort", button.dataset.sort === RECEIPT_SORT.key
+      ? (RECEIPT_SORT.direction === "asc" ? "ascending" : "descending")
+      : "none");
+  });
 }
 function selectedRangeLabel_() {
   const from = $("from").value || $("to").value;
@@ -507,17 +574,27 @@ function renderPrintReport_(rows) {
     .filter(row => row.kind === "Receipt" || (row.src === "sales" && row.kind === "Cash sale"));
   const receiptIds = new Set(receiptRows.map(row => String(row.voucher_no || "").trim().toLowerCase()).filter(Boolean));
   const receiptNoCount = receiptIds.size + receiptRows.filter(row => !String(row.voucher_no || "").trim()).length;
-  const totalAmount = receiptRows.reduce((sum, row) => sum + (Number(row.money_in) || 0), 0);
+  const totals = receiptAmounts_(receiptRows);
   const [rangeFrom, rangeTo] = selectedRangeLabel_().split(" to ");
   const from = printDate_(rangeFrom), to = printDate_(rangeTo);
   $("printSub").textContent = from === to ? from : `${from} to ${to}`;
   $("printRows").innerHTML = receiptRows.map(row =>
     `<tr><td>${E(printDate_(row.date))}</td><td>${E(row.voucher_no || "")}</td><td>${E(row.party_no || "")}</td><td>${E(row.party || "")}</td><td>${E(acct(row))}</td><td class="num">${M(Number(row.money_in) || 0)}</td></tr>`
   ).join("");
-  $("printTotals").innerHTML = `<span>Unique Receipt Qty: ${M(receiptNoCount)}</span><span>Total Records: ${M(receiptRows.length)}</span><span>Total Amount: Rs ${M(totalAmount)}</span>`;
+  $("printTotals").innerHTML = `<span>Unique Receipt Qty: ${M(receiptNoCount)}</span><span>Total Records: ${M(receiptRows.length)}</span><span>Total Amount: Rs ${M(totals.total)}</span><span>Advance: Rs ${M(totals.advance)}</span><span>Processing fee: Rs ${M(totals.processing)}</span><span>1st installment: Rs ${M(totals.installment)}</span>`;
 }
 $("q").oninput = ERP.ui.debounce(render, 200);
 $("mergeReceipts").onchange = render;
+document.querySelector(".head").addEventListener("click", event => {
+  const button = event.target.closest("[data-sort]");
+  if (!button) return;
+  const key = button.dataset.sort;
+  RECEIPT_SORT = {
+    key,
+    direction: RECEIPT_SORT.key === key && RECEIPT_SORT.direction === "asc" ? "desc" : "asc"
+  };
+  render();
+});
 $("entryTypeFilter").onchange = () => {
   $("bankFilter").disabled = $("entryTypeFilter").value === "cash_only" || bankAccounts().length === 0;
   render();
