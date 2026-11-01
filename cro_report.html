@@ -118,8 +118,21 @@ function buildAp() {
   $("fAp").innerHTML = '<option value="">Approved by: All</option>' + list.map(a => `<option>${E(a)}</option>`).join("") + (BASE.some(c => !String(c.approved_by || "").trim()) ? '<option value="__none">(none)</option>' : ""); $("fAp").value = v;
 }
 function buildCro() {
-  CROS = BASE.some(c => !c.cro) ? [...CRO_NAMES, "__none"] : CRO_NAMES.slice();
-  SEL = SEL ? new Set([...SEL].filter(x => CROS.includes(x))) : new Set(CROS); croList();
+  const previous = CROS;
+  const wasAllSelected = !SEL || (previous.length > 0 && SEL.size === previous.length);
+  const names = [...CRO_NAMES, ...BASE.map(row => String(row.cro || "").trim()).filter(Boolean)];
+  const seen = new Set();
+  CROS = names.filter(name => {
+    const key = name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (BASE.some(row => !String(row.cro || "").trim())) CROS.push("__none");
+  SEL = wasAllSelected
+    ? new Set(CROS)
+    : new Set([...SEL].filter(name => CROS.includes(name)));
+  croList();
 }
 function croList() {
   $("croList").innerHTML = `<label class="mi"><input type="checkbox" id="croAll" ${SEL.size === CROS.length ? "checked" : ""}> <b>All</b></label><hr>` + CROS.map(c => `<label class="mi"><input type="checkbox" class="croC" value="${E(c)}" ${SEL.has(c) ? "checked" : ""}> ${c === "__none" ? "(no CRO)" : E(c)}</label>`).join("");
