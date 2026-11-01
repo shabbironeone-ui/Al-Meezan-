@@ -59,20 +59,20 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 <body>
 <main class="page">
   <header class="top">
-    <div><h1>📦 Stock Ledger</h1><p id="sub">Al Meezan ERP · item-wise stock, in/out aur balance</p></div>
+    <div><h1>📦 Stock Ledger</h1><p id="sub">Al Meezan ERP · item-level stock movements and balances</p><p class="mu">Source-backed view · purchase and sales records are unchanged; the Supabase stock ledger is not modified.</p></div>
     <div class="acts"><button class="btn ghost" id="bCsv">⬇ CSV</button><button class="btn ghost" id="bPrint">🖨 Print / PDF</button><button class="btn ghost" id="bRef">⟳ Refresh</button><button class="btn danger" id="bClose">✕ Close</button></div>
   </header>
 
   <section class="kpis" id="kpis"></section>
 
   <section class="card bar">
-    <div class="seg" id="viewSeg"><button data-v="sum" class="on">Summary (item-wise)</button><button data-v="det">Detailed (har entry)</button></div>
-    <div class="sq"><input id="q" type="search" placeholder="Search: company, category, product ID, model…"><button class="mic" id="mic" type="button" title="Voice search">🎤</button></div>
+    <div class="seg" id="viewSeg"><button data-v="sum" class="on">Summary (by item)</button><button data-v="det">Detailed (all transactions)</button></div>
+    <div class="sq"><input id="q" type="search" placeholder="Search company, category, product ID, or model…"><button class="mic" id="mic" type="button" title="Voice search">🎤</button></div>
     <select id="cat"></select><select id="comp"></select>
-    <select id="stat"><option value="">Har stock status</option><option value="in">Stock mein hai</option><option value="zero">Stock khatam (0)</option><option value="neg">Negative stock</option></select>
-    <select id="preset"><option value="all">Poora record</option><option value="today">Aaj</option><option value="month">Is mahine</option><option value="lastmonth">Pichhla mahina</option><option value="last3">Pichhle 3 mahine</option><option value="year">Is saal</option><option value="custom">Custom</option></select>
+    <select id="stat"><option value="">All stock statuses</option><option value="in">In stock</option><option value="zero">Out of stock (0)</option><option value="neg">Negative stock</option></select>
+    <select id="preset"><option value="all">All dates</option><option value="today">Today</option><option value="month">This month</option><option value="lastmonth">Last month</option><option value="last3">Last 3 months</option><option value="year">This year</option><option value="custom">Custom range</option></select>
     <input type="date" id="from" title="From"><input type="date" id="to" title="To">
-    <label class="ck"><input type="checkbox" id="grp" checked> Category-wise grouping</label>
+    <label class="ck"><input type="checkbox" id="grp" checked> Group by category</label>
     <button class="btn ghost" id="bReset">↺ Reset</button>
   </section>
   <div class="chips" id="chips"></div>
@@ -84,7 +84,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 <dialog id="dlg">
   <div class="dh"><div><h2 id="dT"></h2><p id="dS"></p></div><button class="btn ghost" id="dX">✕</button></div>
   <div class="dk" id="dK"></div>
-  <div class="db"><table><thead><tr><th>Date</th><th>Reference</th><th>Vendor</th><th class="n">In</th><th class="n">Out</th><th class="n">Balance</th><th>Remarks</th></tr></thead><tbody id="dB"></tbody></table></div>
+  <div class="db"><table><thead><tr><th>Date</th><th>Reference</th><th>Supplier</th><th class="n">Qty In</th><th class="n">Qty Out</th><th class="n">Balance</th><th>Remarks</th></tr></thead><tbody id="dB"></tbody></table></div>
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -94,20 +94,109 @@ const $ = id => document.getElementById(id), N = v => Number(v) || 0, fm = v => 
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dOf = r => r.date ? String(r.date).split("T")[0] : "";
 const fd = d => { const p = String(d || "").split("-"); return p.length === 3 ? +p[2] + "-" + +p[1] + "-" + p[0].slice(-2) : d || "-"; };
-const keyOf = r => [r.product_id, r.company_name, r.product_category, r.model].map(x => x || "").join("|");
+const STOCK_START = "2026-08-01";
+const keyOf = r => {
+  const productId = String(r.product_id || "").trim().toLowerCase();
+  return productId
+    ? `product:${productId}`
+    : `fallback:${[r.company_name, r.product_category, r.model].map(x => String(x || "").trim().toLowerCase()).join("|")}`;
+};
 let ALL = [], VIEW = "sum", D = { per: [], items: [] };
 const SORT = { sum: { k: "company", d: 1 }, det: { k: "_d", d: 1 } };
 const COLS = {
   sum: [["company", "Company"], ["category", "Category"], ["pid", "Product ID"], ["model", "Model"], ["opn", "Opening", "n"], ["in", "In", "n"], ["out", "Out", "n"], ["close", "Closing", "n"]],
-  det: [["_d", "Date"], ["company_name", "Company"], ["product_category", "Category"], ["product_id", "Product ID"], ["model", "Model"], ["vendor", "Vendor"], ["ref", "Reference"], ["qty_in", "In", "n"], ["qty_out", "Out", "n"], ["_bal", "Balance", "n"], ["remarks", "Remarks"]]
+  det: [["_d", "Date"], ["company_name", "Company"], ["product_category", "Category"], ["product_id", "Product ID"], ["model", "Model"], ["vendor", "Supplier"], ["ref", "Reference"], ["qty_in", "Qty In", "n"], ["qty_out", "Qty Out", "n"], ["_bal", "Balance", "n"], ["remarks", "Remarks"]]
 };
+
+function sourceLedger(purchases, sales, existing) {
+  const purchaseRows = purchases.map(r => ({ ...r, _date: dOf({ date: r.purchase_date }) }));
+  const costsByProduct = new Map();
+  purchaseRows
+    .filter(r => r.product_id && !r.return_of_id)
+    .sort((a, b) => a._date.localeCompare(b._date) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }))
+    .forEach(r => {
+      const key = String(r.product_id).trim().toLowerCase();
+      if (!costsByProduct.has(key)) costsByProduct.set(key, []);
+      costsByProduct.get(key).push({ date: r._date, cost: N(r.cost_price) });
+    });
+
+  const movements = [];
+  purchaseRows.forEach(r => {
+    if (!r.product_id || !r._date || r._date < STOCK_START) return;
+    const returned = !!r.return_of_id;
+    const qty = Math.abs(N(r.qty));
+    const opening = !returned && /opening/i.test(String(r.remarks || ""));
+    const unitCost = N(r.cost_price);
+    movements.push({
+      transaction_id: `SOURCE-PUR-${r.id}`,
+      date: r._date,
+      product_id: r.product_id,
+      company_name: r.company_name,
+      product_category: r.product_category,
+      model: r.model,
+      color: r.color,
+      qty_in: returned ? 0 : qty,
+      qty_out: returned ? qty : 0,
+      unit_cost: unitCost,
+      total_cost: qty * unitCost,
+      reference_type: returned ? "PURCHASE_RETURN" : opening ? "OPENING" : "PURCHASE",
+      reference_id: returned ? (r.return_ref || r.id) : r.po_num,
+      warehouse: "MAIN WAREHOUSE",
+      supplier: r.supplier,
+      remarks: r.remarks || (opening ? "OPENING STOCK" : "")
+    });
+  });
+
+  const saleRows = sales.map(r => ({ ...r, _date: dOf(r) }));
+  const originalSaleCosts = new Map();
+  saleRows.filter(r => !r.return_of_id && r.product_id).forEach(r => {
+    const key = String(r.product_id).trim().toLowerCase();
+    const prior = (costsByProduct.get(key) || []).filter(p => p.date <= r._date);
+    originalSaleCosts.set(String(r.id), prior.length ? prior[prior.length - 1].cost : 0);
+  });
+  saleRows.forEach(r => {
+    if (!r.product_id || !r._date || r._date < STOCK_START) return;
+    const returned = !!r.return_of_id;
+    const qty = Math.abs(N(r.qty));
+    const unitCost = returned
+      ? (originalSaleCosts.get(String(r.return_of_id)) || 0)
+      : (originalSaleCosts.get(String(r.id)) || 0);
+    movements.push({
+      transaction_id: `SOURCE-SALE-${r.id}`,
+      date: r._date,
+      product_id: r.product_id,
+      company_name: r.company_name,
+      product_category: r.product_category,
+      model: r.model,
+      color: r.color,
+      qty_in: returned ? qty : 0,
+      qty_out: returned ? 0 : qty,
+      unit_cost: unitCost,
+      total_cost: qty * unitCost,
+      reference_type: returned ? "SALE_RETURN" : "SALE",
+      reference_id: r.account_no,
+      warehouse: "MAIN WAREHOUSE",
+      remarks: [r.remarks, unitCost ? "" : "No prior purchase cost; review valuation"].filter(Boolean).join(" · ")
+    });
+  });
+
+  const sourceTypes = new Set(["PURCHASE", "PURCHASERETURN", "OPENING", "OPENINGSTOCK", "OPENINGBALANCE", "SALE", "SALERETURN"]);
+  const adjustments = existing.filter(r => !sourceTypes.has(String(r.reference_type || "").replace(/[\s_-]/g, "").toUpperCase()));
+  return adjustments.concat(movements);
+}
 
 async function load() {
   document.body.style.cursor = "wait";
   try {
-    ALL = (await ERP.db.stock.ledger()).map((r, i) => ({ ...r, _d: dOf(r), _k: keyOf(r), _i: i, ref: [r.reference_type, r.reference_id].filter(Boolean).join(" ") }));
-    fill("cat", "Sab categories", "product_category"); fill("comp", "Sab companies", "company_name"); render();
-  } catch (e) { alert("Stock data load nahi hua: " + e.message); } finally { document.body.style.cursor = ""; }
+    const [existing, purchases, sales] = await Promise.all([
+      ERP.db.stock.ledger(),
+      ERP.db.fetchAll("purchase_detail", { order: "id" }),
+      ERP.db.sales.list()
+    ]);
+    ALL = sourceLedger(purchases, sales, existing)
+      .map((r, i) => ({ ...r, _d: dOf(r), _k: keyOf(r), _i: i, ref: [r.reference_type, r.reference_id].filter(Boolean).join(" ") }));
+    fill("cat", "All categories", "product_category"); fill("comp", "All companies", "company_name"); render();
+  } catch (e) { alert("Could not load stock data: " + e.message); } finally { document.body.style.cursor = ""; }
 }
 function fill(id, first, f) {
   const cur = $(id).value, v = [...new Set(ALL.map(r => r[f]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -138,7 +227,7 @@ function render() {
   const det = VIEW === "det", cols = COLS[VIEW], rows = det ? D.per : D.items, gk = det ? "product_category" : "category", s = SORT[VIEW], grp = $("grp").checked;
   const sumIn = D.per.reduce((t, r) => t + N(r.qty_in), 0), sumOut = D.per.reduce((t, r) => t + N(r.qty_out), 0), val = D.per.reduce((t, r) => t + N(r.total_cost), 0);
   $("kpis").innerHTML = `<div class="kpi"><small>Items</small><b>${fm(D.items.length)}</b></div><div class="kpi i"><small>Total Qty In</small><b>${fm(sumIn)}</b></div><div class="kpi o"><small>Total Qty Out</small><b>${fm(sumOut)}</b></div><div class="kpi"><small>Closing Stock</small><b>${fm(D.items.reduce((t, o) => t + o.close, 0))}</b></div><div class="kpi"><small>Total Value (PKR)</small><b>Rs ${fm(val)}</b></div>`;
-  $("sub").textContent = `${D.items.length} items · ${D.per.length} entries · ${$("from").value || "shuru"} → ${$("to").value || "aaj tak"}`;
+  $("sub").textContent = `${D.items.length} items · ${D.per.length} transactions · ${$("from").value || "Beginning"} → ${$("to").value || "Today"}`;
   const chips = [["cat", "Category: " + $("cat").value, $("cat").value], ["comp", "Company: " + $("comp").value, $("comp").value], ["q", "Search: " + $("q").value, $("q").value.trim()], ["stat", "Status: " + $("stat").selectedOptions[0].text, $("stat").value]].filter(c => c[2]);
   $("chips").innerHTML = chips.map(c => `<span class="chip" data-x="${c[0]}">${esc(c[1])} ✕</span>`).join("");
 
@@ -165,7 +254,7 @@ function render() {
     if (grp && g !== cur) { flush(); cur = g; h += `<tr class="gh"><td colspan="${cols.length}">📁 ${esc(g)}</td></tr>`; }
     buf.push(r); h += `<tr>${cols.map(c => `<td class="${c[2] || ""}">${cell(r, c)}</td>`).join("")}</tr>`; });
   flush();
-  $("tb").innerHTML = h || `<tr><td colspan="${cols.length}" class="empty">Koi record nahi mila. Filters badal kar ya Reset karke dekhein.</td></tr>`;
+  $("tb").innerHTML = h || `<tr><td colspan="${cols.length}" class="empty">No records found. Adjust the filters or select Reset to view all records.</td></tr>`;
   $("tf").innerHTML = list.length ? totRow(list, "GRAND TOTAL", "gt") : "";
 }
 
@@ -177,9 +266,9 @@ function openItem(k) {
   const m = ALL.find(r => r._k === k) || {}; let b = opn, ti = 0, to_ = 0;
   const body = rows.map(r => { b += N(r.qty_in) - N(r.qty_out); ti += N(r.qty_in); to_ += N(r.qty_out);
     return `<tr><td>${fd(r._d)}</td><td>${esc(r.ref || "-")}</td><td>${esc(r.vendor || "-")}</td><td class="n">${N(r.qty_in) > 0 ? `<span class="in">+${fm(r.qty_in)}</span>` : "–"}</td><td class="n">${N(r.qty_out) > 0 ? `<span class="out">−${fm(r.qty_out)}</span>` : "–"}</td><td class="n"><b class="${b < 0 ? "out" : ""}">${fm(b)}</b></td><td class="mu">${esc(r.remarks || "")}</td></tr>`; }).join("");
-  $("dT").textContent = `${m.model || "-"} · ${m.product_id || "-"}`; $("dS").textContent = `${m.company_name || "-"} · ${m.product_category || "-"} · ${from || "shuru"} → ${to || "aaj tak"}`;
+  $("dT").textContent = `${m.model || "-"} · ${m.product_id || "-"}`; $("dS").textContent = `${m.company_name || "-"} · ${m.product_category || "-"} · ${from || "Beginning"} → ${to || "Today"}`;
   $("dK").innerHTML = `<div><small>Opening</small><b>${fm(opn)}</b></div><div><small>Total In</small><b class="in">+${fm(ti)}</b></div><div><small>Total Out</small><b class="out">−${fm(to_)}</b></div><div><small>Closing</small><b>${fm(opn + ti - to_)}</b></div>`;
-  $("dB").innerHTML = `<tr><td colspan="5" class="mu">Opening balance</td><td class="n"><b>${fm(opn)}</b></td><td></td></tr>` + (body || '<tr><td colspan="7" class="empty">Is period mein koi entry nahi.</td></tr>');
+  $("dB").innerHTML = `<tr><td colspan="5" class="mu">Opening balance</td><td class="n"><b>${fm(opn)}</b></td><td></td></tr>` + (body || '<tr><td colspan="7" class="empty">No transactions in this date range.</td></tr>');
   $("dlg").showModal();
 }
 
@@ -204,16 +293,16 @@ $("bClose").onclick = () => window.top.go ? window.top.go(null) : history.back()
 $("bCsv").onclick = () => {
   const det = VIEW === "det", rows = det ? D.per.map(r => ({ date: r._d, company: r.company_name, category: r.product_category, product_id: r.product_id, model: r.model, color: r.color, vendor: r.vendor, reference: r.ref, warehouse: r.warehouse, qty_in: r.qty_in, qty_out: r.qty_out, balance: r._bal, remarks: r.remarks }))
     : D.items.map(o => ({ company: o.company, category: o.category, product_id: o.pid, model: o.model, opening: o.opn, qty_in: o.in, qty_out: o.out, closing: o.close }));
-  if (!rows.length) return alert("Export ke liye koi data nahi."); ERP.ui.downloadCSV(`stock_${det ? "detailed" : "summary"}_${ERP.ui.today()}.csv`, rows); };
+  if (!rows.length) return alert("There is no data to export."); ERP.ui.downloadCSV(`stock_${det ? "detailed" : "summary"}_${ERP.ui.today()}.csv`, rows); };
 
 /* voice search (Chrome) */
 (() => { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
-  $("mic").onclick = () => { if (!SR) return alert("Voice input ke liye Chrome use karein."); if (rec) { rec.stop(); return; }
+  $("mic").onclick = () => { if (!SR) return alert("Use Chrome for voice search."); if (rec) { rec.stop(); return; }
     rec = new SR(); rec.lang = "en-US"; rec.interimResults = true; $("mic").classList.add("on");
     rec.onresult = ev => { $("q").value = [...ev.results].map(r => r[0].transcript).join(" ").trim(); $("q").dispatchEvent(new Event("input")); };
     rec.onend = () => { rec = null; $("mic").classList.remove("on"); }; try { rec.start(); } catch (e) { rec = null; } }; })();
 
-(async () => { try { await ERP.auth.guard(); await load(); } catch (e) { alert("Stock Ledger open nahi hua: " + e.message); } })();
+(async () => { try { await ERP.auth.guard(); await load(); } catch (e) { alert("Could not open the Stock Ledger: " + e.message); } })();
 </script>
 </body>
 </html>
