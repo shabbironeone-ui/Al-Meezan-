@@ -127,6 +127,37 @@ const saleContractTotal = rows => {
 let PM = { cash: [], bank: [] };
 let CUST = new Map(), STOCK = [], HIST = [], RETURNED_SALES = new Map(), activeSaleLine = null, mode = "inst", editing = null, active = null, curCust = null;
 const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
+const STOCK_START = "2026-08-01";
+function buildSaleStock(products, purchases, sales, ledger) {
+  const balances = new Map();
+  const add = (productId, quantity) => {
+    if (!productId) return;
+    const key = String(productId).trim().toLowerCase();
+    balances.set(key, (balances.get(key) || 0) + quantity);
+  };
+  purchases.forEach(row => {
+    if (!row.product_id || String(row.purchase_date || "") < STOCK_START) return;
+    const qty = Math.abs(N(row.qty));
+    add(row.product_id, row.return_of_id ? -qty : qty);
+  });
+  sales.forEach(row => {
+    if (!row.product_id || String(row.date || "") < STOCK_START) return;
+    const qty = Math.abs(N(row.qty));
+    add(row.product_id, row.return_of_id ? qty : -qty);
+  });
+  const sourceTypes = new Set(["PURCHASE", "PURCHASERETURN", "OPENING", "OPENINGSTOCK", "OPENINGBALANCE", "SALE", "SALERETURN"]);
+  ledger.forEach(row => {
+    const type = String(row.reference_type || "").replace(/[\s_-]/g, "").toUpperCase();
+    if (sourceTypes.has(type)) return;
+    add(row.product_id, N(row.qty_in) - N(row.qty_out));
+  });
+  return products
+    .map(product => ({
+      ...product,
+      in_stock: balances.get(String(product.product_id || "").trim().toLowerCase()) || 0
+    }))
+    .sort((a, b) => N(b.in_stock) - N(a.in_stock));
+}
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
 /* ---------- mode / customer ---------- */
@@ -413,7 +444,17 @@ $("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("
   const modeOptions = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
   $("colMode").innerHTML = modeOptions;
   const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); resetForm(); ERP.voice.wire(document);
-  try { const [c, s] = await Promise.all([ERP.db.customers.balances(), ERP.db.stock.balance()]); CUST = new Map(c.map(x => [String(x.account_no).trim(), x])); STOCK = s.sort((a, b) => N(b.in_stock) - N(a.in_stock)); }
+  try {
+    const [c, products, purchases, sales, ledger] = await Promise.all([
+      ERP.db.customers.balances(),
+      ERP.db.products.list(),
+      ERP.db.fetchAll("purchase_detail", { order: "id" }),
+      ERP.db.sales.list(),
+      ERP.db.stock.ledger()
+    ]);
+    CUST = new Map(c.map(x => [String(x.account_no).trim(), x]));
+    STOCK = buildSaleStock(products, purchases, sales, ledger);
+  }
   catch (e) { ERP.ui.toast("Could not load customers/stock: " + e.message, "err"); }
   loadHist();
 })();
