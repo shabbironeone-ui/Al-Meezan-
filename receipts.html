@@ -141,6 +141,7 @@
     <div class="range-actions"><button class="btn ghost" id="btnApply" type="button">Apply</button><button class="btn ghost" id="btnToday" type="button" title="Show today">Today</button></div>
   </section>
 
+  <div class="card" id="cashReceiptMapWarning" hidden role="alert" style="margin-top:10px;border-color:#f59e0b;background:#fffbeb;color:#78350f"></div>
   <div class="ledger-toolbar no-print"><span id="cnt" style="color:var(--muted);font-size:13px"></span>
     <span class="actions"><button class="btn sm ghost" id="btnClear" hidden>Clear filters</button><button class="btn sm ghost" id="btnPrint">Print</button><button class="btn sm ghost" id="btnCsv">Export CSV</button></span></div>
   <div class="head"><span>Date</span><span>Receipt No</span><span>Acc No</span><span>Customer Name</span><span>Pay Mode</span><span class="r">Amount</span></div>
@@ -256,6 +257,7 @@ function sortSettings(rows) {
   return rows.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || String(a.display_name).localeCompare(String(b.display_name)));
 }
 let PM = { cash: [], bank: [] }, ENT = [], PARTY_ENTRIES = [], partyEntriesLoaded = false, SETT = [], CUST = null, cur = null, kindNow = null, VIEW = [], MERGED = null;
+let CASH_SALE_RECEIPT_NUMBERS = new Map();
 const TEMP_PARTIES = { ACCOUNT_RECEIVABLE_HEAD: [], ACCOUNT_PAYABLE_HEAD: [] };
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -396,7 +398,22 @@ async function load() {
   $("ledger").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div><br><div class="skeleton"></div></div>';
   try {
     const en = await ERP.db.accounts.entries({ from, to });
-    ENT = en.filter(entry => entry.kind === "Receipt");
+    const cashSales = en.filter(entry => entry.src === "sales" && entry.kind === "Cash sale");
+    const invoices = [...new Set(cashSales.map(entry => String(entry.party_no || entry.voucher_no || "").trim()).filter(Boolean))];
+    let receiptNumbers = [];
+    try { receiptNumbers = await ERP.db.cashSaleReceipts.list(invoices); }
+    catch (e) {
+      $("cashReceiptMapWarning").hidden = false;
+      $("cashReceiptMapWarning").textContent = "Cash sales are shown with invoice-based receipt numbers, but custom numbers cannot be saved until the cash-sale receipt migration is applied. " + e.message;
+    }
+    CASH_SALE_RECEIPT_NUMBERS = new Map(receiptNumbers.map(row => [String(row.invoice_no), row.receipt_no]));
+    ENT = en.filter(entry => entry.kind === "Receipt" || (entry.src === "sales" && entry.kind === "Cash sale"))
+      .map(entry => {
+        if (entry.src !== "sales" || entry.kind !== "Cash sale") return entry;
+        const invoice = String(entry.party_no || entry.voucher_no || "").trim();
+        return { ...entry, voucher_no: CASH_SALE_RECEIPT_NUMBERS.get(invoice) || ERP.db.cashSaleReceipts.defaultNo(invoice) };
+      });
+    if (receiptNumbers.length || !cashSales.length) $("cashReceiptMapWarning").hidden = true;
     render();
   } catch (e) {
     $("cnt").textContent = "";
@@ -447,7 +464,7 @@ function render() {
     <span class="d">${E(entry.date)}</span>
     <span class="v">${E(entry.voucher_no || "")}</span>
     <span class="a">${E(mergedValues_(entry, "party_no"))}</span>
-    <span class="p"><b>${E(mergedValues_(entry, "party") || "(no customer name)")}</b>${entry.parts.length > 1 ? `<small>${M(entry.parts.length)} entries merged · select to view details</small>` : ""}</span>
+    <span class="p"><b>${E(mergedValues_(entry, "party") || "(no customer name)")}</b>${entry.src === "sales" && entry.kind === "Cash sale" ? `<small>Cash sale · Invoice ${E(mergedValues_(entry, "party_no"))}</small>` : ""}${entry.parts.length > 1 ? `<small>${M(entry.parts.length)} entries merged · select to view details</small>` : ""}</span>
     <span class="paymode">${E(acct(entry))}</span>
     <span class="amt num in">${M(Number(entry.money_in) || 0)}</span>
     <span class="mm">${E(entry.date)} · ${E(entry.voucher_no || "")} · ${E(acct(entry))}</span>
@@ -487,7 +504,7 @@ function printDate_(value) {
 }
 function renderPrintReport_(rows) {
   const receiptRows = rows.flatMap(row => row.parts || [row])
-    .filter(row => row.kind === "Receipt");
+    .filter(row => row.kind === "Receipt" || (row.src === "sales" && row.kind === "Cash sale"));
   const receiptIds = new Set(receiptRows.map(row => String(row.voucher_no || "").trim().toLowerCase()).filter(Boolean));
   const receiptNoCount = receiptIds.size + receiptRows.filter(row => !String(row.voucher_no || "").trim()).length;
   const totalAmount = receiptRows.reduce((sum, row) => sum + (Number(row.money_in) || 0), 0);

@@ -27,7 +27,7 @@
   .po-h{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;cursor:pointer}.po-h small{color:var(--muted)}.po-h .amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
   .po-b{padding:0 14px 12px}.po-b .table-wrap{margin-bottom:10px}.po-b .ba{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .ft{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:12px;align-items:end}.ft .wide{grid-column:1/-1}
-  @media(min-width:760px){.ft{grid-template-columns:150px 150px 1fr}.ft .wide{grid-column:auto}}
+  @media(min-width:760px){.ft{grid-template-columns:150px 140px 140px 1fr}.ft .wide{grid-column:auto}}
   .plist{max-height:50vh;overflow:auto}.pi{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
   .pi:hover{border-color:var(--brand)}.pi small{color:var(--muted);display:block}
   .crow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 12px;background:var(--bg);border-radius:10px}
@@ -71,7 +71,8 @@
 
   <!-- LIST -->
   <section id="pList" hidden>
-    <div class="card ft"><div><label>From</label><input type="date" id="hFrom"></div><div><label>To</label><input type="date" id="hTo"></div>
+    <div class="card ft"><div><label>Period</label><select id="hPreset"><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last7">Last 7 days</option><option value="week">This week</option><option value="lastWeek">Last week</option><option value="month" selected>This month</option><option value="lastMonth">Last month</option><option value="custom">Custom</option></select></div>
+      <div><label>From</label><input type="date" id="hFrom"></div><div><label>To</label><input type="date" id="hTo"></div>
       <div class="wide"><label>Search</label><input id="hQ" type="search" placeholder="CAF / invoice, customer name or model"></div></div>
     <p id="hSum" style="color:var(--muted);font-size:13px;margin:0 0 8px"></p><div id="hList"></div>
   </section>
@@ -82,9 +83,10 @@
   <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div></dialog>
 <dialog id="rcpt" class="sheet"><div class="sh-head"><div><h2 id="rcT"></h2><p id="rcS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
   <div class="sh-body"><div class="fsec"><div class="table-wrap" style="margin-bottom:12px"><table style="min-width:340px"><thead><tr><th>For</th><th class="num">Due</th><th>Received (Rs)</th><th></th></tr></thead><tbody id="rcRows"></tbody></table></div>
+    <div id="rcReceiptNoWrap" hidden style="margin-bottom:10px"><label for="rcReceiptNo">Receipt number</label><input id="rcReceiptNo" maxlength="80" autocomplete="off"><small style="display:block;color:var(--muted);font-size:12px">Auto-generated from the invoice number. Enter a different number if needed.</small></div>
     <div class="fgrid"><div><label for="rcDate">Date</label><input id="rcDate" type="date"></div><div><label for="rcMode">Received in</label><select id="rcMode"></select></div></div>
     <p style="margin:12px 0 0;font-size:20px"><b>Total received: Rs <span id="rcTot">0</span></b></p>
-    <p style="margin:4px 0 0;font-size:12px;color:var(--muted)">If the customer paid less, type what was actually paid. The rest stays due.</p></div></div>
+    <p id="rcHint" style="margin:4px 0 0;font-size:12px;color:var(--muted)">If the customer paid less, type what was actually paid. The rest stays due.</p></div></div>
   <div class="sh-foot"><button class="btn ghost" id="rcLater">Not received yet</button><button class="btn ghost" id="rcPrint">Print</button><button class="btn" id="rcPaid">Paid ✓ Save receipts</button></div></dialog>
 
 <dialog id="schd" class="sheet"><div class="sh-head"><div><h2>Installment schedule</h2><p id="scS"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
@@ -274,9 +276,25 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : (editing && origEdit && String(origEdit.date).slice(0, 7) === date.slice(0, 7) ? origEdit.next : monthLabel(date)),
     pay_mode: cash ? $("colMode").value : "" };
   const dd = cash ? null : dues(), rec = cash ? null : { adv: N($("rAdv").value), fee: N($("rFee").value), first: N($("rFirst").value), dueAdv: dd.adv, dueFee: dd.fee, dueFirst: dd.first };
-  try { const r = await ERP.db.sales.save(sale, items, !!editing); ERP.ui.toast((editing ? "Sale updated: " : "Sale saved: ") + r.account_no);
-    const wasCash = cash, wasEdit = !!editing; resetForm(); loadHist();
-    if (wasCash) slip(r.account_no, true); else if (!wasEdit) openReceipt({ ...rec, acc: r.account_no, name: sale.account_title, date }); }
+  try { const r = await ERP.db.sales.save(sale, items, !!editing);
+    const wasCash = cash, wasEdit = !!editing, savedName = sale.account_title;
+    let receiptSetupError = null, receiptNo = "";
+    if (wasCash && !wasEdit) {
+      try {
+        receiptNo = await ERP.db.cashSaleReceipts.suggest(r.account_no);
+        await ERP.db.cashSaleReceipts.save(r.account_no, receiptNo);
+      } catch (e) { receiptSetupError = e; receiptNo = ERP.db.cashSaleReceipts.defaultNo(r.account_no); }
+    }
+    ERP.ui.toast((editing ? "Sale updated: " : "Sale saved: ") + r.account_no);
+    if (receiptSetupError) ERP.ui.toast("Sale saved, but its receipt number could not be saved: " + receiptSetupError.message, "err");
+    resetForm(); loadHist();
+    if (wasCash) {
+      openReceipt({
+        cashEdit: true, edit: wasEdit, acc: r.account_no, name: savedName, date, receiptNo,
+        pay_mode: sale.pay_mode, cashTotal: items.reduce((sum, item) => sum + item.sales_amt + item.processing_fee, 0),
+        sale: { ...sale, account_no: r.account_no }, items
+      });
+    } else openReceipt({ ...rec, acc: r.account_no, name: savedName, date, edit: wasEdit }); }
   catch (e) { ERP.ui.toast(e.message, "err"); }
 });
 $("cancelEdit").onclick = resetForm;
@@ -289,6 +307,26 @@ async function loadHist() {
     RETURNED_SALES = await ERP.db.sales.returnedQuantities(HIST.filter(row => !row.return_of_id).map(row => row.id));
     renderHist();
   } catch (e) { $("hList").innerHTML = `<div class="empty">${E(e.message)}</div>`; }
+}
+function setHistPeriod(period) {
+  if (period === "custom") return;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  let from = new Date(today), to = new Date(today);
+  if (period === "yesterday") { from.setDate(from.getDate() - 1); to = new Date(from); }
+  else if (period === "last7") from.setDate(from.getDate() - 6);
+  else if (period === "week") from.setDate(from.getDate() - ((from.getDay() + 6) % 7));
+  else if (period === "lastWeek") {
+    from.setDate(from.getDate() - ((from.getDay() + 6) % 7) - 7);
+    to = new Date(from); to.setDate(to.getDate() + 6);
+  } else if (period === "month") from.setDate(1);
+  else if (period === "lastMonth") {
+    from = new Date(today.getFullYear(), today.getMonth() - 1, 1, 12);
+    to = new Date(today.getFullYear(), today.getMonth(), 0, 12);
+  }
+  const iso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  $("hFrom").value = iso(from);
+  $("hTo").value = iso(to);
 }
 function groups() { const q = $("hQ").value.trim().toLowerCase(), g = new Map();
   HIST.filter(r => !q || [r.account_no, r.account_title, r.model, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.account_no; (g.get(k) || g.set(k, []).get(k)).push(r); }); return g; }
@@ -358,7 +396,9 @@ $("hList").onclick = async e => {
       $("gInv").hidden = true; $("editBar").hidden = false; $("editTxt").textContent = `Editing ${acc}. Saving replaces the whole sale and its stock entry.`; totals(); window.scrollTo(0, 0); } catch (er) { ERP.ui.toast(er.message, "err"); }
   } else if (confirm(`Delete sale ${acc}? Its stock-out entries are removed too.`)) { try { await ERP.db.sales.remove(acc); ERP.ui.toast("Sale deleted"); loadHist(); } catch (er) { ERP.ui.toast(er.message, "err"); } }
 };
-["hFrom", "hTo"].forEach(i => $(i).onchange = loadHist); $("hQ").oninput = ERP.ui.debounce(renderHist, 200);
+$("hPreset").onchange = () => { setHistPeriod($("hPreset").value); loadHist(); };
+["hFrom", "hTo"].forEach(i => $(i).onchange = () => { $("hPreset").value = "custom"; loadHist(); });
+$("hQ").oninput = ERP.ui.debounce(renderHist, 200);
 
 const ST = { PAID: ["ok", "✓ Paid"], PARTIAL: ["warn", "Partial"], OVERDUE: ["bad", "Overdue"], DUE: ["warn", "Due this month"], UPCOMING: ["", "Upcoming"], SKIPPED: ["", "Skipped"] };
 async function loadSch(el) {
@@ -368,33 +408,142 @@ async function loadSch(el) {
   } catch (e) { el.innerHTML = `<small style="color:var(--danger)">Schedule: ${E(e.message)}</small>`; }
 }
 
-/* ---------- receipt window (opens after Save) ---------- */
-let RC = null; const DUEKEY = { adv: "dueAdv", fee: "dueFee", first: "dueFirst" };
-function openReceipt(r) {
-  RC = r; $("rcT").textContent = "Receipt · CAF " + r.acc; $("rcS").textContent = r.name; $("rcDate").value = r.date;
+/* ---------- receipt window after saving a sale ---------- */
+let RC = null; const DUEKEY = { adv: "dueAdv", fee: "dueFee", first: "dueFirst", cashTotal: "cashTotal" };
+const RECEIPT_KIND = { Advance: "adv", "Processing Fee": "fee", "1st Installment": "first" };
+async function openReceipt(r) {
+  const existing = new Map();
+  let receiptNo = "";
+  if (r.cashEdit) {
+    if (r.receiptNo) receiptNo = r.receiptNo;
+    else {
+      try { receiptNo = await ERP.db.cashSaleReceipts.suggest(r.acc); }
+      catch (e) {
+        receiptNo = ERP.db.cashSaleReceipts.defaultNo(r.acc);
+        ERP.ui.toast("Cash receipt-number storage is unavailable. Apply the cash-sale receipt migration: " + e.message, "err");
+      }
+    }
+  }
+  if (r.edit && !r.cashEdit) {
+    try {
+      const saved = await ERP.db.receipts.list({ accNo: r.acc });
+      saved.filter(row => row.remarks === "Received at sale" && Object.prototype.hasOwnProperty.call(RECEIPT_KIND, row.voucher_no))
+        .forEach(row => {
+          const kind = RECEIPT_KIND[row.voucher_no];
+          if (!existing.has(kind)) existing.set(kind, []);
+          existing.get(kind).push(row);
+        });
+      const duplicates = [...existing].filter(([, rows]) => rows.length > 1);
+      if (duplicates.length) {
+        ERP.ui.toast("Multiple sale-time receipts exist for " + duplicates.map(([kind]) => kind).join(", ") + ". Edit them from Receipts to avoid changing the wrong entry.", "err");
+        return;
+      }
+    } catch (e) {
+      ERP.ui.toast("Could not load saved sale payments: " + e.message, "err");
+      return;
+    }
+  }
+  RC = { ...r, existing, receiptNo };
+  $("rcT").textContent = r.cashEdit
+    ? (r.edit ? "Edit cash receipt · Invoice " : "Cash sale receipt · Invoice ") + r.acc
+    : (r.edit ? "Edit payments · CAF " : "Receipt · CAF ") + r.acc;
+  $("rcS").textContent = r.name;
+  $("rcReceiptNoWrap").hidden = !r.cashEdit;
+  $("rcReceiptNo").value = receiptNo;
+  $("rcHint").hidden = !!r.cashEdit;
+  const savedRows = [...existing.values()].flat();
+  $("rcDate").value = savedRows[0] ? savedRows[0].date : r.date;
+  $("rcDate").disabled = !!r.cashEdit;
   const modes = PM.all || [...new Set([...PM.cash, ...PM.bank])];
   $("rcMode").innerHTML = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
-  $("rcMode").value = PM.cash[0] || PM.bank[0] || "";
-  $("rcRows").innerHTML = [["Advance", "adv"], ["Processing fee", "fee"], ["1st installment", "first"]].map(([l, k]) => `<tr><td>${l}</td><td class="num">${M(r[DUEKEY[k]])}</td><td><input class="rc-in" data-k="${k}" type="number" inputmode="decimal" min="0" value="${r[k] || ""}" style="min-width:110px"></td><td class="short" data-s="${k}" style="font-size:12px;white-space:nowrap"></td></tr>`).join("");
+  const savedMode = savedRows[0] && savedRows[0].pay_mode;
+  const selectedMode = r.cashEdit ? r.pay_mode : savedMode;
+  if (selectedMode && ![...$("rcMode").options].some(option => option.value === selectedMode)) $("rcMode").add(new Option(selectedMode + " (legacy)", selectedMode));
+  $("rcMode").value = selectedMode || PM.cash[0] || PM.bank[0] || "";
+  RC.initialDate = $("rcDate").value;
+  RC.initialMode = $("rcMode").value;
+  if (r.cashEdit) {
+    RC.cashTotal = N(r.cashTotal);
+    $("rcRows").innerHTML = `<tr><td>Cash sale</td><td class="num">${M(RC.cashTotal)}</td><td><input class="rc-in" data-k="cashTotal" type="number" value="${RC.cashTotal}" readonly style="min-width:110px"></td><td class="short" data-s="cashTotal" style="font-size:12px;white-space:nowrap"></td></tr>`;
+  } else {
+    $("rcRows").innerHTML = [["Advance", "adv"], ["Processing fee", "fee"], ["1st installment", "first"]].map(([label, kind]) => {
+      const row = (existing.get(kind) || [])[0];
+      const value = row ? row.amount : r.edit ? "" : r[kind];
+      return `<tr><td>${label}</td><td class="num">${M(r[DUEKEY[kind]])}</td><td><input class="rc-in" data-k="${kind}" type="number" inputmode="decimal" min="0" value="${value || ""}" style="min-width:110px"></td><td class="short" data-s="${kind}" style="font-size:12px;white-space:nowrap"></td></tr>`;
+    }).join("");
+  }
+  RC.initialReceiptNo = receiptNo;
+  $("rcLater").textContent = r.cashEdit ? "Close" : r.edit ? "Close without changes" : "Not received yet";
+  $("rcPaid").textContent = r.cashEdit ? "Save receipt" : r.edit ? "Save payment changes" : "Paid ✓ Save receipts";
   rcCalc(); $("rcpt").showModal();
 }
 function rcCalc() { let t = 0; document.querySelectorAll("#rcRows .rc-in").forEach(i => { const v = N(i.value), d = N(RC[DUEKEY[i.dataset.k]]); t += v; const c = document.querySelector(`[data-s="${i.dataset.k}"]`);
   c.textContent = d > 0 && v < d ? "short " + M(d - v) : v > d && v > 0 ? "extra " + M(v - d) : ""; c.style.color = v < d ? "var(--warn)" : "var(--muted)"; }); $("rcTot").textContent = M(t); }
 $("rcRows").addEventListener("input", rcCalc);
-$("rcLater").onclick = () => { $("rcpt").close(); ERP.ui.toast("Sale saved. Enter the receipts later in Receipts."); };
+$("rcLater").onclick = () => {
+  $("rcpt").close();
+  if (!RC.cashEdit && !RC.edit) ERP.ui.toast("Sale saved. Enter the receipts later in Receipts.");
+};
 $("rcPaid").onclick = () => ERP.ui.busy($("rcPaid"), async () => {
   const v = {}; document.querySelectorAll("#rcRows .rc-in").forEach(i => v[i.dataset.k] = N(i.value));
+  if (RC.cashEdit) {
+    try {
+      const receiptNo = $("rcReceiptNo").value.trim() || await ERP.db.cashSaleReceipts.suggest(RC.acc);
+      if (!receiptNo) return ERP.ui.toast("Enter a receipt number", "err");
+      await ERP.db.cashSaleReceipts.save(RC.acc, receiptNo);
+      RC.receiptNo = receiptNo;
+      if (RC.initialMode !== $("rcMode").value) {
+        await ERP.db.sales.save({ ...RC.sale, pay_mode: $("rcMode").value }, RC.items, true);
+      }
+      ERP.ui.toast("Receipt " + receiptNo + " saved" + (RC.initialMode !== $("rcMode").value ? " · payment mode updated" : ""));
+      $("rcpt").close();
+      if (!RC.edit) slip(RC.acc, true);
+    } catch (e) { ERP.ui.toast(e.message, "err"); }
+    return;
+  }
   const base = { date: $("rcDate").value, account_no: RC.acc, account_title: RC.name, pay_mode: $("rcMode").value, remarks: "Received at sale" }, rows = [];
   if (v.adv > 0) rows.push({ ...base, voucher_no: "Advance", account_head: "Advance", amount: v.adv });
   if (v.fee > 0) rows.push({ ...base, voucher_no: "Processing Fee", account_head: "Processing Fee", amount: v.fee });
   if (v.first > 0) rows.push({ ...base, voucher_no: "1st Installment", account_head: "Recovery", amount: v.first });
   if (!base.date) return ERP.ui.toast("Select the date", "err");
-  if (!rows.length) return ERP.ui.toast("Enter at least one amount, or press 'Not received yet'", "err");
-  try { await ERP.db.receipts.add(rows); ERP.ui.toast(rows.length + " receipt" + (rows.length > 1 ? "s" : "") + " saved"); $("rcpt").close(); openSchedule(RC.acc, RC.name); }
+  if (!rows.length && !RC.edit) return ERP.ui.toast("Enter at least one amount, or press 'Not received yet'", "err");
+  try {
+    if (RC.edit) {
+      let changed = 0;
+      const dateChanged = base.date !== RC.initialDate, modeChanged = base.pay_mode !== RC.initialMode;
+      for (const [kind, voucher] of [["adv", "Advance"], ["fee", "Processing Fee"], ["first", "1st Installment"]]) {
+        const prior = (RC.existing.get(kind) || [])[0], amount = v[kind];
+        if (prior) {
+          const unchanged = N(prior.amount) === amount
+            && (!dateChanged || prior.date === base.date)
+            && (!modeChanged || prior.pay_mode === base.pay_mode);
+          if (unchanged) continue;
+          if (amount > 0) {
+            const fields = { account_title: base.account_title, amount };
+            if (dateChanged) fields.date = base.date;
+            if (modeChanged) fields.pay_mode = base.pay_mode;
+            await ERP.db.receipts.update(prior.id, fields);
+          }
+          else await ERP.db.receipts.remove([prior.id]);
+          changed++;
+        } else if (amount > 0) {
+          const row = rows.find(item => item.voucher_no === voucher);
+          if (row) { await ERP.db.receipts.add([row]); changed++; }
+        }
+      }
+      ERP.ui.toast(changed ? changed + " payment " + (changed === 1 ? "entry" : "entries") + " updated" : "No payment changes to save");
+    } else {
+      await ERP.db.receipts.add(rows);
+      ERP.ui.toast(rows.length + " receipt" + (rows.length > 1 ? "s" : "") + " saved");
+    }
+    $("rcpt").close();
+    if (!/^INV-/i.test(RC.acc)) openSchedule(RC.acc, RC.name);
+  }
   catch (e) { ERP.ui.toast(e.message, "err"); }
 });
 $("rcPrint").onclick = () => { const lines = [...document.querySelectorAll("#rcRows .rc-in")].map(i => [i.closest("tr").children[0].textContent, N(i.value)]).filter(x => x[1] > 0), tot = lines.reduce((s, x) => s + x[1], 0);
-  $("printArea").innerHTML = `<h2>${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>Receipt · CAF <b>${E(RC.acc)}</b> · ${E($("rcDate").value)}</div><div>Received from: <b>${E(RC.name)}</b></div>
+  const cash = RC.cashEdit, receiptNo = cash ? $("rcReceiptNo").value.trim() || ERP.db.cashSaleReceipts.defaultNo(RC.acc) : "";
+  $("printArea").innerHTML = `<h2>${E(ERP_CONFIG.APP_NAME.replace(" ERP", ""))}</h2><div>${cash ? `Cash sale receipt · <b>${E(receiptNo)}</b> · Invoice ${E(RC.acc)}` : `Receipt · CAF <b>${E(RC.acc)}</b>`} · ${E($("rcDate").value)}</div><div>Received from: <b>${E(RC.name)}</b></div>
     <table><tbody>${lines.map(x => `<tr><td>${E(x[0])}</td><td style="text-align:right">Rs ${M(x[1])}</td></tr>`).join("")}</tbody></table><div><b>Total received: Rs ${M(tot)}</b></div><div>Account: ${E($("rcMode").value)}</div><p style="margin-top:14px">Thank you.</p>`; window.print(); };
 
 /* ---------- schedule window: untick a month = nothing due that month, later installments move ahead ---------- */
@@ -443,19 +592,24 @@ $("tList").onclick = () => { $("tList").setAttribute("aria-selected", true); $("
   const modes = PM.all || [...new Set([...PM.cash, ...PM.bank])];
   const modeOptions = modes.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
   $("colMode").innerHTML = modeOptions;
-  const t = new Date(); $("hFrom").value = new Date(t.getFullYear(), t.getMonth(), 1, 12).toISOString().slice(0, 10); resetForm(); ERP.voice.wire(document);
+  setHistPeriod("month"); resetForm(); ERP.voice.wire(document);
   try {
-    const [c, products, purchases, sales, ledger] = await Promise.all([
-      ERP.db.customers.balances(),
+    const customers = await ERP.db.customers.balances();
+    CUST = new Map(customers.map(x => [String(x.account_no).trim(), x]));
+  } catch (e) {
+    ERP.ui.toast("Could not load customer balances: " + e.message, "err");
+  }
+  try {
+    const [products, purchases, sales, ledger] = await Promise.all([
       ERP.db.products.list(),
       ERP.db.fetchAll("purchase_detail", { order: "id" }),
       ERP.db.sales.list(),
       ERP.db.stock.ledger()
     ]);
-    CUST = new Map(c.map(x => [String(x.account_no).trim(), x]));
     STOCK = buildSaleStock(products, purchases, sales, ledger);
+  } catch (e) {
+    ERP.ui.toast("Could not load stock products: " + e.message, "err");
   }
-  catch (e) { ERP.ui.toast("Could not load customers/stock: " + e.message, "err"); }
   loadHist();
 })();
 </script>
