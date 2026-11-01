@@ -1,965 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Al Meezan ERP - Category & Dynamic Stock Ledger</title>
-  <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <style>
-    body { font-family: Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px; color: #1f2937; }
-    .container { max-width: 1450px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-blue { background-color: #2563eb; color: white; }
-    .btn-green { background-color: #16a34a; color: white; }
-    .btn-purple { background-color: #7c3aed; color: white; }
-    .btn-red { background-color: #dc2626; color: white; }
-    .btn-gray { background-color: #4b5563; color: white; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .card { background: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .card-title { font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: bold; }
-    .card-value { font-size: 20px; font-weight: 800; margin-top: 5px; }
-    
-    .filter-section { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-    .date-filter { display: flex; gap: 8px; align-items: center; background: #f9fafb; padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
-    .date-filter input { border: 1px solid #d1d5db; padding: 4px 6px; border-radius: 3px; font-size: 13px; }
-    
-    .table-container { max-height: 500px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    
-    th, td { 
-      padding: 6px 8px !important; 
-      text-align: left; 
-      border-bottom: 1px solid #e5e7eb; 
-      font-size: 12px !important; 
-      white-space: nowrap; 
-    }
-    
-    th { background-color: #f8fafc; font-weight: bold; color: #374151; position: sticky; top: 0; z-index: 10; box-shadow: inset 0 -2px 0 #e5e7eb; vertical-align: middle; }
-    tr:hover { background-color: #f9fafb; }
-    
-    .category-group-row { background-color: #e2e8f0 !important; font-weight: bold; color: #1e293b; font-size: 13px; white-space: normal !important; }
-    .category-subtotal-row { background-color: #f1f5f9 !important; font-weight: bold; color: #334155; border-top: 2px solid #cbd5e1; white-space: normal !important; }
-
-    tfoot tr th { position: sticky; bottom: 0; background-color: #0f172a; color: white; z-index: 10; border-top: 2px solid #334155; font-weight: bold; white-space: nowrap; }
-
-    .col-search { width: 100%; padding: 4px 6px; margin-top: 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 11px; font-weight: normal; background-color: #ffffff; }
-    .col-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
-
-    .summary-col-search { width: 75px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 11px; font-weight: normal; background-color: #ffffff; }
-    .summary-col-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
-
-    .clickable-link { color: #2563eb; cursor: pointer; text-decoration: underline; font-weight: 500; }
-    .clickable-link:hover { color: #1d4ed8; }
-    .sortable-th { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 4px; }
-    .sortable-th:hover { color: #2563eb; }
-
-    .print-signature { display: none; margin-top: 30px; justify-content: space-between; padding: 0 40px; font-weight: bold; font-size: 13px; }
-
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-container { background: white; width: 85%; max-width: 950px; max-height: 80vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; }
-    .modal-header { padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
-    .modal-footer { padding: 15px 20px; border-top: 1px solid #e5e7eb; text-align: right; background: #f8fafc; }
-
-    @media print {
-      body { background: white; padding: 0; }
-      .container { box-shadow: none; padding: 5px; max-width: 100%; }
-      .filter-section, .header button, .cards-grid, .col-search, .summary-col-search, .form-check { display: none !important; }
-      .table-container { max-height: none; overflow: visible; border: none; }
-      th { position: static !important; background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
-      .print-signature { display: flex !important; page-break-inside: avoid; }
-      tr { page-break-inside: avoid; }
-    }
-  
-    .auto-mic-wrap { position: relative; display: inline-block; width: 100%; }
-    .auto-mic-btn {
-      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
-      width: 20px; height: 20px; padding: 0; border: none; background: transparent;
-      cursor: pointer; font-size: 12px; line-height: 1; z-index: 5; opacity: 0.55;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auto-mic-btn:hover { opacity: 1; }
-    .auto-mic-btn.listening {
-      background: #c62828; border-radius: 50%; color: #fff; opacity: 1;
-      animation: autoMicPulse 1s infinite;
-    }
-    @keyframes autoMicPulse {
-      0% { box-shadow: 0 0 0 0 rgba(198,40,40,0.5); }
-      70% { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
-      100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock Ledger</title>
+<style>
+:root{--brand:#1d4ed8;--soft:#eaf1ff;--line:#e3e8ef;--muted:#64748b;--ink:#0f172a;--bg:#f4f6fa;--in:#047857;--out:#b91c1c;--r:14px;--sh:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.05)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.page{max-width:1500px;margin:0 auto;padding:0 14px 40px}
+.top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(244,246,250,.93);backdrop-filter:blur(8px);padding:14px 0 12px}
+.top h1{margin:0;font-size:20px}.top p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:10px;padding:8px 13px;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--brand);border-color:#c7d6f5}.btn.ghost:hover{background:var(--soft)}
+.btn.danger{background:#fff;color:#dc2626;border-color:#fecaca}
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:12px}
+@media(min-width:900px){.kpis{grid-template-columns:repeat(5,1fr)}}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh);border-top:3px solid var(--brand)}
+.kpi small{display:block;color:var(--muted);font-size:12px;font-weight:600}.kpi b{font-size:21px;font-variant-numeric:tabular-nums}
+.kpi.i{border-top-color:#10b981}.kpi.i b{color:var(--in)}.kpi.o{border-top-color:#ef4444}.kpi.o b{color:var(--out)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px;margin-bottom:10px}
+.bar input,.bar select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.bar input:focus,.bar select:focus{outline:2px solid var(--brand);outline-offset:1px}
+.sq{position:relative;flex:1;min-width:230px}.sq input{width:100%;padding-right:34px}
+.mic{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:15px;opacity:.6}.mic.on{opacity:1;background:#fee2e2;border-radius:50%}
+.seg{display:flex;background:#e2e8f0;border-radius:10px;padding:3px}
+.seg button{border:0;background:none;font:inherit;font-weight:600;color:var(--muted);padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--brand);box-shadow:var(--sh)}
+.ck{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.chips:empty{display:none}
+.chip{background:var(--soft);color:#1e3a8a;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.tw{overflow:auto;max-height:calc(100vh - 330px);min-height:240px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:#f8fafc;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#475569;cursor:pointer;user-select:none;z-index:2}
+thead th:hover{color:var(--brand)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:#f8fafc}
+.gh td{background:#e2e8f0;font-weight:700;border:0}
+.st td{background:#f1f5f9;font-weight:700;text-align:right}.st td:first-child{text-align:right;color:#475569}
+tfoot td{position:sticky;bottom:0;background:#0f172a;color:#fff;font-weight:700;text-align:right;border:0}
+.lk{color:var(--brand);cursor:pointer;text-decoration:none;border-bottom:1px dotted var(--brand)}.lk:hover{color:#1e3a8a}
+.in{color:var(--in);font-weight:700}.out{color:var(--out);font-weight:700}.mu{color:var(--muted)}
+.bg{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-left:6px}
+.bg.neg{background:#fee2e2;color:#991b1b}.bg.zero{background:#fef3c7;color:#92400e}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+dialog{border:0;border-radius:18px;padding:0;width:min(900px,95vw);max-height:90vh;box-shadow:0 20px 50px rgba(15,23,42,.3)}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+.dh{display:flex;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}.dh h2{margin:0;font-size:17px}.dh p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.dk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 18px}.dk div{background:#f8fafc;border-radius:10px;padding:8px 10px}.dk small{display:block;color:var(--muted);font-size:11px}.dk b{font-size:16px}
+.db{padding:0 18px 14px;overflow:auto;max-height:55vh}
+.sign{display:none;justify-content:space-between;margin-top:36px;padding:0 40px;font-weight:700}
+@media print{body{background:#fff}.top .acts,.bar,.chips,.kpis{display:none}.tw{max-height:none;overflow:visible;border:0;box-shadow:none}thead th{position:static}tfoot td{position:static}.sign{display:flex}.page{padding:0}}
 </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div>
-        <h2 style="margin: 0; font-size: 22px;"><i class="fas fa-warehouse" style="color: #2563eb; margin-right: 8px;"></i>Stock Ledger & Audit Dashboard</h2>
-        <p style="margin: 5px 0 0 0; font-size: 13px; color: #6b7280;">Al Meezan ERP Professional • Stock Tracking</p>
-      </div>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-        <!-- Detailed View Checkbox -->
-        <div class="form-check" style="display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; cursor: pointer;">
-          <input type="checkbox" id="detailedViewToggle" checked onchange="applyFilters()" style="cursor: pointer; width: 14px; height: 14px;">
-          <label for="detailedViewToggle" style="cursor: pointer; font-weight: bold; color: #374151; user-select: none;">Detailed View</label>
-        </div>
-
-        <button onclick="exportToCSV()" class="btn btn-green"><i class="fas fa-file-csv"></i> CSV</button>
-        <button onclick="exportToPDF()" class="btn btn-purple"><i class="fas fa-file-pdf"></i> PDF / Print</button>
-        <button onclick="loadStockData()" class="btn btn-blue"><i class="fas fa-sync-alt"></i> Refresh</button>
-        <button onclick="window.top.go ? window.top.go(null) : history.back()" class="btn btn-red"><i class="fas fa-times"></i> Close</button>
-      </div>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="cards-grid">
-      <div class="card" style="border-left-color: #2563eb;">
-        <div class="card-title">Total Entries</div>
-        <div id="totalEntries" class="card-value" style="color: #1f2937;">0</div>
-      </div>
-      <div class="card" style="border-left-color: #16a34a;">
-        <div class="card-title">Total Qty In</div>
-        <div id="totalQtyIn" class="card-value" style="color: #16a34a;">0</div>
-      </div>
-      <div class="card" style="border-left-color: #dc2626;">
-        <div class="card-title">Total Qty Out</div>
-        <div id="totalQtyOut" class="card-value" style="color: #dc2626;">0</div>
-      </div>
-      <div class="card" style="border-left-color: #4f46e5;">
-        <div class="card-title">Total Valuation (PKR)</div>
-        <div id="totalValuation" class="card-value" style="color: #4f46e5;">Rs 0</div>
-      </div>
-    </div>
-
-    <!-- Date Filter & Reset Section -->
-    <div class="filter-section">
-      <div class="date-filter">
-        <span>From:</span>
-        <input type="date" id="fromDateFilter" onchange="applyFilters()">
-      </div>
-      <div class="date-filter">
-        <span>To:</span>
-        <input type="date" id="toDateFilter" onchange="applyFilters()">
-      </div>
-      <button onclick="clearFilters()" class="btn btn-gray" style="padding: 8px 12px; font-size: 13px;"><i class="fas fa-undo"></i> Reset All Filters</button>
-    </div>
-
-    <!-- Data Table Container -->
-    <div class="table-container">
-      <table id="stockTable">
-        <thead id="tableHeaderContainer">
-          <!-- Dynamically populated headers -->
-        </thead>
-        <tbody id="ledgerTableBody">
-          <tr><td colspan="11" style="text-align: center; padding: 20px; color: #6b7280;">Loading stock records...</td></tr>
-        </tbody>
-        <tfoot id="tableFooterContainer">
-          <!-- Dynamically populated footer -->
-        </tfoot>
-      </table>
-    </div>
-
-    <!-- Signature Block for Printed PDF Report -->
-    <div class="print-signature">
-      <div>
-        <p>___________________________</p>
-        <p>Prepared / Checked By</p>
-      </div>
-      <div>
-        <p>___________________________</p>
-        <p>Authorized Signature</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- POPUP MODAL FOR LEDGER DRILLDOWN -->
-  <div id="ledgerModal" class="modal-overlay">
-    <div class="modal-container">
-      <div class="modal-header">
-        <h3 id="modalTitle" style="margin: 0; font-size: 16px; font-weight: bold;">Ledger Details</h3>
-        <button onclick="closeModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280;">&times;</button>
-      </div>
-      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Details (Company / Model)</th>
-              <th style="text-align: center;">Opn Blnc</th>
-              <th style="text-align: center;">In</th>
-              <th style="text-align: center;">Out</th>
-              <th style="text-align: center;">Balance</th>
-              <th>Remarks</th>
-            </tr>
-          </thead>
-          <tbody id="modalTableBody">
-            <!-- Dynamic rows -->
-          </tbody>
-        </table>
-      </div>
-      <div class="modal-footer">
-        <button onclick="closeModal()" class="btn btn-gray">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/db.js"></script>
-  <script src="js/auth.js"></script>
-  <script>
-    let globalStockData = [];
-    let filteredStockData = [];
-    let currentModalRows = [];
-    let mainSortDirections = {};
-    let summarySortDirections = {};
-    let currentSummaryData = [];
-
-    window.onload = async function() {
-      try {
-        await ERP.auth.guard();
-        await loadStockData();
-      } catch (err) {
-        alert("Could not open Stock Ledger: " + err.message);
-      }
-    };
-
-    function formatDateToCustom(dateString) {
-      if (!dateString) return '';
-      var parts = dateString.toString().split('T')[0].split('-');
-      if (parts.length === 3) {
-        var year = parts[0].slice(-2);
-        var month = parseInt(parts[1], 10);
-        var day = parseInt(parts[2], 10);
-        return day + '-' + month + '-' + year;
-      }
-      return dateString;
-    }
-
-    async function loadStockData() {
-      document.body.style.cursor = 'wait';
-      try {
-        globalStockData = await ERP.db.stock.ledger();
-        applyFilters();
-      } catch (err) {
-        alert("Error loading stock data: " + err.message);
-      } finally {
-        document.body.style.cursor = 'default';
-      }
-    }
-
-    function applyFilters() {
-      let activeElementId = document.activeElement ? document.activeElement.id : null;
-      let isDetailed = document.getElementById("detailedViewToggle").checked;
-
-      let fromDate = document.getElementById("fromDateFilter").value;
-      let toDate = document.getElementById("toDateFilter").value;
-
-      let sDate = document.getElementById("searchDate") ? document.getElementById("searchDate").value.toLowerCase().trim() : "";
-      let sCompany = document.getElementById("searchCompany") ? document.getElementById("searchCompany").value.toLowerCase().trim() : "";
-      let sCategory = document.getElementById("searchCategory") ? document.getElementById("searchCategory").value.toLowerCase().trim() : "";
-      let sProdId = document.getElementById("searchProdId") ? document.getElementById("searchProdId").value.toLowerCase().trim() : "";
-      let sModel = document.getElementById("searchModel") ? document.getElementById("searchModel").value.toLowerCase().trim() : "";
-      let sVendor = document.getElementById("searchVendor") ? document.getElementById("searchVendor").value.toLowerCase().trim() : "";
-      let sRemarks = document.getElementById("searchRemarks") ? document.getElementById("searchRemarks").value.toLowerCase().trim() : "";
-
-      let openingBalances = {};
-      if (fromDate) {
-        globalStockData.forEach(row => {
-          if (row.date && row.date < fromDate) {
-            let itemKey = (row.company_name || '') + '|' + (row.product_category || '') + '|' + (row.model || '');
-            if (!openingBalances[itemKey]) openingBalances[itemKey] = 0;
-            openingBalances[itemKey] += (Number(row.qty_in) || 0) - (Number(row.qty_out) || 0);
-          }
-        });
-      }
-
-      filteredStockData = globalStockData.filter(row => {
-        let rowDateStr = row.date ? row.date.toString().split('T')[0] : '';
-        let formattedDateStr = formatDateToCustom(row.date).toLowerCase();
-        
-        if (fromDate && rowDateStr < fromDate) return false;
-        if (toDate && rowDateStr > toDate) return false;
-
-        if (isDetailed) {
-          if (sDate && !rowDateStr.includes(sDate) && !formattedDateStr.includes(sDate)) return false;
-          if (sCompany && (!row.company_name || !row.company_name.toLowerCase().includes(sCompany))) return false;
-          if (sCategory && (!row.product_category || !row.product_category.toLowerCase().includes(sCategory))) return false;
-          if (sProdId && (!row.product_id || !row.product_id.toLowerCase().includes(sProdId))) return false;
-          if (sModel && (!row.model || !row.model.toLowerCase().includes(sModel))) return false;
-          if (sVendor && (!row.vendor || !row.vendor.toLowerCase().includes(sVendor))) return false;
-          if (sRemarks && (!row.remarks || !row.remarks.toLowerCase().includes(sRemarks))) return false;
-        }
-
-        return true;
-      });
-
-      filteredStockData = filteredStockData.map(row => {
-        let itemKey = (row.company_name || '') + '|' + (row.product_category || '') + '|' + (row.model || '');
-        let opn = fromDate ? (openingBalances[itemKey] || 0) : 0;
-        let qtyIn = Number(row.qty_in) || 0;
-        let qtyOut = Number(row.qty_out) || 0;
-        let correctBalance = opn + qtyIn - qtyOut;
-        return { ...row, opening_balance: opn, balance: correctBalance };
-      });
-
-      if (!isDetailed) {
-        renderSummaryTable(filteredStockData);
-      } else {
-        renderDetailedHeadersAndTable(filteredStockData, sCategory, sCompany, sProdId, sModel, sDate, sVendor, sRemarks);
-      }
-
-      updateSummary(filteredStockData);
-
-      if (activeElementId && document.getElementById(activeElementId)) {
-        let el = document.getElementById(activeElementId);
-        el.focus();
-        let val = el.value;
-        el.value = '';
-        el.value = val;
-      }
-    }
-
-    function renderDetailedHeadersAndTable(data, sCategory, sCompany, sProdId, sModel, sDate, sVendor, sRemarks) {
-      const headerContainer = document.getElementById("tableHeaderContainer");
-      headerContainer.innerHTML = `
-        <tr>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('date')">Date <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchDate" class="col-search" placeholder="Search date..." value="${sDate}" oninput="applyFilters()">
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('company')">Company Name <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchCompany" class="col-search" placeholder="Search company..." value="${sCompany}" oninput="applyFilters()">
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('category')">Category <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchCategory" class="col-search" placeholder="Search category..." value="${sCategory}" oninput="applyFilters()">
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('prodId')">Product ID <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchProdId" class="col-search" placeholder="Search product id..." value="${sProdId}" oninput="applyFilters()">
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('model')">Model <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchModel" class="col-search" placeholder="Search model..." value="${sModel}" oninput="applyFilters()">
-          </th>
-          <th style="text-align: center;">
-            <div class="sortable-th" onclick="sortMainTable('opn')">Opn Blnc <i class="fas fa-sort text-gray-400"></i></div>
-          </th>
-          <th style="text-align: center;">
-            <div class="sortable-th" onclick="sortMainTable('in')">Qty In <i class="fas fa-sort text-gray-400"></i></div>
-          </th>
-          <th style="text-align: center;">
-            <div class="sortable-th" onclick="sortMainTable('out')">Qty Out <i class="fas fa-sort text-gray-400"></i></div>
-          </th>
-          <th style="text-align: center;">
-            <div class="sortable-th" onclick="sortMainTable('balance')">Balance <i class="fas fa-sort text-gray-400"></i></div>
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('vendor')">Supplier / Vendor <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchVendor" class="col-search" placeholder="Search vendor..." value="${sVendor}" oninput="applyFilters()">
-          </th>
-          <th>
-            <div class="sortable-th" onclick="sortMainTable('remarks')">Remarks <i class="fas fa-sort text-gray-400"></i></div>
-            <input type="text" id="searchRemarks" class="col-search" placeholder="Search remarks..." value="${sRemarks}" oninput="applyFilters()">
-          </th>
-        </tr>
-      `;
-
-      const footerContainer = document.getElementById("tableFooterContainer");
-      footerContainer.innerHTML = `
-        <tr>
-          <th colspan="5" style="text-align: right;">GRAND TOTAL:</th>
-          <th id="footerOpnBlnc" style="text-align: center;">0</th>
-          <th id="footerQtyIn" style="text-align: center;">0</th>
-          <th id="footerQtyOut" style="text-align: center;">0</th>
-          <th id="footerBalance" style="text-align: center;">0</th>
-          <th colspan="2"></th>
-        </tr>
-      `;
-
-      let isCategoryFiltered = sCategory !== "";
-      if (isCategoryFiltered || (!sCompany && !sModel && !sProdId && !sDate && !sVendor && !sRemarks)) {
-        data.sort((a, b) => {
-          let catA = (a.product_category || "Uncategorized").toUpperCase();
-          let catB = (b.product_category || "Uncategorized").toUpperCase();
-          if (catA < catB) return -1;
-          if (catA > catB) return 1;
-          return 0;
-        });
-        renderGroupedTable(data);
-      } else {
-        renderFlatTable(data);
-      }
-    }
-
-    function renderSummaryTable(data) {
-      let sumSCompany = document.getElementById("sumSearchCompany") ? document.getElementById("sumSearchCompany").value.toLowerCase().trim() : "";
-      let sumSCategory = document.getElementById("sumSearchCategory") ? document.getElementById("sumSearchCategory").value.toLowerCase().trim() : "";
-      let sumSProdId = document.getElementById("sumSearchProdId") ? document.getElementById("sumSearchProdId").value.toLowerCase().trim() : "";
-      let sumSModel = document.getElementById("sumSearchModel") ? document.getElementById("sumSearchModel").value.toLowerCase().trim() : "";
-      let sumSOpn = document.getElementById("sumSearchOpn") ? document.getElementById("sumSearchOpn").value.toLowerCase().trim() : "";
-      let sumSIn = document.getElementById("sumSearchIn") ? document.getElementById("sumSearchIn").value.toLowerCase().trim() : "";
-      let sumSOut = document.getElementById("sumSearchOut") ? document.getElementById("sumSearchOut").value.toLowerCase().trim() : "";
-      let sumSBal = document.getElementById("sumSearchBal") ? document.getElementById("sumSearchBal").value.toLowerCase().trim() : "";
-
-      const headerContainer = document.getElementById("tableHeaderContainer");
-      headerContainer.innerHTML = `
-        <tr>
-          <th>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('company')">Company <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchCompany" class="summary-col-search" placeholder="Search..." value="${sumSCompany}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('category')">Category <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchCategory" class="summary-col-search" placeholder="Search..." value="${sumSCategory}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('prodId')">Product ID <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchProdId" class="summary-col-search" placeholder="Search..." value="${sumSProdId}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('model')">Model <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchModel" class="summary-col-search" placeholder="Search..." value="${sumSModel}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th style="text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('opn')">Opn Blnc <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchOpn" class="summary-col-search" placeholder="Search..." value="${sumSOpn}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th style="text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('in')">Qty In <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchIn" class="summary-col-search" placeholder="Search..." value="${sumSIn}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th style="text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('out')">Qty Out <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchOut" class="summary-col-search" placeholder="Search..." value="${sumSOut}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-          <th style="text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-              <span class="sortable-th" onclick="sortSummaryTable('balance')">Clos Balnc <i class="fas fa-sort text-gray-400" style="font-size:10px;"></i></span>
-              <input type="text" id="sumSearchBal" class="summary-col-search" placeholder="Search..." value="${sumSBal}" oninput="applyFilters()" onclick="event.stopPropagation()">
-            </div>
-          </th>
-        </tr>
-      `;
-
-      const footerContainer = document.getElementById("tableFooterContainer");
-      footerContainer.innerHTML = `
-        <tr>
-          <th colspan="4" style="text-align: right;">GRAND TOTAL:</th>
-          <th id="summaryOpn" style="text-align: center;">0</th>
-          <th id="summaryIn" style="text-align: center;">0</th>
-          <th id="summaryOut" style="text-align: center;">0</th>
-          <th id="summaryBal" style="text-align: center;">0</th>
-        </tr>
-      `;
-
-      let summaryMap = {};
-      data.forEach(row => {
-        let key = (row.product_id || '') + '_' + (row.model || '');
-        if (!summaryMap[key]) {
-          summaryMap[key] = {
-            company: row.company_name || '-',
-            category: row.product_category || '-',
-            product_id: row.product_id || '-',
-            model: row.model || '-',
-            opn_blnc: Number(row.opening_balance) || 0,
-            qty_in: 0,
-            qty_out: 0,
-            clos_balnc: 0
-          };
-        }
-        summaryMap[key].qty_in += Number(row.qty_in) || 0;
-        summaryMap[key].qty_out += Number(row.qty_out) || 0;
-      });
-
-      let summaryArray = Object.values(summaryMap);
-
-      // Apply Summary inline filters
-      summaryArray = summaryArray.filter(item => {
-        let closing = item.opn_blnc + item.qty_in - item.qty_out;
-        if (sumSCompany && !item.company.toLowerCase().includes(sumSCompany)) return false;
-        if (sumSCategory && !item.category.toLowerCase().includes(sumSCategory)) return false;
-        if (sumSProdId && !item.product_id.toLowerCase().includes(sumSProdId)) return false;
-        if (sumSModel && !item.model.toLowerCase().includes(sumSModel)) return false;
-        if (sumSOpn && !item.opn_blnc.toString().includes(sumSOpn)) return false;
-        if (sumSIn && !item.qty_in.toString().includes(sumSIn)) return false;
-        if (sumSOut && !item.qty_out.toString().includes(sumSOut)) return false;
-        if (sumSBal && !closing.toString().includes(sumSBal)) return false;
-        return true;
-      });
-
-      currentSummaryData = summaryArray;
-      drawSummaryRows(currentSummaryData);
-    }
-
-    function drawSummaryRows(summaryArray) {
-      const tbody = document.getElementById("ledgerTableBody");
-      if (!summaryArray || summaryArray.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: #6b7280;">No stock records found.</td></tr>`;
-        if(document.getElementById("summaryOpn")) document.getElementById("summaryOpn").innerText = 0;
-        if(document.getElementById("summaryIn")) document.getElementById("summaryIn").innerText = 0;
-        if(document.getElementById("summaryOut")) document.getElementById("summaryOut").innerText = 0;
-        if(document.getElementById("summaryBal")) document.getElementById("summaryBal").innerText = 0;
-        return;
-      }
-
-      let html = "";
-      let totOpn = 0, totIn = 0, totOut = 0, totBal = 0;
-
-      summaryArray.forEach(item => {
-        let closing = item.opn_blnc + item.qty_in - item.qty_out;
-        totOpn += item.opn_blnc;
-        totIn += item.qty_in;
-        totOut += item.qty_out;
-        totBal += closing;
-
-        html += `
-          <tr>
-            <td><b><span class="clickable-link" onclick="openLedgerPopup('Company Name', '${item.company}')">${item.company}</span></b></td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Category', '${item.category}')">${item.category}</span></td>
-            <td><code><span class="clickable-link" onclick="openLedgerPopup('Product ID', '${item.product_id}')">${item.product_id}</span></code></td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Model', '${item.model}')">${item.model}</span></td>
-            <td style="text-align: center; font-weight: bold; color: #4b5563;">${item.opn_blnc}</td>
-            <td style="text-align: center; color: #16a34a; font-weight: bold;">${item.qty_in > 0 ? '+' + item.qty_in : '-'}</td>
-            <td style="text-align: center; color: #dc2626; font-weight: bold;">${item.qty_out > 0 ? '-' + item.qty_out : '-'}</td>
-            <td style="text-align: center; font-weight: bold; color: #2563eb;">${closing}</td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-
-      if(document.getElementById("summaryOpn")) document.getElementById("summaryOpn").innerText = totOpn;
-      if(document.getElementById("summaryIn")) document.getElementById("summaryIn").innerText = totIn;
-      if(document.getElementById("summaryOut")) document.getElementById("summaryOut").innerText = totOut;
-      if(document.getElementById("summaryBal")) document.getElementById("summaryBal").innerText = totBal;
-    }
-
-    function sortSummaryTable(column) {
-      let asc = summarySortDirections[column] = !summarySortDirections[column];
-
-      currentSummaryData.sort((a, b) => {
-        let valA = "", valB = "";
-        let closingA = a.opn_blnc + a.qty_in - a.qty_out;
-        let closingB = b.opn_blnc + b.qty_in - b.qty_out;
-
-        if (column === 'company') { valA = a.company || ""; valB = b.company || ""; }
-        else if (column === 'category') { valA = a.category || ""; valB = b.category || ""; }
-        else if (column === 'prodId') { valA = a.product_id || ""; valB = b.product_id || ""; }
-        else if (column === 'model') { valA = a.model || ""; valB = b.model || ""; }
-        else if (column === 'opn') { valA = Number(a.opn_blnc) || 0; valB = Number(b.opn_blnc) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'in') { valA = Number(a.qty_in) || 0; valB = Number(b.qty_in) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'out') { valA = Number(a.qty_out) || 0; valB = Number(b.qty_out) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'balance') { valA = Number(closingA) || 0; valB = Number(closingB) || 0; return asc ? valA - valB : valB - valA; }
-
-        if (valA < valB) return asc ? -1 : 1;
-        if (valA > valB) return asc ? 1 : -1;
-        return 0;
-      });
-
-      drawSummaryRows(currentSummaryData);
-    }
-
-    function clearFilters() {
-      document.getElementById("fromDateFilter").value = "";
-      document.getElementById("toDateFilter").value = "";
-      if(document.getElementById("searchDate")) document.getElementById("searchDate").value = "";
-      if(document.getElementById("searchCompany")) document.getElementById("searchCompany").value = "";
-      if(document.getElementById("searchCategory")) document.getElementById("searchCategory").value = "";
-      if(document.getElementById("searchProdId")) document.getElementById("searchProdId").value = "";
-      if(document.getElementById("searchModel")) document.getElementById("searchModel").value = "";
-      if(document.getElementById("searchVendor")) document.getElementById("searchVendor").value = "";
-      if(document.getElementById("searchRemarks")) document.getElementById("searchRemarks").value = "";
-      
-      if(document.getElementById("sumSearchCompany")) document.getElementById("sumSearchCompany").value = "";
-      if(document.getElementById("sumSearchCategory")) document.getElementById("sumSearchCategory").value = "";
-      if(document.getElementById("sumSearchProdId")) document.getElementById("sumSearchProdId").value = "";
-      if(document.getElementById("sumSearchModel")) document.getElementById("sumSearchModel").value = "";
-      if(document.getElementById("sumSearchOpn")) document.getElementById("sumSearchOpn").value = "";
-      if(document.getElementById("sumSearchIn")) document.getElementById("sumSearchIn").value = "";
-      if(document.getElementById("sumSearchOut")) document.getElementById("sumSearchOut").value = "";
-      if(document.getElementById("sumSearchBal")) document.getElementById("sumSearchBal").value = "";
-
-      applyFilters();
-    }
-
-    function renderGroupedTable(data) {
-      const tbody = document.getElementById("ledgerTableBody");
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 20px; color: #6b7280;">No stock records found.</td></tr>`;
-        document.getElementById("footerOpnBlnc").innerText = "0";
-        document.getElementById("footerQtyIn").innerText = "0";
-        document.getElementById("footerQtyOut").innerText = "0";
-        document.getElementById("footerBalance").innerText = "0";
-        return;
-      }
-
-      let html = "";
-      let grandOpn = 0, grandIn = 0, grandOut = 0, grandBal = 0;
-
-      let categoriesMap = {};
-      data.forEach(row => {
-        let cat = (row.product_category || "UNCATEGORIZED").toUpperCase();
-        if (!categoriesMap[cat]) categoriesMap[cat] = [];
-        categoriesMap[cat].push(row);
-      });
-
-      for (let cat in categoriesMap) {
-        html += `
-          <tr class="category-group-row">
-            <td colspan="11"><i class="fas fa-folder-open" style="margin-right: 6px; color: #2563eb;"></i> CATEGORY: ${cat}</td>
-          </tr>
-        `;
-
-        let subOpn = 0, subIn = 0, subOut = 0, subBal = 0;
-
-        categoriesMap[cat].forEach(row => {
-          let formattedDate = formatDateToCustom(row.date) || '-';
-          let opnBlnc = row.opening_balance !== undefined ? Number(row.opening_balance) : 0;
-          let qIn = Number(row.qty_in) || 0;
-          let qOut = Number(row.qty_out) || 0;
-          let bal = Number(row.balance) || 0;
-
-          subOpn += opnBlnc; subIn += qIn; subOut += qOut; subBal += bal;
-          grandOpn += opnBlnc; grandIn += qIn; grandOut += qOut; grandBal += bal;
-
-          html += `
-            <tr>
-              <td>${formattedDate}</td>
-              <td><span class="clickable-link" onclick="openLedgerPopup('Company Name', '${row.company_name}')">${row.company_name || '-'}</span></td>
-              <td><span class="clickable-link" onclick="openLedgerPopup('Category', '${row.product_category}')">${row.product_category || '-'}</span></td>
-              <td><code><span class="clickable-link" onclick="openLedgerPopup('Product ID', '${row.product_id}')">${row.product_id || '-'}</span></code></td>
-              <td><span class="clickable-link" onclick="openLedgerPopup('Model', '${row.model}')">${row.model || '-'}</span></td>
-              <td style="text-align: center; font-weight: bold; color: #4b5563;">${opnBlnc}</td>
-              <td style="text-align: center; color: #16a34a; font-weight: bold;">${qIn > 0 ? '+' + qIn : '-'}</td>
-              <td style="text-align: center; color: #dc2626; font-weight: bold;">${qOut > 0 ? '-' + qOut : '-'}</td>
-              <td style="text-align: center; font-weight: bold;">${bal}</td>
-              <td><span class="clickable-link" onclick="openLedgerPopup('Vendor', '${row.vendor}')">${row.vendor || '-'}</span></td>
-              <td style="color: #4b5563; font-style: italic;">${row.remarks || '-'}</td>
-            </tr>
-          `;
-        });
-
-        html += `
-          <tr class="category-subtotal-row">
-            <td colspan="5" style="text-align: right;">Subtotal (${cat}):</td>
-            <td style="text-align: center;">${subOpn}</td>
-            <td style="text-align: center; color: #16a34a;">${subIn}</td>
-            <td style="text-align: center; color: #dc2626;">${subOut}</td>
-            <td style="text-align: center; color: #2563eb;">${subBal}</td>
-            <td colspan="2"></td>
-          </tr>
-        `;
-      }
-
-      tbody.innerHTML = html;
-
-      if(document.getElementById("footerOpnBlnc")) document.getElementById("footerOpnBlnc").innerText = grandOpn;
-      if(document.getElementById("footerQtyIn")) document.getElementById("footerQtyIn").innerText = grandIn;
-      if(document.getElementById("footerQtyOut")) document.getElementById("footerQtyOut").innerText = grandOut;
-      if(document.getElementById("footerBalance")) document.getElementById("footerBalance").innerText = grandBal;
-    }
-
-    function renderFlatTable(data) {
-      const tbody = document.getElementById("ledgerTableBody");
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 20px; color: #6b7280;">No stock records found.</td></tr>`;
-        document.getElementById("footerOpnBlnc").innerText = "0";
-        document.getElementById("footerQtyIn").innerText = "0";
-        document.getElementById("footerQtyOut").innerText = "0";
-        document.getElementById("footerBalance").innerText = "0";
-        return;
-      }
-
-      let html = "";
-      let grandOpn = 0, grandIn = 0, grandOut = 0, grandBal = 0;
-
-      data.forEach(row => {
-        let formattedDate = formatDateToCustom(row.date) || '-';
-        let opnBlnc = row.opening_balance !== undefined ? Number(row.opening_balance) : 0;
-        let qIn = Number(row.qty_in) || 0;
-        let qOut = Number(row.qty_out) || 0;
-        let bal = Number(row.balance) || 0;
-
-        grandOpn += opnBlnc;
-        grandIn += qIn;
-        grandOut += qOut;
-        grandBal += bal;
-
-        html += `
-          <tr>
-            <td>${formattedDate}</td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Company Name', '${row.company_name}')">${row.company_name || '-'}</span></td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Category', '${row.product_category}')">${row.product_category || '-'}</span></td>
-            <td><code><span class="clickable-link" onclick="openLedgerPopup('Product ID', '${row.product_id}')">${row.product_id || '-'}</span></code></td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Model', '${row.model}')">${row.model || '-'}</span></td>
-            <td style="text-align: center; font-weight: bold; color: #4b5563;">${opnBlnc}</td>
-            <td style="text-align: center; color: #16a34a; font-weight: bold;">${qIn > 0 ? '+' + qIn : '-'}</td>
-            <td style="text-align: center; color: #dc2626; font-weight: bold;">${qOut > 0 ? '-' + qOut : '-'}</td>
-            <td style="text-align: center; font-weight: bold;">${bal}</td>
-            <td><span class="clickable-link" onclick="openLedgerPopup('Vendor', '${row.vendor}')">${row.vendor || '-'}</span></td>
-            <td style="color: #4b5563; font-style: italic;">${row.remarks || '-'}</td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-
-      if(document.getElementById("footerOpnBlnc")) document.getElementById("footerOpnBlnc").innerText = grandOpn;
-      if(document.getElementById("footerQtyIn")) document.getElementById("footerQtyIn").innerText = grandIn;
-      if(document.getElementById("footerQtyOut")) document.getElementById("footerQtyOut").innerText = grandOut;
-      if(document.getElementById("footerBalance")) document.getElementById("footerBalance").innerText = grandBal;
-    }
-
-    function updateSummary(data) {
-      document.getElementById("totalEntries").innerText = data.length;
-      let totalIn = data.reduce((sum, row) => sum + (Number(row.qty_in) || 0), 0);
-      let totalOut = data.reduce((sum, row) => sum + (Number(row.qty_out) || 0), 0);
-      let totalVal = data.reduce((sum, row) => sum + (Number(row.total_cost) || 0), 0);
-
-      document.getElementById("totalQtyIn").innerText = totalIn;
-      document.getElementById("totalQtyOut").innerText = totalOut;
-      document.getElementById("totalValuation").innerText = "Rs " + totalVal.toLocaleString();
-    }
-
-    function sortMainTable(column) {
-      let asc = mainSortDirections[column] = !mainSortDirections[column];
-
-      filteredStockData.sort((a, b) => {
-        let valA = "", valB = "";
-
-        if (column === 'date') { valA = a.date || ""; valB = b.date || ""; }
-        else if (column === 'company') { valA = a.company_name || ""; valB = b.company_name || ""; }
-        else if (column === 'category') { valA = a.product_category || ""; valB = b.product_category || ""; }
-        else if (column === 'prodId') { valA = a.product_id || ""; valB = b.product_id || ""; }
-        else if (column === 'model') { valA = a.model || ""; valB = b.model || ""; }
-        else if (column === 'opn') { valA = Number(a.opening_balance) || 0; valB = Number(b.opening_balance) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'in') { valA = Number(a.qty_in) || 0; valB = Number(b.qty_in) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'out') { valA = Number(a.qty_out) || 0; valB = Number(b.qty_out) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'balance') { valA = Number(a.balance) || 0; valB = Number(b.balance) || 0; return asc ? valA - valB : valB - valA; }
-        else if (column === 'vendor') { valA = a.vendor || ""; valB = b.vendor || ""; }
-        else if (column === 'remarks') { valA = a.remarks || ""; valB = b.remarks || ""; }
-
-        if (valA < valB) return asc ? -1 : 1;
-        if (valA > valB) return asc ? 1 : -1;
-        return 0;
-      });
-
-      let sCategory = document.getElementById("searchCategory") ? document.getElementById("searchCategory").value.toLowerCase().trim() : "";
-      let sCompany = document.getElementById("searchCompany") ? document.getElementById("searchCompany").value.toLowerCase().trim() : "";
-      let sProdId = document.getElementById("searchProdId") ? document.getElementById("searchProdId").value.toLowerCase().trim() : "";
-      let sModel = document.getElementById("searchModel") ? document.getElementById("searchModel").value.toLowerCase().trim() : "";
-      let sDate = document.getElementById("searchDate") ? document.getElementById("searchDate").value.toLowerCase().trim() : "";
-      let sVendor = document.getElementById("searchVendor") ? document.getElementById("searchVendor").value.toLowerCase().trim() : "";
-      let sRemarks = document.getElementById("searchRemarks") ? document.getElementById("searchRemarks").value.toLowerCase().trim() : "";
-
-      if (!sCategory && (sCompany || sProdId || sModel || sDate || sVendor || sRemarks)) {
-        renderFlatTable(filteredStockData);
-      } else {
-        renderGroupedTable(filteredStockData);
-      }
-    }
-
-    function exportToCSV() {
-      if (!filteredStockData || filteredStockData.length === 0) {
-        alert("No data available to export!");
-        return;
-      }
-      const rows = filteredStockData.map(row => ({
-        date: row.date,
-        product_id: row.product_id,
-        company_name: row.company_name,
-        product_category: row.product_category,
-        model: row.model,
-        color: row.color,
-        vendor: row.vendor,
-        qty_in: row.qty_in,
-        qty_out: row.qty_out,
-        balance: row.balance,
-        reference_type: row.reference_type,
-        reference_id: row.reference_id,
-        warehouse: row.warehouse,
-        remarks: row.remarks
-      }));
-      ERP.ui.downloadCSV(`stock_ledger_${ERP.ui.today()}.csv`, rows);
-    }
-
-    function exportToPDF() {
-      window.print();
-    }
-
-    function openLedgerPopup(type, value) {
-      if (!value || value === '-') return;
-      
-      currentModalRows = globalStockData.filter(row => {
-        if (type === 'Company Name') return row.company_name === value;
-        if (type === 'Category') return row.product_category === value;
-        if (type === 'Model') return row.model === value;
-        if (type === 'Vendor') return row.vendor === value;
-        if (type === 'Product ID') return row.product_id === value;
-        return false;
-      });
-
-      document.getElementById("modalTitle").innerText = `${type} Ledger View: ${value}`;
-      renderModalTable(currentModalRows);
-      document.getElementById("ledgerModal").style.display = "flex";
-    }
-
-    function renderModalTable(rows) {
-      let modalBody = document.getElementById("modalTableBody");
-      if (rows.length === 0) {
-        modalBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #6b7280;">No records found.</td></tr>`;
-        return;
-      }
-
-      let mHtml = "";
-      rows.forEach(r => {
-        let formattedDate = formatDateToCustom(r.date) || '-';
-        mHtml += `
-          <tr>
-            <td>${formattedDate}</td>
-            <td>${r.company_name || ''} / ${r.model || ''}</td>
-            <td style="text-align: center; color: #4b5563;">-</td>
-            <td style="text-align: center; color: #16a34a; font-weight: bold;">${r.qty_in > 0 ? '+' + r.qty_in : '-'}</td>
-            <td style="text-align: center; color: #dc2626; font-weight: bold;">${r.qty_out > 0 ? '-' + r.qty_out : '-'}</td>
-            <td style="text-align: center; font-weight: bold;">${r.balance}</td>
-            <td style="font-style: italic; color: #4b5563;">${r.remarks || '-'}</td>
-          </tr>
-        `;
-      });
-      modalBody.innerHTML = mHtml;
-    }
-
-    function closeModal() {
-      document.getElementById("ledgerModal").style.display = "none";
-    }
-  
-    // ================= UNIVERSAL MIC INPUT (auto-added) =================
-    (function() {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      let activeRec = null, activeBtn = null, activeInput = null;
-
-      function cleanNumeric(t) { return t.replace(/[^\d\-]/g, '').trim(); }
-
-      function stopActiveMic() {
-        if (activeRec) {
-          activeRec.onend = null; activeRec.onresult = null;
-          try { activeRec.abort(); } catch (e) {}
-          activeRec = null;
-        }
-        if (activeBtn) activeBtn.classList.remove('listening');
-        if (activeInput) activeInput.placeholder = activeInput.dataset.origPh || activeInput.placeholder;
-        activeBtn = null; activeInput = null;
-      }
-
-      function toggleMic(input, btn) {
-        if (!SR) { alert('Ye browser voice input support nahi karta. Chrome use karein.'); return; }
-        const isNumeric = input.type === 'number';
-
-        if (btn.classList.contains('listening')) { stopActiveMic(); return; }
-        stopActiveMic();
-
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.continuous = true;
-        rec.interimResults = true;
-        let finalText = '';
-
-        activeRec = rec; activeBtn = btn; activeInput = input;
-        btn.classList.add('listening');
-        input.dataset.origPh = input.placeholder || '';
-        input.placeholder = 'Sun raha hoon... rokne ke liye mic dobara dabayein';
-
-        rec.onresult = function(ev) {
-          let interim = '';
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            const t = ev.results[i][0].transcript;
-            if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
-          }
-          let text = (finalText + interim).trim();
-          if (isNumeric) text = cleanNumeric(text);
-          input.value = text;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        rec.onerror = function(ev) {
-          if (ev.error !== 'no-speech' && ev.error !== 'aborted') console.error('Mic error:', ev.error);
-        };
-        rec.onend = function() {
-          btn.classList.remove('listening');
-          input.placeholder = input.dataset.origPh || '';
-          if (isNumeric) input.value = cleanNumeric(input.value);
-          if (activeInput === input) { activeRec = null; activeBtn = null; activeInput = null; }
-        };
-        try { rec.start(); } catch (e) {}
-      }
-
-      function attachMic(input) {
-        if (!input || input.dataset.autoMic) return;
-        if (input.type === 'date' || input.type === 'hidden' || input.type === 'checkbox' ||
-            input.type === 'radio' || input.type === 'file' || input.readOnly || input.disabled) return;
-        if (input.closest('.input-with-mic')) return; // already has a manual mic button
-        if (input.parentElement && input.parentElement.querySelector('.mic-btn')) return;
-
-        input.dataset.autoMic = '1';
-
-        const wrap = document.createElement('span');
-        wrap.className = 'auto-mic-wrap';
-        input.parentNode.insertBefore(wrap, input);
-        wrap.appendChild(input);
-
-        const curPad = window.getComputedStyle(input).paddingRight;
-        input.style.paddingRight = '24px';
-        input.style.boxSizing = 'border-box';
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'auto-mic-btn';
-        btn.title = 'Voice input';
-        btn.innerHTML = '&#127908;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleMic(input, btn); };
-        wrap.appendChild(btn);
-      }
-
-      function scanAndAttach(root) {
-        root.querySelectorAll('input[type="text"], input[type="number"], input:not([type])').forEach(attachMic);
-      }
-
-      document.addEventListener('DOMContentLoaded', function() {
-        scanAndAttach(document);
-      });
-
-      const mo = new MutationObserver(function(mutations) {
-        mutations.forEach(function(m) {
-          m.addedNodes.forEach(function(node) {
-            if (node.nodeType !== 1) return;
-            if (node.matches && (node.matches('input[type="text"]') || node.matches('input[type="number"]') || node.matches('input:not([type])'))) {
-              attachMic(node);
-            }
-            if (node.querySelectorAll) scanAndAttach(node);
-          });
-        });
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
+<main class="page">
+  <header class="top">
+    <div><h1>📦 Stock Ledger</h1><p id="sub">Al Meezan ERP · item-wise stock, in/out aur balance</p></div>
+    <div class="acts"><button class="btn ghost" id="bCsv">⬇ CSV</button><button class="btn ghost" id="bPrint">🖨 Print / PDF</button><button class="btn ghost" id="bRef">⟳ Refresh</button><button class="btn danger" id="bClose">✕ Close</button></div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card bar">
+    <div class="seg" id="viewSeg"><button data-v="sum" class="on">Summary (item-wise)</button><button data-v="det">Detailed (har entry)</button></div>
+    <div class="sq"><input id="q" type="search" placeholder="Search: company, category, product ID, model…"><button class="mic" id="mic" type="button" title="Voice search">🎤</button></div>
+    <select id="cat"></select><select id="comp"></select>
+    <select id="stat"><option value="">Har stock status</option><option value="in">Stock mein hai</option><option value="zero">Stock khatam (0)</option><option value="neg">Negative stock</option></select>
+    <select id="preset"><option value="all">Poora record</option><option value="today">Aaj</option><option value="month">Is mahine</option><option value="lastmonth">Pichhla mahina</option><option value="last3">Pichhle 3 mahine</option><option value="year">Is saal</option><option value="custom">Custom</option></select>
+    <input type="date" id="from" title="From"><input type="date" id="to" title="To">
+    <label class="ck"><input type="checkbox" id="grp" checked> Category-wise grouping</label>
+    <button class="btn ghost" id="bReset">↺ Reset</button>
+  </section>
+  <div class="chips" id="chips"></div>
+
+  <div class="tw" id="tw"><table><thead id="th"></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
+  <div class="sign"><div>______________________<br>Prepared / Checked By</div><div>______________________<br>Authorized Signature</div></div>
+</main>
+
+<dialog id="dlg">
+  <div class="dh"><div><h2 id="dT"></h2><p id="dS"></p></div><button class="btn ghost" id="dX">✕</button></div>
+  <div class="dk" id="dK"></div>
+  <div class="db"><table><thead><tr><th>Date</th><th>Reference</th><th>Vendor</th><th class="n">In</th><th class="n">Out</th><th class="n">Balance</th><th>Remarks</th></tr></thead><tbody id="dB"></tbody></table></div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), N = v => Number(v) || 0, fm = v => N(v).toLocaleString("en-US");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dOf = r => r.date ? String(r.date).split("T")[0] : "";
+const fd = d => { const p = String(d || "").split("-"); return p.length === 3 ? +p[2] + "-" + +p[1] + "-" + p[0].slice(-2) : d || "-"; };
+const keyOf = r => [r.product_id, r.company_name, r.product_category, r.model].map(x => x || "").join("|");
+let ALL = [], VIEW = "sum", D = { per: [], items: [] };
+const SORT = { sum: { k: "company", d: 1 }, det: { k: "_d", d: 1 } };
+const COLS = {
+  sum: [["company", "Company"], ["category", "Category"], ["pid", "Product ID"], ["model", "Model"], ["opn", "Opening", "n"], ["in", "In", "n"], ["out", "Out", "n"], ["close", "Closing", "n"]],
+  det: [["_d", "Date"], ["company_name", "Company"], ["product_category", "Category"], ["product_id", "Product ID"], ["model", "Model"], ["vendor", "Vendor"], ["ref", "Reference"], ["qty_in", "In", "n"], ["qty_out", "Out", "n"], ["_bal", "Balance", "n"], ["remarks", "Remarks"]]
+};
+
+async function load() {
+  document.body.style.cursor = "wait";
+  try {
+    ALL = (await ERP.db.stock.ledger()).map((r, i) => ({ ...r, _d: dOf(r), _k: keyOf(r), _i: i, ref: [r.reference_type, r.reference_id].filter(Boolean).join(" ") }));
+    fill("cat", "Sab categories", "product_category"); fill("comp", "Sab companies", "company_name"); render();
+  } catch (e) { alert("Stock data load nahi hua: " + e.message); } finally { document.body.style.cursor = ""; }
+}
+function fill(id, first, f) {
+  const cur = $(id).value, v = [...new Set(ALL.map(r => r[f]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  $(id).innerHTML = `<option value="">${first}</option>` + v.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join(""); $(id).value = v.includes(cur) ? cur : "";
+}
+
+/* ---- core calculation: opening before "From", running balance per item inside the period ---- */
+function compute() {
+  const from = $("from").value, to = $("to").value, cat = $("cat").value, comp = $("comp").value, q = $("q").value.trim().toLowerCase(), stat = $("stat").value, det = VIEW === "det";
+  const base = ALL.filter(r => (!cat || r.product_category === cat) && (!comp || r.company_name === comp) &&
+    (!q || [r.company_name, r.product_category, r.product_id, r.model, ...(det ? [r.vendor, r.remarks, r.ref] : [])].join(" ").toLowerCase().includes(q)));
+  const opn = new Map(), per = [];
+  base.forEach(r => { if (from && r._d < from) opn.set(r._k, (opn.get(r._k) || 0) + N(r.qty_in) - N(r.qty_out)); else if (!to || r._d <= to) per.push(r); });
+  per.sort((a, b) => a._d.localeCompare(b._d) || a._i - b._i);
+  const bal = new Map(opn);
+  per.forEach(r => { const b = (bal.get(r._k) || 0) + N(r.qty_in) - N(r.qty_out); bal.set(r._k, b); r._bal = b; });
+  const it = new Map(), touch = r => { if (!it.has(r._k)) it.set(r._k, { k: r._k, company: r.company_name || "-", category: r.product_category || "-", pid: r.product_id || "-", model: r.model || "-", opn: opn.get(r._k) || 0, in: 0, out: 0 }); return it.get(r._k); };
+  base.forEach(r => { if (from && r._d < from) touch(r); });
+  per.forEach(r => { const o = touch(r); o.in += N(r.qty_in); o.out += N(r.qty_out); });
+  let items = [...it.values()]; items.forEach(o => o.close = o.opn + o.in - o.out);
+  if (stat) items = items.filter(o => stat === "in" ? o.close > 0 : stat === "zero" ? o.close === 0 : o.close < 0);
+  const ok = new Set(items.map(o => o.k));
+  D = { per: stat ? per.filter(r => ok.has(r._k)) : per, items };
+}
+
+function render() {
+  compute();
+  const det = VIEW === "det", cols = COLS[VIEW], rows = det ? D.per : D.items, gk = det ? "product_category" : "category", s = SORT[VIEW], grp = $("grp").checked;
+  const sumIn = D.per.reduce((t, r) => t + N(r.qty_in), 0), sumOut = D.per.reduce((t, r) => t + N(r.qty_out), 0), val = D.per.reduce((t, r) => t + N(r.total_cost), 0);
+  $("kpis").innerHTML = `<div class="kpi"><small>Items</small><b>${fm(D.items.length)}</b></div><div class="kpi i"><small>Total Qty In</small><b>${fm(sumIn)}</b></div><div class="kpi o"><small>Total Qty Out</small><b>${fm(sumOut)}</b></div><div class="kpi"><small>Closing Stock</small><b>${fm(D.items.reduce((t, o) => t + o.close, 0))}</b></div><div class="kpi"><small>Total Value (PKR)</small><b>Rs ${fm(val)}</b></div>`;
+  $("sub").textContent = `${D.items.length} items · ${D.per.length} entries · ${$("from").value || "shuru"} → ${$("to").value || "aaj tak"}`;
+  const chips = [["cat", "Category: " + $("cat").value, $("cat").value], ["comp", "Company: " + $("comp").value, $("comp").value], ["q", "Search: " + $("q").value, $("q").value.trim()], ["stat", "Status: " + $("stat").selectedOptions[0].text, $("stat").value]].filter(c => c[2]);
+  $("chips").innerHTML = chips.map(c => `<span class="chip" data-x="${c[0]}">${esc(c[1])} ✕</span>`).join("");
+
+  const val_ = (r, k) => r[k] == null ? "" : r[k];
+  const cmp = (a, b) => { const x = val_(a, s.k), y = val_(b, s.k); return (typeof x === "number" || typeof y === "number" ? N(x) - N(y) : String(x).localeCompare(String(y), undefined, { numeric: true })) * s.d; };
+  const list = rows.slice().sort(cmp); if (grp) list.sort((a, b) => String(a[gk] || "-").localeCompare(String(b[gk] || "-")));
+  const lk = (t, kind, v) => `<a class="lk" data-f="${kind}" data-v="${esc(encodeURIComponent(v))}">${esc(t)}</a>`, it = r => `data-it="${esc(encodeURIComponent(r._k || r.k))}"`;
+  const cell = (r, c) => { const k = c[0], v = r[k];
+    if (det) { if (k === "_d") return fd(v); if (k === "company_name") return v ? lk(v, "company", v) : "-"; if (k === "product_category") return v ? lk(v, "category", v) : "-";
+      if (k === "product_id" || k === "model") return v ? `<a class="lk" ${it(r)}>${esc(v)}</a>` : "-"; if (k === "vendor") return v ? lk(v, "vendor", v) : "-";
+      if (k === "qty_in") return N(v) > 0 ? `<span class="in">+${fm(v)}</span>` : '<span class="mu">–</span>'; if (k === "qty_out") return N(v) > 0 ? `<span class="out">−${fm(v)}</span>` : '<span class="mu">–</span>';
+      if (k === "_bal") return `<b class="${v < 0 ? "out" : ""}">${fm(v)}</b>`; return esc(v || "-"); }
+    if (k === "company") return lk(v, "company", v); if (k === "category") return lk(v, "category", v); if (k === "pid" || k === "model") return `<a class="lk" ${it(r)}>${esc(v)}</a>`;
+    if (k === "opn") return `<span class="mu">${fm(v)}</span>`; if (k === "in") return v > 0 ? `<span class="in">+${fm(v)}</span>` : '<span class="mu">–</span>'; if (k === "out") return v > 0 ? `<span class="out">−${fm(v)}</span>` : '<span class="mu">–</span>';
+    return `<b class="${v < 0 ? "out" : ""}">${fm(v)}</b>${v < 0 ? '<span class="bg neg">Negative</span>' : v === 0 ? '<span class="bg zero">Out of stock</span>' : ""}`; };
+  const first = cols.findIndex(c => c[2] === "n");
+  const totRow = (arr, label, cls) => { const t = {}; cols.forEach(c => { if (c[2] === "n") t[c[0]] = arr.reduce((a, r) => a + N(r[c[0]]), 0); }); if (det) t._bal = t.qty_in - t.qty_out;
+    return `<tr class="${cls}"><td colspan="${first}">${label}</td>${cols.slice(first).map(c => c[2] === "n" ? `<td class="n">${fm(t[c[0]])}</td>` : "<td></td>").join("")}</tr>`; };
+
+  $("th").innerHTML = `<tr>${cols.map(c => `<th class="${c[2] || ""}" data-s="${c[0]}">${c[1]}${s.k === c[0] ? (s.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr>`;
+  let h = "", cur = null, buf = [];
+  const flush = () => { if (grp && buf.length) h += totRow(buf, "Subtotal — " + esc(cur), "st"); buf = []; };
+  list.forEach(r => { const g = String(r[gk] || "-");
+    if (grp && g !== cur) { flush(); cur = g; h += `<tr class="gh"><td colspan="${cols.length}">📁 ${esc(g)}</td></tr>`; }
+    buf.push(r); h += `<tr>${cols.map(c => `<td class="${c[2] || ""}">${cell(r, c)}</td>`).join("")}</tr>`; });
+  flush();
+  $("tb").innerHTML = h || `<tr><td colspan="${cols.length}" class="empty">Koi record nahi mila. Filters badal kar ya Reset karke dekhein.</td></tr>`;
+  $("tf").innerHTML = list.length ? totRow(list, "GRAND TOTAL", "gt") : "";
+}
+
+/* ---- item ledger popup (opening + running balance for chosen period) ---- */
+function openItem(k) {
+  const from = $("from").value, to = $("to").value; let opn = 0; const rows = [];
+  ALL.forEach(r => { if (r._k !== k) return; if (from && r._d < from) opn += N(r.qty_in) - N(r.qty_out); else if (!to || r._d <= to) rows.push(r); });
+  rows.sort((a, b) => a._d.localeCompare(b._d) || a._i - b._i);
+  const m = ALL.find(r => r._k === k) || {}; let b = opn, ti = 0, to_ = 0;
+  const body = rows.map(r => { b += N(r.qty_in) - N(r.qty_out); ti += N(r.qty_in); to_ += N(r.qty_out);
+    return `<tr><td>${fd(r._d)}</td><td>${esc(r.ref || "-")}</td><td>${esc(r.vendor || "-")}</td><td class="n">${N(r.qty_in) > 0 ? `<span class="in">+${fm(r.qty_in)}</span>` : "–"}</td><td class="n">${N(r.qty_out) > 0 ? `<span class="out">−${fm(r.qty_out)}</span>` : "–"}</td><td class="n"><b class="${b < 0 ? "out" : ""}">${fm(b)}</b></td><td class="mu">${esc(r.remarks || "")}</td></tr>`; }).join("");
+  $("dT").textContent = `${m.model || "-"} · ${m.product_id || "-"}`; $("dS").textContent = `${m.company_name || "-"} · ${m.product_category || "-"} · ${from || "shuru"} → ${to || "aaj tak"}`;
+  $("dK").innerHTML = `<div><small>Opening</small><b>${fm(opn)}</b></div><div><small>Total In</small><b class="in">+${fm(ti)}</b></div><div><small>Total Out</small><b class="out">−${fm(to_)}</b></div><div><small>Closing</small><b>${fm(opn + ti - to_)}</b></div>`;
+  $("dB").innerHTML = `<tr><td colspan="5" class="mu">Opening balance</td><td class="n"><b>${fm(opn)}</b></td><td></td></tr>` + (body || '<tr><td colspan="7" class="empty">Is period mein koi entry nahi.</td></tr>');
+  $("dlg").showModal();
+}
+
+/* ---- events ---- */
+$("tw").onclick = e => {
+  const th = e.target.closest("th[data-s]"); if (th) { const s = SORT[VIEW]; if (s.k === th.dataset.s) s.d = -s.d; else { s.k = th.dataset.s; s.d = 1; } return render(); }
+  const f = e.target.closest("[data-f]"); if (f) { const v = decodeURIComponent(f.dataset.v);
+    if (f.dataset.f === "company") $("comp").value = v; else if (f.dataset.f === "category") $("cat").value = v; else $("q").value = v; return render(); }
+  const i = e.target.closest("[data-it]"); if (i) openItem(decodeURIComponent(i.dataset.it)); };
+$("chips").onclick = e => { const c = e.target.closest("[data-x]"); if (c) { $(c.dataset.x).value = ""; render(); } };
+$("viewSeg").onclick = e => { const b = e.target.closest("button"); if (!b) return; VIEW = b.dataset.v; $("viewSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); render(); };
+let tm; $("q").oninput = () => { clearTimeout(tm); tm = setTimeout(render, 150); };
+["cat", "comp", "stat", "grp"].forEach(id => $(id).onchange = render);
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+$("preset").onchange = () => { const p = $("preset").value, t = new Date(), y = t.getFullYear(), m = t.getMonth(), D_ = (a, b, c) => new Date(a, b, c, 12); let a = null, b = null;
+  if (p === "today") a = b = t; else if (p === "month") { a = D_(y, m, 1); b = t; } else if (p === "lastmonth") { a = D_(y, m - 1, 1); b = D_(y, m, 0); } else if (p === "last3") { a = D_(y, m - 2, 1); b = t; } else if (p === "year") { a = D_(y, 0, 1); b = t; }
+  if (p !== "custom") { $("from").value = a ? iso(a) : ""; $("to").value = b ? iso(b) : ""; } render(); };
+$("from").onchange = $("to").onchange = () => { $("preset").value = "custom"; render(); };
+$("bReset").onclick = () => { ["q", "cat", "comp", "stat", "from", "to"].forEach(id => $(id).value = ""); $("preset").value = "all"; render(); };
+$("bRef").onclick = load; $("bPrint").onclick = () => window.print(); $("dX").onclick = () => $("dlg").close();
+$("bClose").onclick = () => window.top.go ? window.top.go(null) : history.back();
+$("bCsv").onclick = () => {
+  const det = VIEW === "det", rows = det ? D.per.map(r => ({ date: r._d, company: r.company_name, category: r.product_category, product_id: r.product_id, model: r.model, color: r.color, vendor: r.vendor, reference: r.ref, warehouse: r.warehouse, qty_in: r.qty_in, qty_out: r.qty_out, balance: r._bal, remarks: r.remarks }))
+    : D.items.map(o => ({ company: o.company, category: o.category, product_id: o.pid, model: o.model, opening: o.opn, qty_in: o.in, qty_out: o.out, closing: o.close }));
+  if (!rows.length) return alert("Export ke liye koi data nahi."); ERP.ui.downloadCSV(`stock_${det ? "detailed" : "summary"}_${ERP.ui.today()}.csv`, rows); };
+
+/* voice search (Chrome) */
+(() => { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
+  $("mic").onclick = () => { if (!SR) return alert("Voice input ke liye Chrome use karein."); if (rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = "en-US"; rec.interimResults = true; $("mic").classList.add("on");
+    rec.onresult = ev => { $("q").value = [...ev.results].map(r => r[0].transcript).join(" ").trim(); $("q").dispatchEvent(new Event("input")); };
+    rec.onend = () => { rec = null; $("mic").classList.remove("on"); }; try { rec.start(); } catch (e) { rec = null; } }; })();
+
+(async () => { try { await ERP.auth.guard(); await load(); } catch (e) { alert("Stock Ledger open nahi hua: " + e.message); } })();
 </script>
 </body>
 </html>
