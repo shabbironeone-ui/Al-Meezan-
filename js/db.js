@@ -137,6 +137,56 @@ ERP.db = (function () {
       async remove(ids) { const r = must(await sb.from("receipts").delete().in("id", ids).select("id")); if (r.length !== ids.length) throw new Error("Only " + r.length + " of " + ids.length + " deleted (permission)"); }
     },
 
+    cashSaleReceipts: {
+      defaultNo(invoiceNo) { return "CS-" + String(invoiceNo || "").trim().replace(/^INV-/i, ""); },
+      async get(invoiceNo) {
+        const { data, error } = await sb.from("cash_sale_receipt_numbers").select("invoice_no,receipt_no")
+          .eq("invoice_no", String(invoiceNo).trim()).maybeSingle();
+        if (error) throw new Error(error.message);
+        return data;
+      },
+      async list(invoiceNos) {
+        const rows = [];
+        for (let i = 0; i < invoiceNos.length; i += 150) {
+          const batch = [...new Set(invoiceNos.slice(i, i + 150).map(value => String(value).trim()).filter(Boolean))];
+          if (!batch.length) continue;
+          rows.push(...must(await sb.from("cash_sale_receipt_numbers").select("invoice_no,receipt_no").in("invoice_no", batch)));
+        }
+        return rows;
+      },
+      async suggest(invoiceNo) {
+        const invoice = String(invoiceNo || "").trim();
+        const saved = await this.get(invoice);
+        if (saved) return saved.receipt_no;
+        const base = this.defaultNo(invoice);
+        let candidate = base, suffix = 2;
+        while (suffix <= 100) {
+          const [receiptNos, mapped] = await Promise.all([
+            ERP.db.receipts.existing([candidate]),
+            sb.from("cash_sale_receipt_numbers").select("invoice_no").eq("receipt_no", candidate).maybeSingle()
+          ]);
+          if (mapped.error) throw new Error(mapped.error.message);
+          if (!receiptNos.length && !mapped.data) return candidate;
+          candidate = base + "-" + suffix++;
+        }
+        throw new Error("Could not generate an unused receipt number");
+      },
+      async save(invoiceNo, receiptNo) {
+        const invoice = String(invoiceNo || "").trim();
+        const value = String(receiptNo || "").trim() || await this.suggest(invoice);
+        if (!invoice) throw new Error("Invoice number is required");
+        const duplicateReceipts = await ERP.db.receipts.existing([value]);
+        if (duplicateReceipts.length) throw new Error("Receipt number " + value + " is already used");
+        const { data: duplicate, error: duplicateError } = await sb.from("cash_sale_receipt_numbers")
+          .select("invoice_no").eq("receipt_no", value).maybeSingle();
+        if (duplicateError) throw new Error(duplicateError.message);
+        if (duplicate && String(duplicate.invoice_no) !== invoice) throw new Error("Receipt number " + value + " is already used");
+        return must(await sb.from("cash_sale_receipt_numbers").upsert({
+          invoice_no: invoice, receipt_no: value, updated_at: new Date().toISOString()
+        }, { onConflict: "invoice_no" }).select());
+      }
+    },
+
     products: {
       list: () => fetchAll("product_master", { order: "product_id" }),
       async save(p) { return must(await sb.from("product_master").upsert(p, { onConflict: "product_id" }).select()); },
