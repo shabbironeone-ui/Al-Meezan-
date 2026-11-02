@@ -235,11 +235,13 @@
   <div class="sh-head"><div><h2 id="tTitle"></h2><p id="tSub"></p></div><button class="x" data-close>✕</button></div>
   <form class="sh-body" onsubmit="return false"><div class="fsec"><div class="fgrid">
     <div class="fld"><label>Date</label><input id="eDate" type="date"></div><div class="fld"><label>Account</label><select id="eMode"></select></div>
-    <div class="fld"><label>Party / name</label><input id="eParty"></div><div class="fld"><label>Head / subhead</label><select id="eHead"></select></div>
+    <div class="fld"><label>Party / name</label><input id="eParty"></div><div class="fld" id="gEAccount" hidden><label for="eAccountNo">Customer account no</label><input id="eAccountNo" list="customerAccountOptions" inputmode="numeric" autocomplete="off"><small id="eAccountHint" style="color:var(--muted)"></small></div>
+    <div class="fld"><label>Head / subhead</label><select id="eHead"></select></div>
     <div class="fld"><label>Amount (Rs)</label><input id="eAmt" type="number" inputmode="decimal" min="0"></div><div class="fld"><label>Remarks</label><input id="eRem"></div></div>
     <p id="tNote" style="font-size:13px;color:var(--muted);margin:8px 0 0"></p></div></form>
   <div class="sh-foot"><button class="btn danger" id="eDel" style="margin-right:auto">Delete</button><button class="btn ghost" data-close>Close</button><button class="btn" id="eSave">Save changes</button></div>
 </dialog>
+<datalist id="customerAccountOptions"></datalist>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
@@ -863,8 +865,7 @@ async function openNew(k) {
   }
   if (k === "transfer") { populateContraHeads(); setContraAccountOptions(); }
   $("dTags").innerHTML = TAGS.map(t => `<option value="${E(t)}">`).join(""); ERP.voice.wire($("dlg"));
-  if (k === "receipt" && !CUST) ERP.db.customers.balances().then(r => {
-    CUST = new Map(r.map(c => [String(c.account_no).trim(), c]));
+  if (k === "receipt" && !CUST) ensureCustomerAccounts_().then(() => {
     $("receiptBatchRows").querySelectorAll(".receipt-batch-row").forEach(updateReceiptCustomerHint_);
   }).catch(e => ERP.ui.toast("Could not load customer accounts: " + e.message, "err"));
   $("dlg").showModal();
@@ -883,6 +884,16 @@ function updateReceiptCustomerHint_(row) {
   hint.textContent = customer
     ? `${customer.account_title} · ${Number(customer.balance) > 0 ? "Balance Rs " + M(customer.balance) : "Clear"}`
     : "Account not found";
+}
+function setCustomerAccounts_(customers) {
+  CUST = new Map(customers.map(customer => [String(customer.account_no).trim(), customer]));
+  $("customerAccountOptions").innerHTML = customers.map(customer =>
+    `<option value="${E(String(customer.account_no || "").trim())}" label="${E(customer.account_title || "")}"></option>`
+  ).join("");
+}
+async function ensureCustomerAccounts_() {
+  if (!CUST) setCustomerAccounts_(await ERP.db.customers.balances());
+  else if (!$("customerAccountOptions").options.length) setCustomerAccounts_([...CUST.values()]);
 }
 $("receiptBatchRows").addEventListener("input", event => {
   const row = event.target.closest(".receipt-batch-row");
@@ -993,10 +1004,7 @@ async function save(again) {
   if (!date) return bad("Select the date");
   try {
     if (kindNow === "receipt") {
-      if (!CUST) {
-        const customers = await ERP.db.customers.balances();
-        CUST = new Map(customers.map(customer => [String(customer.account_no).trim(), customer]));
-      }
+      await ensureCustomerAccounts_();
       const rowElements = [...$("receiptBatchRows").querySelectorAll(".receipt-batch-row")];
       if (!rowElements.length) return bad("Add at least one receipt");
       const entries = [];
@@ -1065,15 +1073,27 @@ async function save(again) {
 $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), () => save(false)); $("btnAgain").onclick = () => ERP.ui.busy($("btnAgain"), () => save(true));
 
 /* ---------- entry details: edit / delete ---------- */
-function openDetail(e) {
+async function openDetail(e) {
+  let accountLoadError = "";
+  if (e.src === "receipts") {
+    try { await ensureCustomerAccounts_(); }
+    catch (error) {
+      accountLoadError = error.message;
+      ERP.ui.toast("Could not load customer accounts: " + error.message, "err");
+    }
+  }
   cur = e; const isAdv = e.src === "sales", isTr = e.src === "contra";
   $("tTitle").textContent = e.kind + " " + (e.voucher_no || ""); $("tSub").textContent = e.date + " · " + acct(e);
   const storedAccount = e.account || "(none)";
   const editModes = [...new Set([...configuredModes(), storedAccount])].filter(Boolean);
   $("eDate").value = e.date; $("eMode").innerHTML = editModes.map(a => `<option value="${E(a)}">${E(canonicalAccount(a))}${configuredModes().includes(a) ? "" : " (legacy)"}</option>`).join(""); $("eMode").value = storedAccount;
-  $("eParty").value = e.party || ""; populateEntryHeadEditor(e); $("eAmt").value = +e.money_in || +e.money_out; $("eRem").value = e.remarks || "";
+  $("eParty").value = e.party || ""; $("eAccountNo").value = e.party_no || "";
+  $("eAccountHint").textContent = accountLoadError || "Type an account number to find a customer.";
+  show("gEAccount", e.src === "receipts");
+  populateEntryHeadEditor(e); $("eAmt").value = +e.money_in || +e.money_out; $("eRem").value = e.remarks || "";
   const lock = isAdv || isTr || !ERP.auth.can("edit");
   document.querySelectorAll("#det input,#det select").forEach(x => x.disabled = lock); $("eSave").hidden = lock;
+  $("eAccountNo").disabled = !!accountLoadError || lock;
   $("eDel").hidden = isAdv || !ERP.auth.can("delete");
   $("tNote").textContent = isAdv ? "This is the advance taken with a sale. Change it from the Sales page." : isTr ? "Transfers cannot be edited. Delete and enter it again if it is wrong (both sides are removed together)." : e.needs_review ? "Old transfer entry: its direction is not recorded." : "";
   $("det").showModal();
@@ -1106,9 +1126,23 @@ const openRow = i => {
 };
 $("ledger").onclick = e => { const a = e.target.closest(".ent[data-r]"); if (a) openRow(a.dataset.r); };
 $("ledger").onkeydown = e => { if (e.key === "Enter" && e.target.dataset.r !== undefined) openRow(e.target.dataset.r); };
+$("eAccountNo").oninput = () => {
+  const customer = CUST && CUST.get($("eAccountNo").value.trim());
+  if (customer) $("eParty").value = customer.account_title || "";
+};
 $("eSave").onclick = () => ERP.ui.busy($("eSave"), async () => {
   const f = { date: $("eDate").value, account: $("eMode").value, party: $("eParty").value.trim(), head: $("eHead").value.trim(), amount: +$("eAmt").value, remarks: $("eRem").value.trim() };
   if (!f.date || !(f.amount > 0)) return ERP.ui.toast("Date and amount are required", "err");
+  if (cur.src === "receipts") {
+    const accountNo = $("eAccountNo").value.trim();
+    const originalAccountNo = String(cur.party_no || "").trim();
+    if (accountNo !== originalAccountNo) {
+      const customer = CUST && CUST.get(accountNo);
+      if (!customer) return ERP.ui.toast("Select a valid customer account number", "err");
+      f.account_no = accountNo;
+      f.party = customer.account_title || "";
+    }
+  }
   try {
     await ERP.db.accounts.update(cur.src, cur.rid, f);
     ERP.ui.toast("Saved"); $("det").close(); partyEntriesLoaded = false; load();
