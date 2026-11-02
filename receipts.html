@@ -150,7 +150,7 @@
 
   <section class="card range" style="margin-top:12px">
     <div><label>Period</label><select id="preset"><option value="all">All dates</option><option value="today">Today</option><option value="month">This month</option><option value="last_month">Last month</option><option value="last_3_months">Last 3 months</option><option value="year">This year</option><option value="custom">Custom range</option></select></div>
-    <div id="fromWrap" hidden><label for="from">From</label><input type="date" id="from"></div><div id="toWrap" hidden><label for="to">To</label><input type="date" id="to"></div>
+    <div id="fromWrap"><label for="from">From</label><input type="date" id="from"></div><div id="toWrap"><label for="to">To</label><input type="date" id="to"></div>
     <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Receipt no, customer, account no or pay mode"></div>
     <div class="bank-filter"><div><label for="entryTypeFilter">Entry type</label><select id="entryTypeFilter"><option value="cash_bank">Cash + bank</option><option value="cash_only">Cash only</option><option value="bank_only">Bank only</option></select></div><div style="flex:1;min-width:0"><label for="bankFilter">Bank account</label><select id="bankFilter" aria-label="Filter by bank"><option value="">All banks</option></select></div></div>
     <div class="range-actions"><button class="btn ghost" id="btnApply" type="button">Apply</button><button class="btn ghost" id="btnToday" type="button" title="Show today">Today</button></div>
@@ -416,9 +416,6 @@ function setPreset(p) {
     $("from").value = iso(from);
     $("to").value = iso(to);
   }
-  const isCustom = p === "custom";
-  $("fromWrap").hidden = !isCustom;
-  $("toWrap").hidden = !isCustom;
 }
 $("preset").onchange = () => { setPreset($("preset").value); load(); };
 ["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; setPreset("custom"); if ($("from").value && $("to").value) load(); });
