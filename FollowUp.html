@@ -106,6 +106,7 @@
     let selected = null;
     let profile = null;
     let historyMode = "promises";
+    let croNames = [];
 
     function monthIso() { return ($("month").value || ERP.ui.today().slice(0, 7)) + "-01"; }
     function monthName(value) {
@@ -127,6 +128,26 @@
       if (row.due_month < currentMonth()) return "Past month due";
       if (row.due_month === currentMonth()) return "Due this month";
       return "Upcoming";
+    }
+    async function loadCroOptions() {
+      if (isCro()) return;
+      const [customers, settings] = await Promise.all([
+        ERP.db.customers.list(),
+        ERP.db.settings().catch(error => {
+          ERP.ui.toast("CRO settings could not be loaded; using customer assignments: " + error.message, "err");
+          return { rows: [] };
+        })
+      ]);
+      const configured = settings.rows
+        .filter(item => String(item.category || "").trim().toUpperCase() === "CRO")
+        .map(item => String(item.display_name || item.lookup_code || "").trim())
+        .filter(Boolean);
+      const assigned = customers.map(customer => String(customer.cro || "").trim()).filter(Boolean);
+      croNames = [...new Set([...configured, ...assigned])].sort((a, b) => a.localeCompare(b));
+      const selected = $("croFilter").value;
+      $("croFilter").replaceChildren(new Option("All CROs", ""));
+      croNames.forEach(name => $("croFilter").add(new Option(name, name)));
+      $("croFilter").value = croNames.includes(selected) ? selected : "";
     }
     function filteredRows() {
       const query = $("search").value.trim().toLowerCase();
@@ -201,13 +222,6 @@
         });
         if (error) throw new Error("Could not load monthly due list: " + error.message);
         rows = (data || []).map(item => typeof item === "string" ? JSON.parse(item) : item);
-        if (!isCro()) {
-          const croNames = [...new Set(rows.map(row => String(row.cro || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-          const selectedCro = $("croFilter").value;
-          $("croFilter").replaceChildren(new Option("All CROs", ""));
-          croNames.forEach(name => $("croFilter").add(new Option(name, name)));
-          $("croFilter").value = croNames.includes(selectedCro) ? selectedCro : "";
-        }
         render();
       } catch (error) {
         rows = [];
@@ -398,6 +412,9 @@
             showNotice("No CRO name is assigned to your account. Ask an admin to assign your CRO name in User Roles.", true);
             return;
           }
+        } else {
+          try { await loadCroOptions(); }
+          catch (error) { ERP.ui.toast("Could not load the complete CRO list: " + error.message, "err"); }
         }
         $("exportBtn").hidden = !ERP.auth.can("export", "followup");
         await load();
