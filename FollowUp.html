@@ -8,23 +8,29 @@
   <style>
     .toolbar{display:grid;gap:10px;grid-template-columns:1fr 1fr;align-items:end}
     .toolbar .search{grid-column:1/-1}
-    @media(min-width:850px){.toolbar{grid-template-columns:minmax(210px,1.2fr) 170px 190px 180px auto}.toolbar .search{grid-column:auto}}
+    @media(min-width:850px){.toolbar{grid-template-columns:minmax(0,1.2fr) minmax(120px,.7fr) minmax(130px,.8fr) minmax(140px,.9fr) auto}.toolbar .search{grid-column:auto}}
     .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
     @media(min-width:760px){.stats{grid-template-columns:repeat(5,minmax(0,1fr))}}
     .stat.due b{color:var(--warn)}.stat.overdue b{color:var(--danger)}
-    .table-wrap{overflow-x:auto;overflow-y:visible;max-height:none}
-    .follow-table{min-width:1040px}
+    .table-wrap{overflow:hidden;max-height:none}
+    .follow-table{width:100%;min-width:0;table-layout:fixed;font-size:12px}
+    .follow-table th,.follow-table td{padding:7px 5px;white-space:normal;overflow-wrap:anywhere}
+    .follow-table th:nth-child(1){width:18%}.follow-table th:nth-child(2){width:7%}
+    .follow-table th:nth-child(3){width:8%}.follow-table th:nth-child(4){width:7%}
+    .follow-table th:nth-child(5){width:8%}.follow-table th:nth-child(6){width:8%}
+    .follow-table th:nth-child(7){width:9%}.follow-table th:nth-child(8){width:11%}
+    .follow-table th:nth-child(9){width:9%}.follow-table th:nth-child(10){width:15%}
     .follow-table th{position:sticky;top:0;z-index:2}
     .follow-table td{vertical-align:top}
-    .customer{min-width:210px;white-space:normal}
+    .customer{min-width:0;white-space:normal}
     .customer strong{display:block}
     .customer small,.subtle{display:block;color:var(--muted);font-size:12px}
     .amount{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .status-cell{min-width:118px}
-    .row-actions{display:flex;gap:5px;flex-wrap:wrap;min-width:190px}
-    .row-actions .btn{min-height:34px;padding:4px 9px;font-size:12px}
+    .status-cell{min-width:0}
+    .row-actions{display:flex;gap:4px;flex-wrap:wrap;min-width:0}
+    .row-actions .btn{min-width:0;min-height:30px;padding:3px 4px;font-size:11px;white-space:normal}
     .wa{background:#15803d}.wa:hover{background:#166534}
-    .promise{white-space:normal;min-width:160px}
+    .promise{white-space:normal;min-width:0}
     .promise .badge{margin-bottom:4px}
     .loading{display:grid;gap:12px}
     .notice{margin:10px 0;padding:12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:var(--radius);color:#854d0e}
@@ -39,7 +45,19 @@
     .history-item small{color:var(--muted)}
     .history-tabs{display:flex;gap:8px;margin-bottom:12px}
     .history-tabs button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand-dark)}
-    @media(max-width:600px){.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}.table-wrap{max-height:none}}
+    @media(max-width:849px){
+      .toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .toolbar .search{grid-column:1/-1}
+      .follow-table,.follow-table tbody{display:block}
+      .follow-table thead{display:none}
+      .follow-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--line);padding:4px}
+      .follow-table td{display:flex;flex-direction:column;min-width:0;padding:6px;border:0;text-align:left}
+      .follow-table td::before{content:attr(data-label);margin-bottom:2px;color:var(--muted);font-size:10px;font-weight:700}
+      .follow-table td:nth-child(1),.follow-table td:nth-child(8),.follow-table td:nth-child(9),.follow-table td:nth-child(10){grid-column:1/-1}
+      .follow-table .amount{white-space:normal}
+      .row-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+    @media(max-width:600px){.toolbar{grid-template-columns:1fr}.toolbar .search{grid-column:auto}}
     @media print{.toolbar,.bar-actions,.row-actions,.history-tabs{display:none!important}.table-wrap{max-height:none;overflow:visible}.follow-table{min-width:0}.page{max-width:none}}
   </style>
 </head>
@@ -190,16 +208,16 @@
         const reminder = row.last_reminder;
         const totalOutstanding = N(row.overdue_total) + (row.due_month >= currentMonth() ? N(row.balance_due) : 0);
         return `<tr>
-          <td class="customer"><strong>${E(row.account_title || "Unnamed customer")}</strong><small>CAF ${E(row.account_no)} · ${E(row.mobile_number || "No mobile")}</small></td>
-          <td>${E(row.cro || "Unassigned")}</td>
-          <td class="amount">${N(row.due_amt) ? "Rs " + M(row.due_amt) : "—"}<small class="subtle">${row.installments && row.installments.length ? row.installments.length + " installment(s)" : ""}</small></td>
-          <td class="amount">${N(row.paid_amt) ? "Rs " + M(row.paid_amt) : "—"}</td>
-          <td class="amount"><strong>${N(row.balance_due) ? "Rs " + M(row.balance_due) : "—"}</strong></td>
-          <td class="amount">${N(row.overdue_total) ? "Rs " + M(row.overdue_total) : "—"}<small class="subtle">${row.oldest_overdue_month ? "Since " + E(monthName(row.oldest_overdue_month)) : ""}</small></td>
-          <td class="status-cell"><span class="badge ${badge}">${E(state)}</span></td>
-          <td class="promise">${promise ? `<span class="badge warn">Promised ${E(monthName(promise.promised_date))}</span><small class="subtle">Rs ${M(promise.promised_amount)}</small>` : '<small class="subtle">No promise recorded</small>'}</td>
-          <td>${reminder ? `<small>${E(new Date(reminder.created_at).toLocaleString())}</small>` : '<small class="subtle">No reminder</small>'}</td>
-          <td><div class="row-actions">
+          <td class="customer" data-label="Customer"><strong>${E(row.account_title || "Unnamed customer")}</strong><small>CAF ${E(row.account_no)} · ${E(row.mobile_number || "No mobile")}</small></td>
+          <td data-label="CRO">${E(row.cro || "Unassigned")}</td>
+          <td class="amount" data-label="Monthly due">${N(row.due_amt) ? "Rs " + M(row.due_amt) : "—"}<small class="subtle">${row.installments && row.installments.length ? row.installments.length + " installment(s)" : ""}</small></td>
+          <td class="amount" data-label="Received">${N(row.paid_amt) ? "Rs " + M(row.paid_amt) : "—"}</td>
+          <td class="amount" data-label="Month remaining"><strong>${N(row.balance_due) ? "Rs " + M(row.balance_due) : "—"}</strong></td>
+          <td class="amount" data-label="Past due">${N(row.overdue_total) ? "Rs " + M(row.overdue_total) : "—"}<small class="subtle">${row.oldest_overdue_month ? "Since " + E(monthName(row.oldest_overdue_month)) : ""}</small></td>
+          <td class="status-cell" data-label="Status"><span class="badge ${badge}">${E(state)}</span></td>
+          <td class="promise" data-label="Latest promise">${promise ? `<span class="badge warn">Promised ${E(monthName(promise.promised_date))}</span><small class="subtle">Rs ${M(promise.promised_amount)}</small>` : '<small class="subtle">No promise recorded</small>'}</td>
+          <td data-label="Last reminder">${reminder ? `<small>${E(new Date(reminder.created_at).toLocaleString())}</small>` : '<small class="subtle">No reminder</small>'}</td>
+          <td data-label="Actions"><div class="row-actions">
             <button class="btn wa" type="button" data-action="whatsapp" data-account="${E(row.account_no)}" ${!row.mobile_number || !totalOutstanding || !canWrite() ? "disabled" : ""}>WhatsApp</button>
             <button class="btn ghost" type="button" data-action="promise" data-account="${E(row.account_no)}" ${!totalOutstanding || !canWrite() ? "disabled" : ""}>Promise</button>
             <button class="btn ghost" type="button" data-action="history" data-account="${E(row.account_no)}">History</button>
