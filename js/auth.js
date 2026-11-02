@@ -7,6 +7,7 @@ ERP.auth = (function () {
     ["receipts.html", "receipts", "Receipts"],
     ["SalesForm.html", "sales", "Sales"],
     ["customer.html", "customers", "Customers"],
+    ["BulkCRO.html", "bulk_cro", "Bulk CRO Reassign"],
     ["LedgerView.html", "ledger", "Customer Ledger"],
     ["Accounts.html", "accounts", "Accounts & Day Book"],
     ["voucher_entry.html", "vouchers", "Voucher Entry"],
