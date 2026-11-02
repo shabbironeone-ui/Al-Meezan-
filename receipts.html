@@ -469,9 +469,14 @@ function render() {
     if (entryType === "bank_only") return !isCash && (!selectedBank || sameAccount_(entry.account, selectedBank));
     return isCash || (!selectedBank || sameAccount_(entry.account, selectedBank));
   });
-  const entries = rangeEntries.filter(entry => !q || [
-    entry.voucher_no, entry.party, entry.party_no, entry.remarks, acct(entry)
-  ].join(" ").toLowerCase().includes(q));
+  const entries = rangeEntries.filter(entry => {
+    if (!q) return true;
+    const amount = Number(entry.money_in) || 0;
+    const searchText = [
+      entry.voucher_no, entry.party, entry.party_no, entry.remarks, acct(entry), amount, M(amount)
+    ].join(" ").toLowerCase();
+    return searchText.includes(q) || searchText.replace(/,/g, "").includes(q.replace(/,/g, ""));
+  });
   const rows = [];
   const byKey = new Map();
   entries.forEach(entry => {
