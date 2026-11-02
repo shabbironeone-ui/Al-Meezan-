@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk CRO Reassignment</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .page{max-width:1600px}
+  .bulk-filters{display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,1.3fr) minmax(190px,1fr) minmax(180px,.9fr);gap:12px;align-items:end}
+  .cro-picker{position:relative}
+  .cro-picker-toggle{width:100%;min-height:var(--tap);padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+  .cro-picker-toggle::after{content:"▾";float:right;color:var(--muted)}
+  .cro-picker-menu{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:20;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.16)}
+  .cro-picker-menu[hidden]{display:none}
+  .cro-picker-actions{display:flex;justify-content:space-between;gap:8px;margin:8px 0}
+  .cro-picker-actions button{border:0;background:none;color:var(--brand-dark);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .cro-options{max-height:260px;overflow:auto}
+  .cro-option{display:flex;align-items:center;gap:9px;padding:6px 4px;margin:0;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer}
+  .cro-option input{width:17px;min-height:17px;height:17px;margin:0;accent-color:var(--brand)}
+  .bulk-account-filter{display:flex;gap:8px;align-items:center}
+  .bulk-account-filter input{min-width:0}
+  .bulk-account-filter button{white-space:nowrap}
+  .bulk-list-card{padding:10px}
+  .bulk-list-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 2px 9px}
+  .bulk-list-title{font-size:15px;margin:0}
+  .bulk-list-top label{display:flex;align-items:center;gap:8px;margin:0;cursor:pointer}
+  .bulk-list-top input{width:18px;min-height:18px;height:18px;margin:0;accent-color:var(--brand)}
+  .bulk-list{max-height:calc(100dvh - 350px);min-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .bulk-list-head,.bulk-row{display:grid;grid-template-columns:34px 120px minmax(170px,1fr) minmax(125px,.7fr) minmax(140px,.8fr) minmax(140px,.8fr);align-items:center;gap:10px}
+  .bulk-list-head{position:sticky;top:0;z-index:1;min-height:36px;padding:7px 12px;background:#f8fafc;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .bulk-row{min-height:44px;padding:5px 12px;border-top:1px solid var(--line);cursor:pointer}
+  .bulk-row:hover{background:#f8fafc}
+  .bulk-row input{width:18px;min-height:18px;height:18px;margin:0;accent-color:var(--brand);cursor:pointer}
+  .bulk-account{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .bulk-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .bulk-meta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}
+  .bulk-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .bulk-footer small{color:var(--muted)}
+  .bulk-footer-actions{display:flex;gap:8px;flex-wrap:wrap}
+  @media(max-width:900px){
+    .bulk-filters{grid-template-columns:1fr 1fr}
+    .bulk-list{max-height:calc(100dvh - 390px)}
+    .bulk-list-head,.bulk-row{grid-template-columns:28px 95px minmax(120px,1fr) minmax(115px,.8fr);gap:7px;padding-inline:8px}
+    .bulk-list-head span:nth-child(5),.bulk-list-head span:nth-child(6),.bulk-row .bulk-meta{display:none}
+  }
+  @media(max-width:520px){
+    .bulk-filters{grid-template-columns:1fr}
+    .bulk-list{max-height:calc(100dvh - 490px);min-height:180px}
+    .bulk-list-head,.bulk-row{grid-template-columns:25px 82px minmax(0,1fr);gap:6px;padding-inline:6px}
+    .bulk-list-head span:nth-child(4),.bulk-row .bulk-mobile{display:none}
+    .bulk-footer-actions{width:100%}.bulk-footer-actions .btn{flex:1}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="appbar">
+    <div><h1>Bulk CRO Reassignment</h1><p id="pageStatus">Loading customer accounts...</p></div>
+  </header>
+
+  <section class="card bulk-filters" aria-label="Customer filters">
+    <div class="fld">
+      <label for="sourceAPP">Approved by</label>
+      <select id="sourceAPP"><option value="">All approvers</option></select>
+    </div>
+    <div class="fld">
+      <label>Source CRO · select one or more</label>
+      <div class="cro-picker" id="croPicker">
+        <button class="cro-picker-toggle" id="croPickerToggle" type="button" aria-expanded="false" aria-controls="croPickerMenu">All CROs</button>
+        <div class="cro-picker-menu" id="croPickerMenu" hidden>
+          <input id="croSearch" type="search" placeholder="Search CRO names" autocomplete="off">
+          <div class="cro-picker-actions">
+            <button type="button" id="selectAllCROs">Select all</button>
+            <button type="button" id="clearCROs">Clear selection</button>
+          </div>
+          <div class="cro-options" id="croOptions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fld">
+      <label for="targetCRO">Target CRO</label>
+      <select id="targetCRO"><option value="">Select target CRO</option></select>
+    </div>
+    <div class="fld">
+      <label for="fromAccount">From account no. (inclusive)</label>
+      <div class="bulk-account-filter">
+        <input id="fromAccount" type="text" inputmode="numeric" placeholder="e.g. 7840002" autocomplete="off">
+        <button class="btn ghost" id="clearFromAccount" type="button">Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card bulk-list-card">
+    <div class="bulk-list-top">
+      <h2 class="bulk-list-title" id="listTitle">Customers</h2>
+      <label><input id="selectAll" type="checkbox"> Select all shown</label>
+    </div>
+    <div id="customerList" class="bulk-list" aria-live="polite"></div>
+  </section>
+
+  <section class="bulk-footer">
+    <small id="selectionCount">0 customers selected</small>
+    <div class="bulk-footer-actions">
+      <button class="btn" id="moveSelected" type="button">Move selected</button>
+      <button class="btn danger" id="moveAll" type="button">Move all shown</button>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
+<script>
+const $ = id => document.getElementById(id), E = ERP.ui.esc, M = ERP.ui.money;
+const accountNo = customer => String(customer.account_no || "").trim();
+let CUSTOMERS = [], CRO_NAMES = [], SELECTED_CROS = new Set(), FILTERED_CUSTOMERS = [], REASSIGNING = false;
+
+function accountAtOrAfter_(value, from) {
+  const normalize = number => String(number).replace(/^0+(?=\d)/, "");
+  const rawAccount = accountNo(value);
+  if (!/^\d+$/.test(rawAccount)) return false;
+  const account = normalize(rawAccount), threshold = normalize(from);
+  return account.length > threshold.length || (account.length === threshold.length && account >= threshold);
+}
+
+function selectedSourceCRO_() {
+  return [...SELECTED_CROS];
+}
+
+function updateCROPickerLabel_() {
+  const names = selectedSourceCRO_();
+  const allCROs = !names.length || names.length === CRO_NAMES.length;
+  $("croPickerToggle").textContent = allCROs
+    ? "All CROs"
+    : names.length < 3 ? names.join(", ") : `${names.length} CROs selected`;
+}
+
+function renderCROOptions_() {
+  const query = $("croSearch").value.trim().toLowerCase();
+  const names = CRO_NAMES.filter(name => name.toLowerCase().includes(query));
+  $("croOptions").innerHTML = names.map(name => `
+    <label class="cro-option">
+      <input type="checkbox" data-cro="${E(name)}" ${SELECTED_CROS.has(name) ? "checked" : ""}>
+      <span>${E(name)}</span>
+    </label>
+  `).join("") || '<div class="empty" style="padding:16px">No CRO names found.</div>';
+}
+
+function renderCustomers_() {
+  const approver = $("sourceAPP").value;
+  const sourceCROs = selectedSourceCRO_();
+  const allCROsSelected = !sourceCROs.length || sourceCROs.length === CRO_NAMES.length;
+  const from = $("fromAccount").value.trim();
+  const thresholdValid = !from || /^\d+$/.test(from);
+  $("fromAccount").setAttribute("aria-invalid", String(!thresholdValid));
+  $("fromAccount").title = thresholdValid ? "" : "Enter digits only for the account number";
+
+  FILTERED_CUSTOMERS = CUSTOMERS.filter(customer => {
+    const cro = String(customer.cro || "").trim();
+    return (!approver || String(customer.approved_by || "").trim() === approver)
+      && (allCROsSelected || sourceCROs.includes(cro))
+      && (thresholdValid ? (!from || accountAtOrAfter_(customer, from)) : false);
+  }).sort((a, b) => accountNo(a).localeCompare(accountNo(b), undefined, { numeric: true }));
+
+  const filterSummary = [
+    approver || "All approvers",
+    allCROsSelected ? "All CROs" : sourceCROs.join(", "),
+    from && thresholdValid ? `from account ${from}` : ""
+  ].filter(Boolean).join(" · ");
+  $("listTitle").textContent = `Customers · ${filterSummary} (${M(FILTERED_CUSTOMERS.length)})`;
+
+  $("customerList").innerHTML = FILTERED_CUSTOMERS.length
+    ? `<div class="bulk-list-head"><span></span><span>Account no</span><span>Customer name</span><span>Mobile</span><span>CRO</span><span>Approved by</span></div>`
+      + FILTERED_CUSTOMERS.map(customer => `
+        <label class="bulk-row">
+          <input type="checkbox" class="customer-check" data-acc="${E(accountNo(customer))}" checked aria-label="Select ${E(customer.account_title || accountNo(customer))}">
+          <span class="bulk-account">${E(accountNo(customer))}</span>
+          <span class="bulk-name" title="${E(customer.account_title || "")}">${E(customer.account_title || "(no name)")}</span>
+          <span class="bulk-meta bulk-mobile">${E(customer.mobile_number || "")}</span>
+          <span class="bulk-meta">${E(customer.cro || "Unassigned")}</span>
+          <span class="bulk-meta">${E(customer.approved_by || "—")}</span>
+        </label>
+      `).join("")
+    : '<div class="empty">No customers match these filters.</div>';
+  $("selectAll").checked = FILTERED_CUSTOMERS.length > 0;
+  $("selectAll").indeterminate = false;
+  $("selectionCount").textContent = `${M(FILTERED_CUSTOMERS.length)} customers shown · ${M(FILTERED_CUSTOMERS.length)} selected`;
+}
+
+function updateSelectionCount_() {
+  const checks = [...$("customerList").querySelectorAll(".customer-check")];
+  const selected = checks.filter(check => check.checked).length;
+  $("selectAll").checked = checks.length > 0 && selected === checks.length;
+  $("selectAll").indeterminate = selected > 0 && selected < checks.length;
+  $("selectionCount").textContent = `${M(FILTERED_CUSTOMERS.length)} customers shown · ${M(selected)} selected`;
+}
+
+function populateFilters_(settings) {
+  const names = category => settings
+    .filter(row => String(row.category || "").trim().toUpperCase() === category)
+    .map(row => String(row.display_name || row.lookup_code || "").trim()).filter(Boolean);
+  CRO_NAMES = [...new Set([...names("CRO"), ...CUSTOMERS.map(customer => String(customer.cro || "").trim()).filter(Boolean)])]
+    .sort((a, b) => a.localeCompare(b));
+  const approvers = [...new Set([...names("APPROVED_BY"), ...CUSTOMERS.map(customer => String(customer.approved_by || "").trim()).filter(Boolean)])]
+    .sort((a, b) => a.localeCompare(b));
+  $("sourceAPP").innerHTML = '<option value="">All approvers</option>' + approvers.map(name =>
+    `<option value="${E(name)}">${E(name)}</option>`).join("");
+  $("targetCRO").innerHTML = '<option value="">Select target CRO</option>' + CRO_NAMES.map(name =>
+    `<option value="${E(name)}">${E(name)}</option>`).join("");
+  renderCROOptions_();
+  updateCROPickerLabel_();
+}
+
+async function loadCustomers_() {
+  $("pageStatus").textContent = "Loading customer accounts...";
+  $("customerList").innerHTML = '<div class="empty">Loading customers...</div>';
+  try {
+    const [customers, settings] = await Promise.all([
+      ERP.db.customers.list(),
+      ERP.db.settings().catch(error => {
+        ERP.ui.toast("CRO settings could not be loaded; using customer assignments: " + error.message, "err");
+        return { rows: [] };
+      })
+    ]);
+    CUSTOMERS = customers;
+    populateFilters_(settings.rows || []);
+    $("pageStatus").textContent = `${M(CUSTOMERS.length)} customer accounts`;
+    renderCustomers_();
+  } catch (error) {
+    $("pageStatus").textContent = "Customer accounts could not be loaded.";
+    $("customerList").innerHTML = `<div class="empty"><b>Could not load customers.</b><br><small>${E(error.message)}</small></div>`;
+    throw error;
+  }
+}
+
+async function moveCustomers_(accounts, busyButton = $("moveSelected")) {
+  if (!ERP.auth.can("write", "bulk_cro")) return ERP.ui.toast("You do not have permission to reassign customers.", "err");
+  const target = $("targetCRO").value;
+  if (!target || !CRO_NAMES.includes(target)) return ERP.ui.toast("Choose a target CRO.", "err");
+  if (!accounts.length) return ERP.ui.toast("No customers selected.", "err");
+  if (REASSIGNING) return;
+
+  let updated = 0;
+  REASSIGNING = true;
+  const otherButton = busyButton === $("moveSelected") ? $("moveAll") : $("moveSelected");
+  otherButton.disabled = true;
+  try {
+    await ERP.ui.busy(busyButton, async () => {
+      for (const accNo of accounts) {
+        await ERP.db.customers.update(accNo, { cro: target });
+        updated++;
+      }
+    });
+  } catch (error) {
+    const progress = updated ? ` ${M(updated)} of ${M(accounts.length)} were updated before the error.` : "";
+    if (updated) {
+      try { await loadCustomers_(); }
+      catch (refreshError) { ERP.ui.toast("Could not refresh customer list: " + refreshError.message, "err"); }
+    }
+    ERP.ui.toast((error.message || "Could not reassign customers.") + progress, "err");
+    REASSIGNING = false;
+    otherButton.disabled = false;
+    return;
+  }
+  REASSIGNING = false;
+  otherButton.disabled = false;
+  ERP.ui.toast(`${M(updated)} customer(s) moved to ${target}`, "ok");
+  try { await loadCustomers_(); }
+  catch (error) { ERP.ui.toast("Customers were reassigned, but the list could not refresh: " + error.message, "err"); }
+}
+
+$("croPickerToggle").onclick = () => {
+  const open = $("croPickerMenu").hidden;
+  $("croPickerMenu").hidden = !open;
+  $("croPickerToggle").setAttribute("aria-expanded", String(open));
+  if (open) $("croSearch").focus();
+};
+$("croOptions").addEventListener("change", event => {
+  const checkbox = event.target.closest("input[data-cro]");
+  if (!checkbox) return;
+  if (checkbox.checked) SELECTED_CROS.add(checkbox.dataset.cro);
+  else SELECTED_CROS.delete(checkbox.dataset.cro);
+  updateCROPickerLabel_();
+  renderCustomers_();
+});
+$("croSearch").oninput = renderCROOptions_;
+$("selectAllCROs").onclick = () => {
+  SELECTED_CROS = new Set(CRO_NAMES);
+  renderCROOptions_(); updateCROPickerLabel_(); renderCustomers_();
+};
+$("clearCROs").onclick = () => {
+  SELECTED_CROS.clear();
+  renderCROOptions_(); updateCROPickerLabel_(); renderCustomers_();
+};
+document.addEventListener("click", event => {
+  if (!$("croPicker").contains(event.target)) {
+    $("croPickerMenu").hidden = true;
+    $("croPickerToggle").setAttribute("aria-expanded", "false");
+  }
+});
+$("sourceAPP").onchange = renderCustomers_;
+$("fromAccount").oninput = renderCustomers_;
+$("clearFromAccount").onclick = () => { $("fromAccount").value = ""; renderCustomers_(); };
+$("customerList").addEventListener("change", event => {
+  if (event.target.matches(".customer-check")) updateSelectionCount_();
+});
+$("selectAll").onchange = () => {
+  $("customerList").querySelectorAll(".customer-check").forEach(check => { check.checked = $("selectAll").checked; });
+  updateSelectionCount_();
+};
+$("moveSelected").onclick = () => {
+  const selected = [...$("customerList").querySelectorAll(".customer-check:checked")].map(check => check.dataset.acc);
+  moveCustomers_(selected);
+};
+$("moveAll").onclick = () => {
+  if (!FILTERED_CUSTOMERS.length) return ERP.ui.toast("No customers match these filters.", "err");
+  const target = $("targetCRO").value;
+  if (!target) return ERP.ui.toast("Choose a target CRO.", "err");
+  if (!confirm(`Move all ${FILTERED_CUSTOMERS.length} shown customers to ${target}?`)) return;
+  moveCustomers_(FILTERED_CUSTOMERS.map(accountNo), $("moveAll"));
+};
+
+(async () => {
+  await ERP.auth.guard();
+  const canWrite = ERP.auth.can("write", "bulk_cro");
+  $("moveSelected").hidden = !canWrite;
+  $("moveAll").hidden = !canWrite;
+  try { await loadCustomers_(); }
+  catch (error) { ERP.ui.toast("Could not load bulk CRO reassignment data: " + error.message, "err"); }
+})();
+</script>
+</body>
+</html>

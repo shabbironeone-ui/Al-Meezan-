@@ -20,25 +20,6 @@
   .balbox{border-radius:var(--radius);padding:14px;margin-bottom:12px;color:#fff;background:#047857}
   .balbox.due{background:var(--warn)}.balbox small{opacity:.85}.balbox b{display:block;font-size:28px}.balbox span{font-size:12px;opacity:.9}
   .gcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}
-  #bulkCRODialog{width:96vw;max-width:none;height:94vh;height:94dvh;max-height:none}
-  #bulkCRODialog .sh-body{min-height:0}
-  .bulk-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-  .bulk-list-head,.bulk-customer-row{display:grid;grid-template-columns:34px 120px minmax(160px,1fr) minmax(120px,.7fr);align-items:center;gap:12px}
-  .bulk-list-head{position:sticky;top:0;z-index:1;padding:8px 12px;background:#f8fafc;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-  .bulk-customer-row{min-height:48px;padding:6px 12px;border-top:1px solid var(--line);background:#fff;cursor:pointer}
-  .bulk-customer-row:hover{background:#f8fafc}
-  .bulk-customer-row input[type="checkbox"],#bulkSelectAll{width:18px;min-height:18px;height:18px;margin:0;padding:0;accent-color:var(--brand);cursor:pointer}
-  .bulk-customer-account{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
-  .bulk-customer-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-  .bulk-customer-mobile{color:var(--muted);font-size:12px;text-align:right}
-  .bulk-select-all{display:flex;align-items:center;gap:8px;margin:0;cursor:pointer}
-  @media(max-width:760px){
-    #bulkCRODialog{width:100%;height:100dvh;border-radius:0}
-    .bulk-filters{grid-template-columns:1fr 1fr}
-    .bulk-list-head,.bulk-customer-row{grid-template-columns:30px 86px minmax(0,1fr);gap:8px;padding-inline:8px}
-    .bulk-list-head span:last-child,.bulk-customer-mobile{display:none}
-  }
-  @media(max-width:420px){.bulk-filters{grid-template-columns:1fr}}
   @media(max-width:759px){
     .head{display:none}
     .row{grid-template-columns:44px 1fr auto;grid-template-areas:"av who bal" "av meta act"}
@@ -63,7 +44,6 @@
     <select id="fCro" aria-label="CRO"></select>
     <select id="fSort" aria-label="Sort"><option value="new">Newest first</option><option value="name">Name A-Z</option><option value="bal">Highest balance</option></select>
     <button class="chip" id="chipDue" aria-pressed="false">Balance due</button>
-    <button class="btn ghost mini" id="bulkCROBtn" type="button">Bulk CRO move</button>
   </section>
 
   <div class="head"><span>Customer</span><span>Account</span><span>Mobile</span><span>CRO</span><span style="text-align:right">Balance</span><span></span></div>
@@ -82,44 +62,6 @@
     <button class="btn" id="btnSave">Save customer</button>
   </div>
 </dialog>
-<datalist id="bulkCROOptions"></datalist>
-
-<dialog id="bulkCRODialog" class="sheet">
-  <div class="sh-head">
-    <div><h2>Bulk customer reassignment</h2><p>Filter by current CRO and approver, then assign selected customers</p></div>
-    <button class="x" type="button" data-close aria-label="Close">✕</button>
-  </div>
-  <div class="sh-body">
-    <div class="fsec bulk-filters">
-      <div class="fld">
-        <label>Approved by</label>
-        <select id="bulkSourceAPP"></select>
-      </div>
-      <div class="fld">
-        <label>Source CRO</label>
-        <input id="bulkSourceCRO" list="bulkCROOptions" placeholder="All CROs — type to search" autocomplete="off">
-      </div>
-      <div class="fld">
-        <label>Target CRO</label>
-        <input id="bulkTargetCRO" list="bulkCROOptions" placeholder="Select target CRO" autocomplete="off">
-      </div>
-    </div>
-
-    <div class="fsec">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-        <strong id="bulkListTitle">Customers</strong>
-        <label class="bulk-select-all"><input type="checkbox" id="bulkSelectAll"> Select all</label>
-      </div>
-      <div id="bulkCROList" class="table-wrap" style="max-height:calc(94dvh - 300px);overflow:auto"></div>
-    </div>
-  </div>
-  <div class="sh-foot">
-    <button class="btn ghost" type="button" data-close>Cancel</button>
-    <button class="btn" type="button" id="bulkMoveSelectedBtn">Move selected</button>
-    <button class="btn danger" type="button" id="bulkMoveAllBtn">Move all from source</button>
-  </div>
-</dialog>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script><script src="js/voice.js"></script>
 <script>
@@ -240,92 +182,6 @@ function openProfile(c) {
   if ($("pEdit")) $("pEdit").onclick = () => { $("profile").close(); openForm(c); };
   $("profile").showModal();
 }
-
-function populateBulkCROOptions() {
-  const cros = [...new Set((window.CRO || []).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  $("bulkCROOptions").innerHTML = cros.map(x => `<option value="${E(x)}"></option>`).join("");
-  const approvers = [...new Set((window.APP || []).filter(Boolean))].sort();
-  $("bulkSourceAPP").innerHTML = '<option value="">All approvers</option>' + approvers.map(x => `<option value="${E(x)}">${E(x)}</option>`).join("");
-}
-
-function renderBulkCustomers() {
-  const source = $("bulkSourceCRO").value;
-  const sourceAPP = $("bulkSourceAPP").value;
-  const cros = window.CRO || [];
-  const validSource = !source || cros.includes(source);
-  const sourceRows = ALL.filter(c => (!source || String(c.cro || "").trim() === source)
-    && (!sourceAPP || String(c.approved_by || "").trim() === sourceAPP));
-  $("bulkListTitle").textContent = `Customers${source ? ` in ${source}` : " · All CROs"}${sourceAPP ? ` · ${sourceAPP}` : " · All approvers"} (${sourceRows.length})`;
-  if (!validSource || !sourceRows.length) {
-    $("bulkCROList").innerHTML = `<div class="empty">${validSource ? "No customers match these filters." : "Choose a CRO from the search suggestions, or clear the field for all CROs."}</div>`;
-    $("bulkSelectAll").checked = false;
-    return;
-  }
-
-  $("bulkCROList").innerHTML = `<div class="bulk-list-head"><span></span><span>Account no</span><span>Customer name</span><span>Mobile</span></div>`
-    + sourceRows.map(c => `
-      <label class="bulk-customer-row">
-        <input type="checkbox" class="bulk-customer-check" data-acc="${E(key(c))}" checked aria-label="Select ${E(c.account_title)}">
-        <span class="bulk-customer-account">${E(key(c))}</span>
-        <span class="bulk-customer-name" title="${E(c.account_title)}">${E(c.account_title)}</span>
-        <small class="bulk-customer-mobile">${E(c.mobile_number || "")}</small>
-      </label>
-    `).join("");
-  $("bulkSelectAll").checked = true;
-}
-
-async function bulkReassignCustomers(accNos, targetCRO) {
-  const cleanTarget = String(targetCRO || "").trim();
-  if (!cleanTarget || !(window.CRO || []).includes(cleanTarget)) return ERP.ui.toast("Choose a target CRO from the search suggestions", "err");
-  if (!accNos.length) return ERP.ui.toast("No customers selected", "err");
-
-  try {
-    await ERP.ui.busy($("bulkMoveSelectedBtn"), async () => {
-      for (const accNo of accNos) {
-        await ERP.db.customers.update(accNo, { cro: cleanTarget });
-      }
-    });
-    ERP.ui.toast(`${accNos.length} customer(s) moved to ${cleanTarget}`, "ok");
-    $("bulkCRODialog").close();
-    await load();
-  } catch (e) {
-    ERP.ui.toast(e.message || "Could not reassign customers", "err");
-  }
-}
-
-$("bulkCROBtn").onclick = () => {
-  populateBulkCROOptions();
-  $("bulkSourceCRO").value = "";
-  $("bulkTargetCRO").value = "";
-  $("bulkSourceAPP").value = "";
-  $("bulkSelectAll").checked = false;
-  renderBulkCustomers();
-  $("bulkCRODialog").showModal();
-};
-
-$("bulkSourceCRO").oninput = renderBulkCustomers;
-$("bulkSourceAPP").onchange = renderBulkCustomers;
-$("bulkSelectAll").onchange = () => {
-  document.querySelectorAll(".bulk-customer-check").forEach(box => { box.checked = $("bulkSelectAll").checked; });
-};
-
-$("bulkMoveSelectedBtn").onclick = () => {
-  const selected = [...document.querySelectorAll(".bulk-customer-check:checked")].map(x => x.dataset.acc);
-  const target = $("bulkTargetCRO").value;
-  bulkReassignCustomers(selected, target);
-};
-
-$("bulkMoveAllBtn").onclick = () => {
-  const source = $("bulkSourceCRO").value;
-  const target = $("bulkTargetCRO").value;
-  if (!source) return ERP.ui.toast("Choose the source CRO first", "err");
-  const sourceAPP = $("bulkSourceAPP").value;
-  const allAcc = ALL.filter(c => String(c.cro || "").trim() === source
-    && (!sourceAPP || String(c.approved_by || "").trim() === sourceAPP)).map(c => key(c));
-  if (!allAcc.length) return ERP.ui.toast("No customers found in this source CRO", "err");
-  if (!confirm(`Move all ${allAcc.length} customers from ${source}${sourceAPP ? ` · ${sourceAPP}` : ""} to ${target || "selected target"}?`)) return;
-  bulkReassignCustomers(allAcc, target);
-};
 
 function fillSel(el, list, cur) {
   const safeList = [...new Set(list.filter(Boolean))];
