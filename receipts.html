@@ -149,8 +149,8 @@
   </div>
 
   <section class="card range" style="margin-top:12px">
-    <div><label>Period</label><select id="preset"><option value="today">Today</option><option value="yday">Yesterday</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
-    <div><label>From</label><input type="date" id="from"></div><div><label>To</label><input type="date" id="to"></div>
+    <div><label>Period</label><select id="preset"><option value="all">All dates</option><option value="today">Today</option><option value="month">This month</option><option value="last_month">Last month</option><option value="last_3_months">Last 3 months</option><option value="year">This year</option><option value="custom">Custom range</option></select></div>
+    <div id="fromWrap" hidden><label for="from">From</label><input type="date" id="from"></div><div id="toWrap" hidden><label for="to">To</label><input type="date" id="to"></div>
     <div class="wide"><label>Search</label><input id="q" type="search" placeholder="Receipt no, customer, account no or pay mode"></div>
     <div class="bank-filter"><div><label for="entryTypeFilter">Entry type</label><select id="entryTypeFilter"><option value="cash_bank">Cash + bank</option><option value="cash_only">Cash only</option><option value="bank_only">Bank only</option></select></div><div style="flex:1;min-width:0"><label for="bankFilter">Bank account</label><select id="bankFilter" aria-label="Filter by bank"><option value="">All banks</option></select></div></div>
     <div class="range-actions"><button class="btn ghost" id="btnApply" type="button">Apply</button><button class="btn ghost" id="btnToday" type="button" title="Show today">Today</button></div>
@@ -401,27 +401,37 @@ function populateEntryHeadEditor(entry) {
 
 /* ---------- period ---------- */
 function setPreset(p) {
-  const t = new Date(), d = new Date(t); let a = t, b = t;
-  if (p === "yday") { d.setDate(t.getDate() - 1); a = b = d; }
-  else if (p === "week") { d.setDate(t.getDate() - ((t.getDay() + 6) % 7)); a = d; }
-  else if (p === "month") a = new Date(t.getFullYear(), t.getMonth(), 1);
-  if (p !== "custom") {
-    $("from").value = iso(a);
-    $("to").value = p === "today" || p === "yday" ? "" : iso(b);
+  const today = new Date();
+  const startOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  let from = today, to = today;
+  if (p === "all" || p === "custom") {
+    if (p === "all") $("from").value = $("to").value = "";
+  } else {
+    if (p === "month") from = startOfThisMonth;
+    else if (p === "last_month") {
+      from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      to = new Date(today.getFullYear(), today.getMonth(), 0);
+    } else if (p === "last_3_months") from = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+    else if (p === "year") from = new Date(today.getFullYear(), 0, 1);
+    $("from").value = iso(from);
+    $("to").value = iso(to);
   }
+  const isCustom = p === "custom";
+  $("fromWrap").hidden = !isCustom;
+  $("toWrap").hidden = !isCustom;
 }
 $("preset").onchange = () => { setPreset($("preset").value); load(); };
-["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; load(); });
+["from", "to"].forEach(i => $(i).onchange = () => { $("preset").value = "custom"; setPreset("custom"); if ($("from").value && $("to").value) load(); });
 
 /* ---------- load + compute ---------- */
 async function load() {
-  const from = $("from").value || $("to").value;
-  const to = $("to").value || $("from").value;
-  if (!from || !to || from > to) return ERP.ui.toast("Choose a valid date range", "err");
+  const allDates = $("preset").value === "all";
+  const from = $("from").value, to = $("to").value;
+  if (!allDates && (!from || !to || from > to)) return ERP.ui.toast("Choose a valid date range", "err");
   $("loadErr").hidden = true;
   $("ledger").innerHTML = '<div class="card"><div class="skeleton" style="width:60%"></div><br><div class="skeleton"></div></div>';
   try {
-    const en = await ERP.db.accounts.entries({ from, to });
+    const en = await ERP.db.accounts.entries(allDates ? {} : { from, to });
     const cashSales = en.filter(entry => entry.src === "sales" && entry.kind === "Cash sale");
     const invoices = [...new Set(cashSales.map(entry => String(entry.party_no || entry.voucher_no || "").trim()).filter(Boolean))];
     let receiptNumbers = [];
@@ -573,8 +583,10 @@ function updateReceiptSortHeadings_() {
   });
 }
 function selectedRangeLabel_() {
-  const from = $("from").value || $("to").value;
-  const to = $("to").value || $("from").value;
+  if ($("preset").value === "all") return "All dates";
+  if ($("preset").value !== "custom") return $("preset").selectedOptions[0].textContent;
+  const from = $("from").value, to = $("to").value;
+  if (!from || !to) return "Choose custom date range";
   return from === to ? from : `${from} to ${to}`;
 }
 function printDate_(value) {
@@ -591,9 +603,10 @@ function renderPrintReport_(rows) {
     .filter(Boolean));
   const receiptNoCount = receiptIds.size;
   const totals = receiptAmounts_(receiptRows);
-  const [rangeFrom, rangeTo] = selectedRangeLabel_().split(" to ");
-  const from = printDate_(rangeFrom), to = printDate_(rangeTo);
-  $("printSub").textContent = from === to ? from : `${from} to ${to}`;
+  const rangeLabel = selectedRangeLabel_();
+  const [rangeFrom, rangeTo] = rangeLabel.split(" to ");
+  const from = printDate_(rangeFrom), to = rangeTo && printDate_(rangeTo);
+  $("printSub").textContent = rangeTo ? `${from} to ${to}` : from;
   $("printRows").innerHTML = receiptRows.map(row =>
     `<tr><td>${E(printDate_(row.date))}</td><td>${E(row.voucher_no || "")}</td><td>${E(row.party_no || "")}</td><td>${E(row.party || "")}</td><td>${E(acct(row))}</td><td class="num">${M(Number(row.money_in) || 0)}</td></tr>`
   ).join("");
@@ -620,7 +633,7 @@ $("btnApply").onclick = load;
 $("btnToday").onclick = () => { $("preset").value = "today"; setPreset("today"); load(); };
 $("btnClear").onclick = () => { $("q").value = ""; render(); };
 $("btnPrint").onclick = () => window.print();
-$("btnCsv").onclick = () => ERP.ui.downloadCSV(`receipts_${$("from").value}_${$("to").value}.csv`, VIEW.flatMap(row => row.parts || [row]).map(e => ({
+$("btnCsv").onclick = () => ERP.ui.downloadCSV(`receipts_${$("preset").value === "all" ? "all_dates" : `${$("from").value}_${$("to").value}`}.csv`, VIEW.flatMap(row => row.parts || [row]).map(e => ({
   date: e.date, receipt_no: e.voucher_no, account_no: e.party_no, customer_name: e.party,
   pay_mode: acct(e), amount: e.money_in
 })));
