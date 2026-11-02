@@ -260,7 +260,11 @@ ERP.db = (function () {
     accounts: {
       TABLE: { receipts: "receipts", general_receipts: "general_receipts", expenses: "expenses", payments: "payments", contra: "contra" },
       HEADCOL: { receipts: "account_head", general_receipts: "account_head", expenses: "expense_head", payments: "payment_head", contra: "head" },
-      entries: ({ from, to }) => fetchAll("v_daybook", { order: "created_at", build: q => q.gte("date", from).lte("date", to).order("date", { ascending: true }) }),
+      entries: ({ from, to } = {}) => fetchAll("v_daybook", { order: "created_at", build: q => {
+        if (from) q = q.gte("date", from);
+        if (to) q = q.lte("date", to);
+        return q.order("date", { ascending: true });
+      } }),
       async partyEntries(headNames = []) {
         const categories = ["Account Receivable", "Account Payable"];
         const sources = ["general_receipts", "payments"];
@@ -284,6 +288,7 @@ ERP.db = (function () {
       async update(src, id, f) {
         const t = this.TABLE[src]; if (!t) throw new Error("This entry cannot be edited here");
         const row = { date: f.date, pay_mode: f.account, account_title: f.party, amount: f.amount, remarks: f.remarks };
+        if (f.account_no !== undefined) row.account_no = f.account_no;
         if (f.to_account !== undefined) row.to_account = f.to_account;
         row[this.HEADCOL[src]] = f.head;
         const r = must(await sb.from(t).update(row).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r;
