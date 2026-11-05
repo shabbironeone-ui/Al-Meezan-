@@ -352,7 +352,7 @@ function renderHist() {
   const totalAdvance = selectedRows.filter(row => !row.return_of_id && !/^INV-/i.test(String(row.account_no || ""))).reduce((sum, row) => sum + N(row.advance), 0);
   const totalProcessingFee = selectedRows.reduce((sum, row) => sum + N(row.processing_fee), 0);
   const totalFirstInstallment = selectedRows.reduce((sum, row) => sum + N(row.installment_per_month), 0);
-  $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)} · Advance Rs ${M(totalAdvance)} · Processing fee Rs ${M(totalProcessingFee)} · 1st installment Rs ${M(totalFirstInstallment)}${HIST.length >= 500 ? " (showing latest 500 lines, narrow the dates)" : ""}`;
+  $("hSum").textContent = `${g.size} sale${g.size === 1 ? "" : "s"} · Rs ${M(grand)} · Advance Rs ${M(totalAdvance)} · Processing fee Rs ${M(totalProcessingFee)} · 1st installment Rs ${M(totalFirstInstallment)}`;
 }
 function openSalesReturn(id) {
   const row = HIST.find(item => String(item.id) === String(id));
