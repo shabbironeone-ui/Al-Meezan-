@@ -227,9 +227,16 @@ ERP.db = (function () {
       contractTotal: saleContractTotal,
       list: ({ accNo } = {}) => fetchAll("sales", { order: "id", build: q => accNo ? q.eq("account_no", String(accNo).trim()) : q }),
       async recent({ from, to } = {}) {
-        let q = sb.from("sales").select("*").order("date", { ascending: false }).order("id", { ascending: false });
-        if (from) q = q.gte("date", from); if (to) q = q.lte("date", to);
-        return must(await q.limit(500));
+        return fetchAll("sales", {
+          order: "id",
+          ascending: false,
+          build: q => {
+            q = q.order("date", { ascending: false });
+            if (from) q = q.gte("date", from);
+            if (to) q = q.lte("date", to);
+            return q;
+          }
+        });
       },
       async returnedQuantities(ids) {
         const totals = new Map();
