@@ -55,17 +55,10 @@
       <div class="cinfo" id="cinfo"></div></div>
     <div id="lines"></div>
     <button class="btn soft" id="addLine" style="width:100%;margin-bottom:12px">＋ Add item</button>
-    <div class="card" id="colCard">
-      <div id="colRows"><h3 style="margin-bottom:8px">Received at sale</h3>
-        <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
-          <div><label for="rAdv">Advance (Rs)</label><input id="rAdv" type="number" inputmode="decimal" min="0"></div>
-          <div><label for="rFee">Processing fee (Rs)</label><input id="rFee" type="number" inputmode="decimal" min="0"></div>
-          <div><label for="rFirst">1st installment (Rs)</label><input id="rFirst" type="number" inputmode="decimal" min="0"></div></div>
-        <p id="rHint" style="margin:8px 0 0;font-size:12px;color:var(--muted)"></p></div>
-      <div id="cashRow" hidden><label for="colMode">Cash sale received in</label><select id="colMode"></select></div></div>
+    <div class="card" id="colCard" hidden><div id="cashRow"><label for="colMode">Cash sale received in</label><select id="colMode"></select></div></div>
     <div class="card" id="planCard" data-feature="show_installment_plan"><h3 style="margin-bottom:2px">Installment plan</h3><p id="planSub" style="margin:0 0 10px;color:var(--muted);font-size:13px"></p>
       <div class="table-wrap"><table style="min-width:340px"><thead><tr><th>#</th><th>Month</th><th class="num">Due (Rs)</th><th>Note</th></tr></thead><tbody id="planBody"></tbody></table></div></div>
-    <div class="sumbar"><div class="k" data-feature="show_entry_totals"><div><small>Items</small><b id="sCnt">0</b></div><div><small>Advance</small><b id="sAdv">0</b></div><div id="kInst"><small>Installment / month</small><b id="sInst">0</b></div><div id="kRec"><small>Received now</small><b id="sRec">0</b></div><div class="g"><small>Grand total</small><b id="sTot">Rs 0</b></div></div>
+    <div class="sumbar"><div class="k" data-feature="show_entry_totals"><div><small>Items</small><b id="sCnt">0</b></div><div><small>Advance</small><b id="sAdv">0</b></div><div id="kInst"><small>Installment / month</small><b id="sInst">0</b></div><div class="g"><small>Grand total</small><b id="sTot">Rs 0</b></div></div>
       <button class="btn" id="btnSave">Save sale</button></div>
   </section>
 
@@ -220,16 +213,10 @@ function planRows() {                                   // same rule the databas
     const d = fm ? new Date(fm.y, fm.m + k - 1, 1) : null; rows.push({ k, due: +due.toFixed(2), label: d ? d.toLocaleString("en", { month: "long", year: "numeric" }) : "-" }); }
   return rows;
 }
-const dirty = { adv: false, fee: false };
-function recvTotal() { $("sRec").textContent = M(N($("rAdv").value) + N($("rFee").value) + N($("rFirst").value)); }
-["rAdv", "rFee", "rFirst"].forEach(id => $(id).addEventListener("input", e => { if (e.isTrusted) { if (id === "rAdv") dirty.adv = true; if (id === "rFee") dirty.fee = true; } recvTotal(); }));
 function dues() { let adv = 0, fee = 0; document.querySelectorAll("#lines .line").forEach(l => { adv += N(l.querySelector(".adv").value); fee += N(l.querySelector(".fee").value); }); const rows = planRows(); return { adv, fee, first: rows.length ? rows[0].due : 0, rows }; }
 function renderPlan() {
-  const cash = mode === "cash"; $("planCard").hidden = cash; $("colRows").hidden = cash; $("cashRow").hidden = !cash; $("kRec").hidden = cash; if (cash) return;
+  const cash = mode === "cash"; $("planCard").hidden = cash; $("colCard").hidden = !cash; $("kInst").hidden = cash; if (cash) return;
   const d = dues(), rows = d.rows, fin = rows.reduce((s, r) => s + r.due, 0);
-  if (!dirty.adv) $("rAdv").value = d.adv || ""; if (!dirty.fee) $("rFee").value = d.fee || "";
-  $("rHint").textContent = `Due: advance Rs ${M(d.adv)} · processing fee Rs ${M(d.fee)} · 1st installment Rs ${M(d.first)}. Type what the customer actually pays now. You confirm it in the receipt window after Save.`;
-  recvTotal();
   $("planSub").textContent = rows.length ? `${rows.length} installments · financed Rs ${M(fin)} (after advance)` : "Set the plan months on an item to see the schedule.";
   $("planBody").innerHTML = rows.map(r => `<tr><td>${r.k}</td><td>${E(r.label)}</td><td class="num"><b>${M(r.due)}</b></td><td>${r.k === 1 ? '<span class="badge">1st installment</span>' : ""}</td></tr>`).join("") || '<tr><td colspan="4" class="empty" style="padding:14px">No installment plan yet</td></tr>';
 }
@@ -257,7 +244,7 @@ $("pickList").onclick = e => { const b = e.target.closest(".pi"); if (!b || !act
 /* ---------- save ---------- */
 function resetForm() {
   editing = null; $("editBar").hidden = true; $("seg").style.opacity = 1; $("lines").innerHTML = ""; $("sAcc").value = "786"; $("sAcc").readOnly = false; $("sName").value = "Cash Customer";
-  $("sDate").value = ERP.ui.today(); origEdit = null; dirty.adv = dirty.fee = false; $("rFirst").value = ""; curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
+  $("sDate").value = ERP.ui.today(); origEdit = null; curCust = null; $("cinfo").className = "cinfo"; setMode(mode); addLine({ plan_months: 0 }); totals();
 }
 $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   const cash = mode === "cash", date = $("sDate").value, acc = $("sAcc").value.trim();
@@ -275,7 +262,7 @@ $("btnSave").onclick = () => ERP.ui.busy($("btnSave"), async () => {
   if (!cash && !editing && N(curCust.balance) > 0 && !confirm(`${curCust.account_title} still owes Rs ${M(curCust.balance)}.\nSave a new sale anyway?`)) return;
   const sale = { date, cash, account_no: cash ? (editing || "") : acc, account_title: cash ? $("sName").value.trim() : (curCust ? curCust.account_title : $("sName").value), approved_by: cash ? "" : (curCust ? curCust.approved_by : ""), next_inst_month: cash ? null : (editing && origEdit && String(origEdit.date).slice(0, 7) === date.slice(0, 7) ? origEdit.next : monthLabel(date)),
     pay_mode: cash ? $("colMode").value : "" };
-  const dd = cash ? null : dues(), rec = cash ? null : { adv: N($("rAdv").value), fee: N($("rFee").value), first: N($("rFirst").value), dueAdv: dd.adv, dueFee: dd.fee, dueFirst: dd.first };
+  const dd = cash ? null : dues(), rec = cash ? null : { adv: dd.adv, fee: dd.fee, first: dd.first, dueAdv: dd.adv, dueFee: dd.fee, dueFirst: dd.first };
   try { const r = await ERP.db.sales.save(sale, items, !!editing);
     const wasCash = cash, wasEdit = !!editing, savedName = sale.account_title;
     let receiptSetupError = null, receiptNo = "";
