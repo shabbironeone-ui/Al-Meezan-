@@ -134,6 +134,28 @@ ERP.db = (function () {
       async add(rows) { return must(await sb.from("receipts").insert(rows).select()); },
       async update(id, fields) { const r = must(await sb.from("receipts").update(fields).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r; },
       async existing(vouchers) { return must(await sb.from("receipts").select("voucher_no").in("voucher_no", vouchers)).map(x => x.voucher_no); },
+      async nextBankRecoveryVoucherNo(date, reserved = []) {
+        const match = /^(\d{4})-(\d{2})-\d{2}$/.exec(String(date || ""));
+        if (!match) throw new Error("Select a valid receipt date before generating a receipt number");
+        const period = match[2] + match[1].slice(-2);
+        const prefix = "online " + period;
+        const rows = await fetchAll("receipts", {
+          select: "voucher_no",
+          order: "voucher_no",
+          build: q => q.ilike("voucher_no", prefix + "%")
+        });
+        const pattern = new RegExp("^online\\s*" + period + "(\\d+)$", "i");
+        let serial = 0;
+        rows.forEach(row => {
+          const found = pattern.exec(String(row.voucher_no || "").trim());
+          if (found) serial = Math.max(serial, Number(found[1]) || 0);
+        });
+        reserved.forEach(value => {
+          const found = pattern.exec(String(value || "").trim());
+          if (found) serial = Math.max(serial, Number(found[1]) || 0);
+        });
+        return prefix + String(serial + 1).padStart(2, "0");
+      },
       async remove(ids) { const r = must(await sb.from("receipts").delete().in("id", ids).select("id")); if (r.length !== ids.length) throw new Error("Only " + r.length + " of " + ids.length + " deleted (permission)"); }
     },
 
