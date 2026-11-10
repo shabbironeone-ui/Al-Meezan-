@@ -125,30 +125,66 @@ const label = p => up(p.model) + (p.color ? " · " + up(p.color) : "");
 const STOCK_START = "2026-08-01";
 function buildSaleStock(products, purchases, sales, ledger) {
   const balances = new Map();
+  const searchAliases = new Map();
+  const productById = new Map(products.map(product => [String(product.product_id || "").trim().toLowerCase(), product]));
+  const productsByIdentity = new Map();
+  const identity = row => [row.company_name, row.product_category, row.model]
+    .map(value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase());
+  products.forEach(product => {
+    const key = identity(product).join("|");
+    if (key.replace(/\|/g, "")) {
+      if (!productsByIdentity.has(key)) productsByIdentity.set(key, []);
+      productsByIdentity.get(key).push(product);
+    }
+  });
+  const resolveProductId = row => {
+    const id = String(row.product_id || "").trim();
+    const product = productById.get(id.toLowerCase());
+    const rowIdentity = identity(row);
+    if (product && identity(product).every((value, index) => !rowIdentity[index] || value === rowIdentity[index])) return id;
+    const rowColor = String(row.color || "").trim().replace(/\s+/g, " ").toLowerCase();
+    const matches = (productsByIdentity.get(rowIdentity.join("|")) || []).filter(candidate =>
+      !rowColor || String(candidate.color || "").trim().replace(/\s+/g, " ").toLowerCase() === rowColor);
+    return matches.length === 1 ? String(matches[0].product_id || "").trim() : id;
+  };
   const add = (productId, quantity) => {
     if (!productId) return;
     const key = String(productId).trim().toLowerCase();
     balances.set(key, (balances.get(key) || 0) + quantity);
   };
+  const addSearchAliases = row => {
+    const productId = resolveProductId(row);
+    if (!productId) return;
+    const key = productId.toLowerCase();
+    if (!searchAliases.has(key)) searchAliases.set(key, new Set());
+    [row.model, row.company_name, row.product_category, row.color].filter(Boolean)
+      .forEach(value => searchAliases.get(key).add(String(value).trim()));
+  };
   purchases.forEach(row => {
-    if (!row.product_id || String(row.purchase_date || "") < STOCK_START) return;
+    addSearchAliases(row);
+    const productId = resolveProductId(row);
+    if (!productId || String(row.purchase_date || "") < STOCK_START) return;
     const qty = Math.abs(N(row.qty));
-    add(row.product_id, row.return_of_id ? -qty : qty);
+    add(productId, row.return_of_id ? -qty : qty);
   });
   sales.forEach(row => {
-    if (!row.product_id || String(row.date || "") < STOCK_START) return;
+    addSearchAliases(row);
+    const productId = resolveProductId(row);
+    if (!productId || String(row.date || "") < STOCK_START) return;
     const qty = Math.abs(N(row.qty));
-    add(row.product_id, row.return_of_id ? qty : -qty);
+    add(productId, row.return_of_id ? qty : -qty);
   });
   const sourceTypes = new Set(["PURCHASE", "PURCHASERETURN", "OPENING", "OPENINGSTOCK", "OPENINGBALANCE", "SALE", "SALERETURN"]);
   ledger.forEach(row => {
+    addSearchAliases(row);
     const type = String(row.reference_type || "").replace(/[\s_-]/g, "").toUpperCase();
     if (sourceTypes.has(type)) return;
-    add(row.product_id, N(row.qty_in) - N(row.qty_out));
+    add(resolveProductId(row), N(row.qty_in) - N(row.qty_out));
   });
   return products
     .map(product => ({
       ...product,
+      search_aliases: [...(searchAliases.get(String(product.product_id || "").trim().toLowerCase()) || [])],
       in_stock: balances.get(String(product.product_id || "").trim().toLowerCase()) || 0
     }))
     .sort((a, b) => N(b.in_stock) - N(a.in_stock));
@@ -234,8 +270,11 @@ $("addLine").onclick = () => { const l = addLine(); l.querySelector(".browse").c
 
 function renderPick() {
   const q = $("pickQ").value.trim().toLowerCase(), all = $("pickAll").checked;
-  const rows = STOCK.filter(p => (all || N(p.in_stock) > 0) && (!q || [p.product_id, p.company_name, p.model, p.color, p.product_category].join(" ").toLowerCase().includes(q))).slice(0, 80);
-  $("pickList").innerHTML = rows.map((p, i) => `<button type="button" class="pi" data-i="${STOCK.indexOf(p)}"><span><b>${E(label(p))}</b><small>${E(up(p.company_name))} · ${E(up(p.product_category))} · ${E(p.product_id)}</small></span><span class="badge ${N(p.in_stock) > 0 ? "ok" : "bad"}">${M(p.in_stock)}</span></button>`).join("")
+  const rows = STOCK.filter(p => (all || N(p.in_stock) > 0 || !!q) && (!q || [p.product_id, p.company_name, p.model, p.color, p.product_category, ...(p.search_aliases || [])].join(" ").toLowerCase().includes(q))).slice(0, 80);
+  $("pickList").innerHTML = rows.map(p => {
+    const outOfStock = N(p.in_stock) <= 0;
+    return `<button type="button" class="pi" data-i="${STOCK.indexOf(p)}" ${outOfStock && !all ? 'disabled title="Out of stock. Enable Show out-of-stock items to select."' : ""}><span><b>${E(label(p))}</b><small>${E(up(p.company_name))} · ${E(up(p.product_category))} · ${E(p.product_id)}${outOfStock ? " · Out of stock" : ""}</small></span><span class="badge ${outOfStock ? "bad" : "ok"}">${M(p.in_stock)}</span></button>`;
+  }).join("")
     || '<div class="empty">No product found.</div>';
 }
 $("pickQ").oninput = ERP.ui.debounce(renderPick, 150); $("pickAll").onchange = renderPick;
