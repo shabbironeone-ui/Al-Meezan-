@@ -24,6 +24,7 @@
   .po{background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:8px;box-shadow:var(--shadow)}
   .po-h{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;cursor:pointer}
   .po-h b{font-size:15px}.po-h small{color:var(--muted)}.po-h .amt{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+  .po-h .product-summary{display:block;margin-top:3px;color:var(--ink);font-size:12px}
   .po-b{padding:0 14px 12px}.po-b .table-wrap{margin-bottom:10px}
   .plist{max-height:50vh;overflow:auto}
   .pi{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;font:inherit;cursor:pointer}
@@ -88,6 +89,23 @@ const spec = v => String(v || "").replace(/gb|mb/gi, "").trim();
 function label(p) { let m = up(p.model); const r = spec(p.ram), s = spec(p.memory);
   if ((r || s) && !m.includes(r || "~") && !m.includes(s || "~")) m += " " + (r && s ? r + "/" + s : r || s); return m; }
 const byId = id => PRODUCTS.find(p => String(p.product_id).toLowerCase() === String(id).trim().toLowerCase());
+const purchaseProductName = row => {
+  const product = byId(row.product_id);
+  return product ? label(product) : row.model;
+};
+const purchaseSearchText = row => {
+  const product = byId(row.product_id);
+  return [
+    row.po_num,
+    product ? label(product) : row.model,
+    row.product_id,
+    row.serial_no,
+    row.supplier,
+    product?.company_name || row.company_name,
+    product?.product_category || row.product_category,
+    product?.color || row.color
+  ].join(" ").toLowerCase();
+};
 document.addEventListener("click", e => { const d = e.target.closest("dialog"); if (e.target.closest("[data-close]") && d) d.close(); });
 
 /* ---------- lines ---------- */
@@ -103,7 +121,13 @@ function addLine(v = {}) {
       <div class="wide"><label>Serial / IMEI</label><input class="serial" value="${E(v.serial_no)}" autocomplete="off"></div>
       <div class="wide"><label>Remarks</label><input class="rem" value="${E(v.remarks)}" autocomplete="off"></div></div>`;
   $("lines").appendChild(d);
-  if (v.product_id) setProduct(d, byId(v.product_id) || { product_id: v.product_id, company_name: v.company_name, product_category: v.product_category, model: v.model, color: v.color }, true);
+  if (v.product_id) setProduct(d, byId(v.product_id) || {
+    product_id: v.product_id,
+    company_name: v.company_name,
+    product_category: v.product_category,
+    model: v.model,
+    color: v.color
+  }, true);
   return d;
 }
 function setProduct(line, p, keepPrices) {
@@ -195,7 +219,7 @@ async function loadHist() {
 }
 function renderHist() {
   const q = $("hQ").value.trim().toLowerCase(), g = new Map();
-  HIST.filter(r => !q || [r.po_num, r.model, r.serial_no, r.supplier, r.company_name].join(" ").toLowerCase().includes(q)).forEach(r => { const k = r.po_num || "—"; (g.get(k) || g.set(k, []).get(k)).push(r); });
+  HIST.filter(r => !q || purchaseSearchText(r).includes(q)).forEach(r => { const k = r.po_num || "—"; (g.get(k) || g.set(k, []).get(k)).push(r); });
   let grand = 0;
   $("hList").innerHTML = [...g].map(([po, rs]) => {
     const tot = rs.reduce((s, r) => s + (+r.line_total || 0), 0), qty = rs.reduce((s, r) => s + (+r.qty || 0), 0);
@@ -205,9 +229,17 @@ function renderHist() {
       const returned = RETURNED_PURCHASES.get(String(r.id)) || 0, remaining = Math.max((Number(r.qty) || 0) - returned, 0);
       const action = !r.return_of_id && remaining > 0 && ERP.auth.can("write")
         ? `<button type="button" class="btn sm ghost" data-do="return-item" data-id="${E(r.id)}">Return · ${M(remaining)} left</button>` : "";
-      return `<tr class="${r.return_of_id ? "return-row" : ""}"><td>${r.return_of_id ? `<span class="badge warn">Return ${E(r.return_ref || "")}</span>` : E(r.model)} <small style="color:var(--muted)">${E(r.company_name)} ${E(r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.cost_price)}</td><td class="num">${M(r.line_total)}</td><td>${E(r.serial_no)}</td><td>${action}</td></tr>`;
+      return `<tr class="${r.return_of_id ? "return-row" : ""}"><td>${r.return_of_id ? `<span class="badge warn">Return ${E(r.return_ref || "")}</span>` : E(purchaseProductName(r))} <small style="color:var(--muted)">${E(byId(r.product_id)?.company_name || r.company_name)} ${E(byId(r.product_id)?.color || r.color)}</small></td><td class="num">${M(r.qty)}</td><td class="num">${M(r.cost_price)}</td><td class="num">${M(r.line_total)}</td><td>${E(r.serial_no)}</td><td>${action}</td></tr>`;
     }).join("");
-    return `<article class="po" data-po="${E(po)}"><div class="po-h"><div><b>${isReturn ? "Purchase Return " : "Purchase "}${E(po)}</b><br><small>${E(rs[0].purchase_date)} · ${E(rs[0].supplier)}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400;color:var(--muted)">${rs.length} items · ${M(qty)} pcs</small></div></div>
+    const productSummary = rs.map(r => {
+      if (r.return_of_id) return `Return ${r.return_ref || ""}`;
+      const product = byId(r.product_id);
+      const details = product
+        ? [product.company_name, product.product_category, product.color, product.product_id]
+        : [r.company_name, r.product_category, r.color, r.product_id];
+      return `${purchaseProductName(r)} · ${details.filter(Boolean).join(" · ")}`;
+    }).join(" | ");
+    return `<article class="po" data-po="${E(po)}"><div class="po-h"><div><b>${isReturn ? "Purchase Return " : "Purchase "}${E(po)}</b><br><small>${E(rs[0].purchase_date)} · ${E(rs[0].supplier)}</small><small class="product-summary">${E(productSummary)}</small></div><div class="amt">Rs ${M(tot)}<br><small style="font-weight:400;color:var(--muted)">${rs.length} items · ${M(qty)} pcs</small></div></div>
       <div class="po-b" hidden><div class="table-wrap"><table style="min-width:620px"><thead><tr><th>Product / return</th><th class="num">Qty</th><th class="num">Cost</th><th class="num">Total</th><th>Serial</th><th>Action</th></tr></thead><tbody>${itemRows}</tbody></table></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">${!hasReturns && ERP.auth.can("delete") ? '<button class="btn sm danger" data-do="del">Delete</button>' : ""}${!hasReturns && ERP.auth.can("edit") ? '<button class="btn sm" data-do="edit">Edit</button>' : ""}${hasReturns ? '<small style="color:var(--muted)">Edit/delete disabled after a return</small>' : ""}</div></div></article>`;
   }).join("")
