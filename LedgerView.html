@@ -16,6 +16,12 @@
   .tabs{display:inline-flex;background:#e8edf3;border-radius:12px;padding:4px;margin:6px 0 12px}
   .tabs button{min-height:40px;padding:6px 18px;border:0;border-radius:9px;background:none;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
   .tabs button[aria-selected="true"]{background:#fff;color:var(--brand-dark);box-shadow:var(--shadow)}
+  .ledger-detail-link{border:0;padding:0;background:none;color:var(--brand-dark);font:inherit;text-align:left;text-decoration:underline;text-decoration-color:#94a3b8;text-underline-offset:3px;cursor:pointer}
+  .ledger-detail-link:hover{color:var(--brand)}
+  .ledger-detail-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:3px}
+  .ledger-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+  .ledger-detail-grid .fld{min-width:0}
+  .ledger-detail-note{margin-top:12px;padding:10px 12px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;color:#1e3a8a;font-size:13px}
   td.deb{color:var(--warn);font-weight:600}td.cre{color:#047857;font-weight:600}tr.sale td{background:#fff7ed}
   .print-section-title{display:none}
   #pr{display:none}
@@ -102,6 +108,16 @@
     <div id="planTab" data-feature="show_installment_plan" hidden><div class="card no-print" id="fmBox" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:170px"><label for="fmIn">First installment month</label><input type="month" id="fmIn"></div><button class="btn sm soft" id="fmSet">Set</button><button class="btn sm ghost" id="fmAuto">Automatic</button><small id="fmNote" style="flex-basis:100%;color:var(--muted)"></small></div><h3 class="print-section-title">Installment schedule</h3><div class="table-wrap"><table style="min-width:420px"><thead><tr><th>#</th><th>Month</th><th class="num">Due</th><th class="num">Paid</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody id="pBody"></tbody></table></div></div>
   </section>
 </main>
+<dialog id="ledgerEntryDialog" class="sheet">
+  <div class="sh-head"><div><h2 id="ledgerEntryTitle">Ledger entry</h2><p id="ledgerEntrySubtitle"></p></div><button class="x" type="button" data-ledger-close aria-label="Close">✕</button></div>
+  <div class="sh-body"><div id="ledgerEntryFields"></div><div id="ledgerEntryNote" class="ledger-detail-note" hidden></div></div>
+  <div class="sh-foot">
+    <button class="btn ghost" type="button" data-ledger-close>Close</button>
+    <button class="btn ghost" type="button" id="ledgerEditSale" hidden>Edit sale</button>
+    <button class="btn danger" type="button" id="ledgerDelete" hidden>Delete</button>
+    <button class="btn" type="button" id="ledgerSave" hidden>Save receipt</button>
+  </div>
+</dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script><script src="js/ui.js"></script><script src="js/db.js"></script><script src="js/auth.js"></script>
 <script>
@@ -126,12 +142,13 @@ function buildLedger(acc, sales, rcs) {   // same money rule as the database: ba
   const originalSales = sales.filter(r => !r.return_of_id), returns = sales.filter(r => r.return_of_id);
   if (originalSales.length) {
     const d = originalSales.map(r => r.date).sort()[0], ts = originalSales.map(r => r.created_at || "").sort()[0];
-    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts });
+    const hasReturns = returns.some(r => originalSales.some(sale => String(sale.id) === String(r.return_of_id)));
+    lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts, actionType: "sale", source: { accNo: acc, rows: originalSales, hasReturns } });
     const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
-    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts });
+    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns } });
   }
-  returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -ERP.db.sales.totalAmount(r), ts: r.created_at || "" }));
-  rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "" }));
+  returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -ERP.db.sales.totalAmount(r), ts: r.created_at || "", actionType: "return", source: r }));
+  rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "", actionType: "receipt", source: r }));
   return lines.sort((x, y) => String(x.date).localeCompare(String(y.date)) || x.ord - y.ord || String(x.ts).localeCompare(String(y.ts)));
 }
 async function pick(acc) {
@@ -160,13 +177,117 @@ function draw() {
   const bl = run; $("bal").className = "balbox" + (bl > 0.5 ? " due" : ""); $("bal").innerHTML = `<small>${bl < -0.5 ? "Paid in excess" : "Outstanding balance"}</small><b>${bl > 0.5 ? "Rs " + M(bl) : bl < -0.5 ? "Rs " + M(-bl) + " extra" : "Clear"}</b>`;
   const over = sch.filter(x => x.due_month < cm).reduce((s, x) => s + N(x.balance_due), 0), month = sch.filter(x => x.due_month === cm).reduce((s, x) => s + N(x.balance_due), 0), next = sch.find(x => N(x.balance_due) > 0 && x.due_month >= cm);
   $("stats").innerHTML = stat("Total sale", "Rs " + M(tD)) + stat("Total received", "Rs " + M(tC)) + stat("Installment / month", "Rs " + M(b.installment)) + stat("Overdue", "Rs " + M(over), over > 0 ? "bad" : "") + stat("Due this month", "Rs " + M(month)) + stat("Next due", next ? mon(next.due_month) : "-");
-  $("lBody").innerHTML = rows.map(r => `<tr class="${r.kind === "Sale" ? "sale" : ""}"><td>${E(r.date)}</td><td>${E(r.kind)}</td><td>${E(r.ref)}</td><td style="white-space:normal;min-width:180px">${E(r.particulars)}</td><td class="num deb">${N(r.debit) ? M(r.debit) : ""}</td><td class="num cre">${N(r.credit) ? M(r.credit) : ""}</td><td class="num"><b>${M(r.run)}</b></td></tr>`).join("")
+  $("lBody").innerHTML = rows.map((r, index) => `<tr class="${r.kind === "Sale" ? "sale" : ""}"><td>${E(r.date)}</td><td>${E(r.kind)}</td><td>${E(r.ref)}</td><td style="white-space:normal;min-width:180px"><button type="button" class="ledger-detail-link" data-ledger-index="${index}" aria-label="View ${E(r.kind)} details for ${E(r.ref)}">${E(r.particulars || r.kind)}</button></td><td class="num deb">${N(r.debit) ? M(r.debit) : ""}</td><td class="num cre">${N(r.credit) ? M(r.credit) : ""}</td><td class="num"><b>${M(r.run)}</b></td></tr>`).join("")
     + (rows.length ? `<tr style="font-weight:700;background:#eef2f7"><td colspan="4">Total</td><td class="num">${M(tD)}</td><td class="num">${M(tC)}</td><td class="num">${M(bl)}</td></tr>` : '<tr><td colspan="7" class="empty">No entries for this customer.</td></tr>');
   $("pBody").innerHTML = sch.map(x => `<tr><td>${x.inst_no ?? "–"}</td><td>${mon(x.due_month)}</td><td class="num">${M(x.due_amt)}</td><td class="num">${M(x.paid_amt)}</td><td class="num">${M(x.balance_due)}</td><td><span class="badge ${ST[x.status][0]}">${ST[x.status][1]}</span></td></tr>`).join("") || (cur.schErr ? '<tr><td colspan="6" class="empty">Plan could not be loaded: ' + E(cur.schErr) + '</td></tr>' : '<tr><td colspan="6" class="empty">' + (cur.sales === 0 ? "No sale found for this customer." : !cur.hasPlan ? "This sale has no installment plan (plan months is empty or 0)." : "The plan could not be built. Set the first installment month above.") + '</td></tr>');
   const fm = sch.map(x => x.due_month).sort()[0]; $("fmIn").value = fm ? fm.slice(0, 7) : ""; $("fmBox").hidden = !ERP.auth.can("edit");
   $("fmNote").textContent = cur.manual ? "Set by hand. Press Automatic to go back to the automatic month." : fm ? "Automatic: taken from the sale, or from this customer's first installment." : "";
   $("bRec").href = "receipts.html"; $("bWa").disabled = !digits(c.mobile_number);
 }
+let selectedLedgerEntry = null;
+function closeLedgerEntry() { $("ledgerEntryDialog").close(); selectedLedgerEntry = null; }
+function openLedgerEntry(index) {
+  const entry = cur && cur.led[index];
+  if (!entry) return;
+  selectedLedgerEntry = entry;
+  const receiptEditable = ERP.auth.can("edit", "receipts"), receiptDeletable = ERP.auth.can("delete", "receipts");
+  const saleEditable = ERP.auth.can("edit", "sales"), saleDeletable = ERP.auth.can("delete", "sales");
+  const note = $("ledgerEntryNote"), save = $("ledgerSave"), remove = $("ledgerDelete"), editSale = $("ledgerEditSale");
+  save.hidden = true; remove.hidden = true; editSale.hidden = true; note.hidden = true;
+  $("ledgerEntryTitle").textContent = `${entry.kind} · ${entry.ref || ""}`;
+  $("ledgerEntrySubtitle").textContent = `${entry.date || "Date not recorded"} · ${cur.c.account_title} · CAF ${cur.c.account_no}`;
+  if (entry.actionType === "receipt") {
+    const receipt = entry.source;
+    $("ledgerEntryFields").innerHTML = `<div class="ledger-detail-grid">
+      <div class="fld"><label for="ledgerReceiptDate">Date</label><input id="ledgerReceiptDate" type="date" value="${E(receipt.date || "")}" ${receiptEditable ? "" : "disabled"}></div>
+      <div class="fld"><label for="ledgerReceiptNo">Receipt no</label><input id="ledgerReceiptNo" value="${E(receipt.voucher_no || "")}" ${receiptEditable ? "" : "disabled"}></div>
+      <div class="fld"><label for="ledgerReceiptAccount">Customer account no</label><input id="ledgerReceiptAccount" list="ledgerCustomerOptions" inputmode="numeric" value="${E(receipt.account_no || "")}" ${receiptEditable ? "" : "disabled"}><datalist id="ledgerCustomerOptions">${LIST.map(customer => `<option value="${E(customer.account_no)}">${E(customer.account_title)}</option>`).join("")}</datalist></div>
+      <div class="fld"><label for="ledgerReceiptMode">Received in</label><input id="ledgerReceiptMode" value="${E(receipt.pay_mode || "")}" ${receiptEditable ? "" : "disabled"}></div>
+      <div class="fld"><label for="ledgerReceiptAmount">Amount (Rs)</label><input id="ledgerReceiptAmount" type="number" min="0.01" step="0.01" value="${N(receipt.amount)}" ${receiptEditable ? "" : "disabled"}></div>
+      <div class="fld wide"><label for="ledgerReceiptRemarks">Remarks</label><input id="ledgerReceiptRemarks" value="${E(receipt.remarks || "")}" ${receiptEditable ? "" : "disabled"}></div>
+    </div>`;
+    save.hidden = !receiptEditable; remove.hidden = !receiptDeletable;
+    if (!receiptEditable && !receiptDeletable) { note.textContent = "You do not have edit or delete permission for receipts."; note.hidden = false; }
+  } else {
+    const sourceRows = entry.source.rows || (entry.actionType === "return" ? [entry.source] : []);
+    const detailRows = sourceRows.map(row => `<tr><td>${E(row.model || "")} ${E(row.color || "")}</td><td class="num">${M(Math.abs(N(row.qty)))}</td><td class="num">Rs ${M(Math.abs(ERP.db.sales.totalAmount(row)))}</td></tr>`).join("");
+    $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div>`;
+    if (entry.actionType === "sale" || entry.actionType === "advance") {
+      editSale.hidden = !saleEditable || !!entry.source.hasReturns;
+      remove.hidden = entry.actionType !== "sale" || !saleDeletable || !!entry.source.hasReturns;
+      note.textContent = entry.actionType === "advance"
+        ? "This advance is part of the original sale. Edit the sale to correct its advance amount."
+        : entry.source.hasReturns
+          ? "This sale has a linked return. Edit and delete are disabled to keep the sale and stock records consistent."
+          : "Editing opens the original sale form. Deleting removes the sale and its stock-out entries; separately recorded receipts are not deleted.";
+      note.hidden = false;
+    } else {
+      note.textContent = "Sales returns affect stock. They cannot be edited or deleted from this ledger.";
+      note.hidden = false;
+    }
+  }
+  $("ledgerEntryDialog").showModal();
+}
+$("lBody").onclick = event => {
+  const button = event.target.closest("[data-ledger-index]");
+  if (button) openLedgerEntry(Number(button.dataset.ledgerIndex));
+};
+$("ledgerEntryDialog").addEventListener("click", event => {
+  if (event.target.closest("[data-ledger-close]")) closeLedgerEntry();
+});
+$("ledgerSave").onclick = () => ERP.ui.busy($("ledgerSave"), async () => {
+  const entry = selectedLedgerEntry;
+  if (!entry || entry.actionType !== "receipt" || !ERP.auth.can("edit", "receipts")) return;
+  const accountNo = $("ledgerReceiptAccount").value.trim();
+  const customer = LIST.find(row => String(row.account_no).trim() === accountNo);
+  const date = $("ledgerReceiptDate").value, voucher = $("ledgerReceiptNo").value.trim(), amount = Number($("ledgerReceiptAmount").value);
+  if (!date || !voucher || !(amount > 0)) return ERP.ui.toast("Date, receipt number and a positive amount are required.", "err");
+  if (!customer) return ERP.ui.toast("Select a valid customer account number.", "err");
+  const oldVoucher = String(entry.source.voucher_no || "").trim();
+  try {
+    if (voucher.toLowerCase() !== oldVoucher.toLowerCase()) {
+      const duplicates = await ERP.db.receipts.existing([voucher]);
+      if (duplicates.length) return ERP.ui.toast(`Receipt number ${voucher} is already saved.`, "err");
+    }
+    await ERP.db.receipts.update(entry.source.id, {
+      date, voucher_no: voucher, account_no: accountNo, account_title: customer.account_title,
+      pay_mode: $("ledgerReceiptMode").value.trim(), amount, remarks: $("ledgerReceiptRemarks").value.trim()
+    });
+    ERP.ui.toast("Receipt updated.");
+    closeLedgerEntry();
+    await pick(cur.c.account_no);
+  } catch (error) { ERP.ui.toast(error.message, "err"); }
+});
+$("ledgerDelete").onclick = async () => {
+  const entry = selectedLedgerEntry;
+  if (!entry) return;
+  if (entry.actionType === "receipt") {
+    if (!ERP.auth.can("delete", "receipts")) return;
+    if (!confirm(`Delete receipt ${entry.source.voucher_no || ""} for Rs ${M(entry.source.amount)}? This cannot be undone.`)) return;
+    try {
+      await ERP.db.receipts.remove([entry.source.id]);
+      ERP.ui.toast("Receipt deleted.");
+      closeLedgerEntry();
+      await pick(cur.c.account_no);
+    } catch (error) { ERP.ui.toast(error.message, "err"); }
+    return;
+  }
+  if (entry.actionType !== "sale" || entry.source.hasReturns || !ERP.auth.can("delete", "sales")) return;
+  if (!confirm(`Delete sale ${entry.source.accNo}? Its stock-out entries will also be removed. Separately recorded receipts will remain. This cannot be undone.`)) return;
+  try {
+    await ERP.db.sales.remove(entry.source.accNo);
+    ERP.ui.toast("Sale and its stock entries deleted.");
+    const accountNo = cur.c.account_no;
+    closeLedgerEntry();
+    await pick(accountNo);
+  } catch (error) { ERP.ui.toast(error.message, "err"); }
+};
+$("ledgerEditSale").onclick = () => {
+  const entry = selectedLedgerEntry;
+  if (!entry || !["sale", "advance"].includes(entry.actionType) || !ERP.auth.can("edit", "sales")) return;
+  if (entry.source.hasReturns) return ERP.ui.toast("This sale has a linked return and cannot be edited safely.", "err");
+  window.location.href = `SalesForm.html?editAccNo=${encodeURIComponent(entry.source.accNo)}`;
+};
 $("bWa").onclick = () => { const { c, b } = cur; let d = digits(c.mobile_number); d = d.startsWith("92") ? d : "92" + d.replace(/^0/, ""); const bl = N(b.balance);
   window.open(`https://wa.me/${d}?text=${encodeURIComponent(`Assalam o Alaikum ${c.account_title}, aap ki CAF ${c.account_no} ka baqaya Rs ${M(bl)} hai. Meherbani karke ada kar dein. Shukriya - Al Meezan`)}`, "_blank", "noopener"); };
 let printState = null;
