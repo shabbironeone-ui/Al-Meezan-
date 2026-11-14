@@ -116,6 +116,7 @@
     <button class="btn ghost" type="button" id="ledgerEditSale" hidden>Edit sale</button>
     <button class="btn ghost" type="button" id="ledgerSaveAdvance" hidden>Save advance</button>
     <button class="btn danger" type="button" id="ledgerDeleteAdvance" hidden>Delete advance</button>
+    <button class="btn danger" type="button" id="ledgerMarkAdvanceReceipts" hidden>Remove extra advance line</button>
     <button class="btn danger" type="button" id="ledgerDelete" hidden>Delete</button>
     <button class="btn" type="button" id="ledgerSave" hidden>Save receipt</button>
   </div>
@@ -203,7 +204,8 @@ function openLedgerEntry(index, receiptOverride) {
   const saleEditable = ERP.auth.can("edit", "sales"), saleDeletable = ERP.auth.can("delete", "sales");
   const note = $("ledgerEntryNote"), save = $("ledgerSave"), remove = $("ledgerDelete"), editSale = $("ledgerEditSale");
   const saveAdvance = $("ledgerSaveAdvance"), deleteAdvance = $("ledgerDeleteAdvance");
-  save.hidden = true; remove.hidden = true; editSale.hidden = true; saveAdvance.hidden = true; deleteAdvance.hidden = true; note.hidden = true;
+  const markAdvanceReceipts = $("ledgerMarkAdvanceReceipts");
+  save.hidden = true; remove.hidden = true; editSale.hidden = true; saveAdvance.hidden = true; deleteAdvance.hidden = true; markAdvanceReceipts.hidden = true; note.hidden = true;
   $("ledgerEntryTitle").textContent = entry.fromSaleAdvance ? `Advance received at sale · ${entry.ref || ""}` : `${entry.kind} · ${entry.ref || ""}`;
   $("ledgerEntrySubtitle").textContent = `${entry.date || "Date not recorded"} · ${cur.c.account_title} · CAF ${cur.c.account_no}`;
   if (entry.actionType === "receipt") {
@@ -235,7 +237,8 @@ function openLedgerEntry(index, receiptOverride) {
         } else {
           $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><p><b>Original sale advance:</b> Rs ${M(entry.source.legacyAdvance)}</p>`;
           saveAdvance.hidden = true; deleteAdvance.hidden = true;
-          note.textContent = "No sale-time receipt was found for this entry. This is the original sale advance balance, not a received amount. Edit or delete the amount from its Receipt entry.";
+          markAdvanceReceipts.hidden = !saleEditable;
+          note.textContent = `This Rs ${M(entry.credit)} sale-advance line is not a receipt. If the original Rs ${M(entry.source.legacyAdvance)} advance is already included in the customer's actual receipts, use “Remove extra advance line”. This does not change the advance or installments.`;
         }
       } else {
         editSale.hidden = !saleEditable || !!entry.source.hasReturns;
@@ -297,6 +300,18 @@ $("ledgerSaveAdvance").onclick = () => ERP.ui.busy($("ledgerSaveAdvance"), async
   try {
     await ERP.db.sales.updateLegacyAdvance(entry.source.accNo, amount);
     ERP.ui.toast("Advance updated. Installments were recalculated.");
+    const accountNo = cur.c.account_no;
+    closeLedgerEntry();
+    await pick(accountNo);
+  } catch (error) { ERP.ui.toast(error.message, "err"); }
+});
+$("ledgerMarkAdvanceReceipts").onclick = () => ERP.ui.busy($("ledgerMarkAdvanceReceipts"), async () => {
+  const entry = selectedLedgerEntry;
+  if (!entry || entry.actionType !== "advance" || !ERP.auth.can("edit", "sales")) return;
+  if (!confirm(`Remove the extra Rs ${M(entry.credit)} advance line from this ledger? This only marks the existing Rs ${M(entry.source.legacyAdvance)} sale advance as already included in receipts. It will not change the advance amount, installment plan, or any receipt. Continue only if the full sale advance has actually been received.`)) return;
+  try {
+    await ERP.db.sales.markLegacyAdvanceInReceipts(entry.source.accNo);
+    ERP.ui.toast("Extra advance line removed. The sale advance and installments were not changed.");
     const accountNo = cur.c.account_no;
     closeLedgerEntry();
     await pick(accountNo);
