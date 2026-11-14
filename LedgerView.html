@@ -114,6 +114,8 @@
   <div class="sh-foot">
     <button class="btn ghost" type="button" data-ledger-close>Close</button>
     <button class="btn ghost" type="button" id="ledgerEditSale" hidden>Edit sale</button>
+    <button class="btn ghost" type="button" id="ledgerSaveAdvance" hidden>Save advance</button>
+    <button class="btn danger" type="button" id="ledgerDeleteAdvance" hidden>Delete advance</button>
     <button class="btn danger" type="button" id="ledgerDelete" hidden>Delete</button>
     <button class="btn" type="button" id="ledgerSave" hidden>Save receipt</button>
   </div>
@@ -145,7 +147,7 @@ function buildLedger(acc, sales, rcs) {   // same money rule as the database: ba
     const hasReturns = returns.some(r => originalSales.some(sale => String(sale.id) === String(r.return_of_id)));
     lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts, actionType: "sale", source: { accNo: acc, rows: originalSales, hasReturns } });
     const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
-    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns } });
+    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns, legacyAdvance: oldAdv } });
   }
   returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -ERP.db.sales.totalAmount(r), ts: r.created_at || "", actionType: "return", source: r }));
   rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "", actionType: "receipt", source: r }));
@@ -193,7 +195,8 @@ function openLedgerEntry(index) {
   const receiptEditable = ERP.auth.can("edit", "receipts"), receiptDeletable = ERP.auth.can("delete", "receipts");
   const saleEditable = ERP.auth.can("edit", "sales"), saleDeletable = ERP.auth.can("delete", "sales");
   const note = $("ledgerEntryNote"), save = $("ledgerSave"), remove = $("ledgerDelete"), editSale = $("ledgerEditSale");
-  save.hidden = true; remove.hidden = true; editSale.hidden = true; note.hidden = true;
+  const saveAdvance = $("ledgerSaveAdvance"), deleteAdvance = $("ledgerDeleteAdvance");
+  save.hidden = true; remove.hidden = true; editSale.hidden = true; saveAdvance.hidden = true; deleteAdvance.hidden = true; note.hidden = true;
   $("ledgerEntryTitle").textContent = `${entry.kind} · ${entry.ref || ""}`;
   $("ledgerEntrySubtitle").textContent = `${entry.date || "Date not recorded"} · ${cur.c.account_title} · CAF ${cur.c.account_no}`;
   if (entry.actionType === "receipt") {
@@ -213,13 +216,20 @@ function openLedgerEntry(index) {
     const detailRows = sourceRows.map(row => `<tr><td>${E(row.model || "")} ${E(row.color || "")}</td><td class="num">${M(Math.abs(N(row.qty)))}</td><td class="num">Rs ${M(Math.abs(ERP.db.sales.totalAmount(row)))}</td></tr>`).join("");
     $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div>`;
     if (entry.actionType === "sale" || entry.actionType === "advance") {
-      editSale.hidden = !saleEditable || !!entry.source.hasReturns;
-      remove.hidden = entry.actionType !== "sale" || !saleDeletable || !!entry.source.hasReturns;
-      note.textContent = entry.actionType === "advance"
-        ? "This advance is part of the original sale. Edit the sale to correct its advance amount."
-        : entry.source.hasReturns
+      if (entry.actionType === "advance") {
+        $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><div class="ledger-detail-grid" style="margin-top:12px"><div class="fld"><label for="ledgerAdvanceAmount">Original sale advance (Rs)</label><input id="ledgerAdvanceAmount" type="number" min="0" step="0.01" value="${N(entry.source.legacyAdvance)}" ${saleEditable && !entry.source.hasReturns ? "" : "disabled"}></div></div>`;
+        saveAdvance.hidden = !saleEditable || !!entry.source.hasReturns;
+        deleteAdvance.hidden = !saleDeletable || !!entry.source.hasReturns;
+        note.textContent = entry.source.hasReturns
+          ? "This sale has a linked return. Advance changes are disabled to keep sale and stock records consistent."
+          : "Change the original sale advance here without selecting its old product. Installments are recalculated; any separately recorded advance receipts remain unchanged. Delete sets this sale advance to Rs 0.";
+      } else {
+        editSale.hidden = !saleEditable || !!entry.source.hasReturns;
+        remove.hidden = !saleDeletable || !!entry.source.hasReturns;
+        note.textContent = entry.source.hasReturns
           ? "This sale has a linked return. Edit and delete are disabled to keep the sale and stock records consistent."
           : "Editing opens the original sale form. Deleting removes the sale and its stock-out entries; separately recorded receipts are not deleted.";
+      }
       note.hidden = false;
     } else {
       note.textContent = "Sales returns affect stock. They cannot be edited or deleted from this ledger.";
@@ -258,6 +268,30 @@ $("ledgerSave").onclick = () => ERP.ui.busy($("ledgerSave"), async () => {
     await pick(cur.c.account_no);
   } catch (error) { ERP.ui.toast(error.message, "err"); }
 });
+$("ledgerSaveAdvance").onclick = () => ERP.ui.busy($("ledgerSaveAdvance"), async () => {
+  const entry = selectedLedgerEntry, amount = Number($("ledgerAdvanceAmount").value);
+  if (!entry || entry.actionType !== "advance" || !ERP.auth.can("edit", "sales")) return;
+  if (!Number.isFinite(amount) || amount < 0) return ERP.ui.toast("Enter a valid advance amount (zero or more).", "err");
+  try {
+    await ERP.db.sales.updateLegacyAdvance(entry.source.accNo, amount);
+    ERP.ui.toast("Advance updated. Installments were recalculated.");
+    const accountNo = cur.c.account_no;
+    closeLedgerEntry();
+    await pick(accountNo);
+  } catch (error) { ERP.ui.toast(error.message, "err"); }
+});
+$("ledgerDeleteAdvance").onclick = async () => {
+  const entry = selectedLedgerEntry;
+  if (!entry || entry.actionType !== "advance" || !ERP.auth.can("delete", "sales")) return;
+  if (!confirm(`Set the recorded advance for ${entry.source.accNo} to Rs 0? The installment amounts will be recalculated.`)) return;
+  try {
+    await ERP.db.sales.updateLegacyAdvance(entry.source.accNo, 0);
+    ERP.ui.toast("Advance removed. Installments were recalculated.");
+    const accountNo = cur.c.account_no;
+    closeLedgerEntry();
+    await pick(accountNo);
+  } catch (error) { ERP.ui.toast(error.message, "err"); }
+};
 $("ledgerDelete").onclick = async () => {
   const entry = selectedLedgerEntry;
   if (!entry) return;
