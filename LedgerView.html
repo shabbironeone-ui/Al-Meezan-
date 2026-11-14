@@ -147,7 +147,7 @@ function buildLedger(acc, sales, rcs) {   // same money rule as the database: ba
     const hasReturns = returns.some(r => originalSales.some(sale => String(sale.id) === String(r.return_of_id)));
     lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts, actionType: "sale", source: { accNo: acc, rows: originalSales, hasReturns } });
     const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
-    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns, legacyAdvance: oldAdv } });
+    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns, legacyAdvance: oldAdv, advanceReceipts: rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())) } });
   }
   returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -ERP.db.sales.totalAmount(r), ts: r.created_at || "", actionType: "return", source: r }));
   rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "", actionType: "receipt", source: r }));
@@ -189,15 +189,19 @@ function draw() {
 let selectedLedgerEntry = null;
 function closeLedgerEntry() { $("ledgerEntryDialog").close(); selectedLedgerEntry = null; }
 function openLedgerEntry(index) {
-  const entry = cur && cur.led[index];
+  let entry = cur && cur.led[index];
   if (!entry) return;
+  if (entry.actionType === "advance" && entry.source.advanceReceipts && entry.source.advanceReceipts.length === 1) {
+    const receipt = entry.source.advanceReceipts[0];
+    entry = { ...entry, kind: "Receipt", ref: receipt.voucher_no, date: receipt.date, actionType: "receipt", source: receipt, fromSaleAdvance: true };
+  }
   selectedLedgerEntry = entry;
   const receiptEditable = ERP.auth.can("edit", "receipts"), receiptDeletable = ERP.auth.can("delete", "receipts");
   const saleEditable = ERP.auth.can("edit", "sales"), saleDeletable = ERP.auth.can("delete", "sales");
   const note = $("ledgerEntryNote"), save = $("ledgerSave"), remove = $("ledgerDelete"), editSale = $("ledgerEditSale");
   const saveAdvance = $("ledgerSaveAdvance"), deleteAdvance = $("ledgerDeleteAdvance");
   save.hidden = true; remove.hidden = true; editSale.hidden = true; saveAdvance.hidden = true; deleteAdvance.hidden = true; note.hidden = true;
-  $("ledgerEntryTitle").textContent = `${entry.kind} · ${entry.ref || ""}`;
+  $("ledgerEntryTitle").textContent = entry.fromSaleAdvance ? `Advance received at sale · ${entry.ref || ""}` : `${entry.kind} · ${entry.ref || ""}`;
   $("ledgerEntrySubtitle").textContent = `${entry.date || "Date not recorded"} · ${cur.c.account_title} · CAF ${cur.c.account_no}`;
   if (entry.actionType === "receipt") {
     const receipt = entry.source;
@@ -206,23 +210,33 @@ function openLedgerEntry(index) {
       <div class="fld"><label for="ledgerReceiptNo">Receipt no</label><input id="ledgerReceiptNo" value="${E(receipt.voucher_no || "")}" ${receiptEditable ? "" : "disabled"}></div>
       <div class="fld"><label for="ledgerReceiptAccount">Customer account no</label><input id="ledgerReceiptAccount" list="ledgerCustomerOptions" inputmode="numeric" value="${E(receipt.account_no || "")}" ${receiptEditable ? "" : "disabled"}><datalist id="ledgerCustomerOptions">${LIST.map(customer => `<option value="${E(customer.account_no)}">${E(customer.account_title)}</option>`).join("")}</datalist></div>
       <div class="fld"><label for="ledgerReceiptMode">Received in</label><input id="ledgerReceiptMode" value="${E(receipt.pay_mode || "")}" ${receiptEditable ? "" : "disabled"}></div>
-      <div class="fld"><label for="ledgerReceiptAmount">Amount (Rs)</label><input id="ledgerReceiptAmount" type="number" min="0.01" step="0.01" value="${N(receipt.amount)}" ${receiptEditable ? "" : "disabled"}></div>
+      <div class="fld"><label for="ledgerReceiptAmount">${entry.fromSaleAdvance ? "Amount received at sale (Rs)" : "Amount (Rs)"}</label><input id="ledgerReceiptAmount" type="number" min="0.01" step="0.01" value="${N(receipt.amount)}" ${receiptEditable ? "" : "disabled"}></div>
       <div class="fld wide"><label for="ledgerReceiptRemarks">Remarks</label><input id="ledgerReceiptRemarks" value="${E(receipt.remarks || "")}" ${receiptEditable ? "" : "disabled"}></div>
     </div>`;
     save.hidden = !receiptEditable; remove.hidden = !receiptDeletable;
-    if (!receiptEditable && !receiptDeletable) { note.textContent = "You do not have edit or delete permission for receipts."; note.hidden = false; }
+    if (entry.fromSaleAdvance) {
+      note.textContent = "This is the amount saved in the after-sale receipt popup. Edit or delete it here without opening the sale or selecting a product.";
+      note.hidden = false;
+    } else if (!receiptEditable && !receiptDeletable) { note.textContent = "You do not have edit or delete permission for receipts."; note.hidden = false; }
   } else {
     const sourceRows = entry.source.rows || (entry.actionType === "return" ? [entry.source] : []);
     const detailRows = sourceRows.map(row => `<tr><td>${E(row.model || "")} ${E(row.color || "")}</td><td class="num">${M(Math.abs(N(row.qty)))}</td><td class="num">Rs ${M(Math.abs(ERP.db.sales.totalAmount(row)))}</td></tr>`).join("");
     $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div>`;
     if (entry.actionType === "sale" || entry.actionType === "advance") {
       if (entry.actionType === "advance") {
-        $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><div class="ledger-detail-grid" style="margin-top:12px"><div class="fld"><label for="ledgerAdvanceAmount">Original sale advance (Rs)</label><input id="ledgerAdvanceAmount" type="number" min="0" step="0.01" value="${N(entry.source.legacyAdvance)}" ${saleEditable && !entry.source.hasReturns ? "" : "disabled"}></div></div>`;
-        saveAdvance.hidden = !saleEditable || !!entry.source.hasReturns;
-        deleteAdvance.hidden = !saleDeletable || !!entry.source.hasReturns;
-        note.textContent = entry.source.hasReturns
-          ? "This sale has a linked return. Advance changes are disabled to keep sale and stock records consistent."
-          : "Change the original sale advance here without selecting its old product. Installments are recalculated; any separately recorded advance receipts remain unchanged. Delete sets this sale advance to Rs 0.";
+        const advanceReceipts = entry.source.advanceReceipts || [];
+        if (advanceReceipts.length > 1) {
+          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Received (Rs)</th></tr></thead><tbody>${advanceReceipts.map(receipt => `<tr><td>${E(receipt.date || "")}</td><td>${E(receipt.voucher_no || "")}</td><td>Rs ${M(receipt.amount)}</td></tr>`).join("")}</tbody></table></div>`;
+          note.textContent = "More than one advance receipt is linked to this sale. Click the matching Receipt row in the ledger below to edit or delete the exact received amount.";
+          saveAdvance.hidden = true; deleteAdvance.hidden = true;
+        } else {
+          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><div class="ledger-detail-grid" style="margin-top:12px"><div class="fld"><label for="ledgerAdvanceAmount">Original sale advance (Rs)</label><input id="ledgerAdvanceAmount" type="number" min="0" step="0.01" value="${N(entry.source.legacyAdvance)}" ${saleEditable && !entry.source.hasReturns ? "" : "disabled"}></div></div>`;
+          saveAdvance.hidden = !saleEditable || !!entry.source.hasReturns;
+          deleteAdvance.hidden = !saleDeletable || !!entry.source.hasReturns;
+          note.textContent = entry.source.hasReturns
+            ? "This sale has a linked return. Advance changes are disabled to keep sale and stock records consistent."
+            : "No separate advance receipt was found. This is the original sale advance; editing it recalculates installments without selecting a product.";
+        }
       } else {
         editSale.hidden = !saleEditable || !!entry.source.hasReturns;
         remove.hidden = !saleDeletable || !!entry.source.hasReturns;
