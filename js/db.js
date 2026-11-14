@@ -280,6 +280,11 @@ ERP.db = (function () {
         if (error) throw new Error(error.message); return count > 0;
       },
       async remove(accNo) { must(await sb.rpc("delete_sale", { p_acc: accNo })); },
+      async updateLegacyAdvance(accNo, amount) {
+        return must(await sb.rpc("update_legacy_sale_advance", {
+          p_account_no: String(accNo).trim(), p_amount: amount
+        }));
+      },
       nextInvoiceNo: async () => must(await sb.rpc("next_invoice_no")),
       /* One CAF = one sale. replace=true edits an existing sale (old rows + stock-out are replaced atomically). */
       async save(sale, items, replace = false) { return must(await sb.rpc("save_sale", { p_sale: sale, p_items: items, p_replace: replace })); }
