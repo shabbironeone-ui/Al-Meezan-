@@ -147,7 +147,7 @@ function buildLedger(acc, sales, rcs) {   // same money rule as the database: ba
     const hasReturns = returns.some(r => originalSales.some(sale => String(sale.id) === String(r.return_of_id)));
     lines.push({ date: d, ord: 0, kind: "Sale", ref: acc, particulars: originalSales.map(r => (String(r.model || "") + " " + String(r.color || "")).trim()).filter(Boolean).join(", "), debit: ERP.db.sales.contractTotal(originalSales), credit: 0, ts, actionType: "sale", source: { accNo: acc, rows: originalSales, hasReturns } });
     const oldAdv = originalSales.filter(r => !r.advance_in_receipts).reduce((t, r) => t + N(r.advance), 0), advR = rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())).reduce((t, r) => t + N(r.amount), 0), cr = Math.max(oldAdv - advR, 0);
-    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Advance", ref: acc, particulars: "Advance recorded on the sale form", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns, legacyAdvance: oldAdv, advanceReceipts: rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim())) } });
+    if (cr > 0) lines.push({ date: d, ord: 1, kind: "Sale advance", ref: acc, particulars: "Original sale advance balance (not a receipt)", debit: 0, credit: cr, ts, actionType: "advance", source: { accNo: acc, rows: originalSales, hasReturns, legacyAdvance: oldAdv, advanceReceipts: rcs.filter(r => /^advance$/i.test(String(r.voucher_no || "").trim()) && String(r.remarks || "").trim().toLowerCase() === "received at sale") } });
   }
   returns.forEach(r => lines.push({ date: r.date, ord: 2, kind: "Sales Return", ref: r.return_ref, particulars: `${r.model || ""} × ${M(-N(r.qty))}${r.remarks ? " · " + r.remarks : ""}`, debit: 0, credit: -ERP.db.sales.totalAmount(r), ts: r.created_at || "", actionType: "return", source: r }));
   rcs.forEach(r => lines.push({ date: r.date, ord: 3, kind: "Receipt", ref: r.voucher_no, particulars: [r.account_head, r.remarks].filter(Boolean).join(" · "), debit: 0, credit: N(r.amount), ts: r.created_at || "", actionType: "receipt", source: r }));
@@ -188,10 +188,13 @@ function draw() {
 }
 let selectedLedgerEntry = null;
 function closeLedgerEntry() { $("ledgerEntryDialog").close(); selectedLedgerEntry = null; }
-function openLedgerEntry(index) {
+function openLedgerEntry(index, receiptOverride) {
   let entry = cur && cur.led[index];
   if (!entry) return;
-  if (entry.actionType === "advance" && entry.source.advanceReceipts && entry.source.advanceReceipts.length === 1) {
+  if (receiptOverride) {
+    const receipt = receiptOverride;
+    entry = { ...entry, kind: "Receipt", ref: receipt.voucher_no, date: receipt.date, actionType: "receipt", source: receipt, fromSaleAdvance: true };
+  } else if (entry.actionType === "advance" && entry.source.advanceReceipts && entry.source.advanceReceipts.length === 1) {
     const receipt = entry.source.advanceReceipts[0];
     entry = { ...entry, kind: "Receipt", ref: receipt.voucher_no, date: receipt.date, actionType: "receipt", source: receipt, fromSaleAdvance: true };
   }
@@ -226,16 +229,13 @@ function openLedgerEntry(index) {
       if (entry.actionType === "advance") {
         const advanceReceipts = entry.source.advanceReceipts || [];
         if (advanceReceipts.length > 1) {
-          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Received (Rs)</th></tr></thead><tbody>${advanceReceipts.map(receipt => `<tr><td>${E(receipt.date || "")}</td><td>${E(receipt.voucher_no || "")}</td><td>Rs ${M(receipt.amount)}</td></tr>`).join("")}</tbody></table></div>`;
-          note.textContent = "More than one advance receipt is linked to this sale. Click the matching Receipt row in the ledger below to edit or delete the exact received amount.";
+          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Receipt</th><th>Received (Rs)</th><th></th></tr></thead><tbody>${advanceReceipts.map((receipt, i) => `<tr><td>${E(receipt.date || "")}</td><td>${E(receipt.voucher_no || "")}</td><td>Rs ${M(receipt.amount)}</td><td><button type="button" class="btn" data-advance-receipt-index="${i}" ${receiptEditable || receiptDeletable ? "" : "disabled"}>Edit / delete</button></td></tr>`).join("")}</tbody></table></div>`;
+          note.textContent = "Select the exact sale-time receipt to edit or delete. The original sale advance and installment plan will not change.";
           saveAdvance.hidden = true; deleteAdvance.hidden = true;
         } else {
-          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><div class="ledger-detail-grid" style="margin-top:12px"><div class="fld"><label for="ledgerAdvanceAmount">Original sale advance (Rs)</label><input id="ledgerAdvanceAmount" type="number" min="0" step="0.01" value="${N(entry.source.legacyAdvance)}" ${saleEditable && !entry.source.hasReturns ? "" : "disabled"}></div></div>`;
-          saveAdvance.hidden = !saleEditable || !!entry.source.hasReturns;
-          deleteAdvance.hidden = !saleDeletable || !!entry.source.hasReturns;
-          note.textContent = entry.source.hasReturns
-            ? "This sale has a linked return. Advance changes are disabled to keep sale and stock records consistent."
-            : "No separate advance receipt was found. This is the original sale advance; editing it recalculates installments without selecting a product.";
+          $("ledgerEntryFields").innerHTML = `<div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Sale amount</th></tr></thead><tbody>${detailRows || `<tr><td colspan="3">${E(entry.particulars || "")}</td></tr>`}</tbody></table></div><p><b>Original sale advance:</b> Rs ${M(entry.source.legacyAdvance)}</p>`;
+          saveAdvance.hidden = true; deleteAdvance.hidden = true;
+          note.textContent = "No sale-time receipt was found for this entry. This is the original sale advance balance, not a received amount. Edit or delete the amount from its Receipt entry.";
         }
       } else {
         editSale.hidden = !saleEditable || !!entry.source.hasReturns;
@@ -257,6 +257,14 @@ $("lBody").onclick = event => {
   if (button) openLedgerEntry(Number(button.dataset.ledgerIndex));
 };
 $("ledgerEntryDialog").addEventListener("click", event => {
+  const receiptButton = event.target.closest("[data-advance-receipt-index]");
+  if (receiptButton && selectedLedgerEntry && selectedLedgerEntry.actionType === "advance") {
+    const receipts = selectedLedgerEntry.source.advanceReceipts || [];
+    const receipt = receipts[Number(receiptButton.dataset.advanceReceiptIndex)];
+    const index = cur.led.indexOf(selectedLedgerEntry);
+    if (receipt && index >= 0) openLedgerEntry(index, receipt);
+    return;
+  }
   if (event.target.closest("[data-ledger-close]")) closeLedgerEntry();
 });
 $("ledgerSave").onclick = () => ERP.ui.busy($("ledgerSave"), async () => {
