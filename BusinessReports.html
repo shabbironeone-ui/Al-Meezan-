@@ -40,6 +40,18 @@
   .bar-row{display:grid;grid-template-columns:minmax(92px,130px) 1fr auto;align-items:center;gap:8px;font-size:12px}
   .bar-track{height:12px;background:#e8edf3;border-radius:99px;overflow:hidden}
   .bar-fill{height:100%;background:var(--brand);border-radius:99px;min-width:2px}
+  .comparison-grid{display:grid;gap:10px;grid-template-columns:1fr}
+  @media(min-width:900px){.comparison-grid{grid-template-columns:repeat(3,1fr)}}
+  .comparison-card{margin:0}
+  .comparison-card h3{margin:0 0 4px;font-size:14px}
+  .comparison-card .compare-period{margin:0 0 10px;color:var(--muted);font-size:11px}
+  .comparison-card .compare-value{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+  .comparison-card .compare-change{font-weight:700}
+  .comparison-card .compare-change.good{color:#047857}
+  .comparison-card .compare-change.bad{color:#b91c1c}
+  .comparison-card .compare-change.neutral{color:var(--muted)}
+  .comparison-card .compare-detail{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+  .comparison-card .compare-detail b{color:var(--ink);font-variant-numeric:tabular-nums}
   [hidden]{display:none!important}
   @media print{
     .toolbar,.tabs,.actions,.links,.appbar .bar-actions{display:none!important}
@@ -95,10 +107,15 @@
     <article class="card report-card" style="margin-top:12px"><h2>Operating expense heads</h2><div class="table-wrap"><table><thead><tr><th>Head</th><th class="num">Entries</th><th class="num">Amount (Rs)</th></tr></thead><tbody id="expenseBody"></tbody></table></div></article>
   </section>
   <section class="report-panel" id="panel-sales" hidden>
+    <article class="card report-card" style="margin-bottom:12px"><h2>Sales growth comparisons</h2><p class="note">Compares net sales through the selected end date with the same elapsed days in the previous month, quarter and year. Returns reduce net sales.</p><div id="salesComparisons" class="comparison-grid"></div></article>
     <div class="kpis" id="salesKpis"></div>
     <div class="report-grid two" style="margin-top:12px">
       <article class="card report-card"><h2>Top product categories</h2><div class="table-wrap"><table><thead><tr><th>Category</th><th class="num">Units</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="categoryBody"></tbody></table></div></article>
       <article class="card report-card"><h2>Top products</h2><div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Units</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="productBody"></tbody></table></div></article>
+    </div>
+    <div class="report-grid two" style="margin-top:12px">
+      <article class="card report-card"><h2>Sales by CRO / approver</h2><div class="table-wrap"><table><thead><tr><th>CRO / approver</th><th class="num">Transactions</th><th class="num">Units</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="croSalesBody"></tbody></table></div></article>
+      <article class="card report-card"><h2>Top customers</h2><div class="table-wrap"><table><thead><tr><th>Customer</th><th class="num">Transactions</th><th class="num">Net sales (Rs)</th></tr></thead><tbody id="customerSalesBody"></tbody></table></div></article>
     </div>
     <article class="card report-card" style="margin-top:12px"><h2>Sales by month</h2><div class="table-wrap"><table><thead><tr><th>Month</th><th class="num">Units net of returns</th><th class="num">Sales (Rs)</th><th class="num">Returns (Rs)</th><th class="num">Processing fees (Rs)</th></tr></thead><tbody id="salesMonthBody"></tbody></table></div></article>
   </section>
@@ -122,6 +139,66 @@ let DATA = null, activeTab = "overview";
 const rupees = value => "Rs " + M(value);
 const startOfMonth = date => new Date(date.getFullYear(), date.getMonth(), 1);
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const dateOffset = (value, years) => {
+  const date = new Date(value + "T12:00:00");
+  date.setFullYear(date.getFullYear() + years);
+  return localDate(date);
+};
+const periodLabel = (start, end) => `${start} to ${end}`;
+function comparisonRanges(endDate, unit) {
+  const end = new Date(endDate + "T12:00:00"), year = end.getFullYear(), month = end.getMonth();
+  let currentStart, previousStart, previousEnd;
+  if (unit === "month") {
+    currentStart = new Date(year, month, 1, 12);
+    previousStart = new Date(year, month - 1, 1, 12);
+    previousEnd = new Date(year, month, 0, 12);
+  } else if (unit === "quarter") {
+    const quarterStartMonth = Math.floor(month / 3) * 3;
+    currentStart = new Date(year, quarterStartMonth, 1, 12);
+    previousStart = new Date(year, quarterStartMonth - 3, 1, 12);
+    previousEnd = new Date(year, quarterStartMonth, 0, 12);
+  } else {
+    currentStart = new Date(year, 0, 1, 12);
+    previousStart = new Date(year - 1, 0, 1, 12);
+    previousEnd = new Date(year, 0, 0, 12);
+  }
+  const elapsedDays = Math.floor((end - currentStart) / 86400000);
+  const previousComparableEnd = new Date(previousStart);
+  previousComparableEnd.setDate(previousComparableEnd.getDate() + elapsedDays);
+  if (previousComparableEnd > previousEnd) previousComparableEnd.setTime(previousEnd.getTime());
+  return {
+    current: { from: localDate(currentStart), to: endDate },
+    previous: { from: localDate(previousStart), to: localDate(previousComparableEnd) }
+  };
+}
+function salesMetrics(rows, range) {
+  const periodRows = rows.filter(row => row.date >= range.from && row.date <= range.to);
+  const originalRows = periodRows.filter(row => !row.return_of_id);
+  const gross = originalRows.reduce((sum, row) => sum + N(row.sales_amt), 0);
+  const returns = -periodRows.filter(row => row.return_of_id).reduce((sum, row) => sum + N(row.sales_amt), 0);
+  const net = total(periodRows, "sales_amt");
+  const invoices = new Set(originalRows.map(row => String(row.account_no || "")).filter(Boolean)).size;
+  return { gross, returns, net, units: total(periodRows, "qty"), invoices, average: invoices ? net / invoices : 0,
+    returnRate: gross > 0 ? returns / gross * 100 : 0 };
+}
+function renderSalesComparisons(rows, endDate) {
+  const options = [
+    ["month", "Month over month"],
+    ["quarter", "Quarter over quarter"],
+    ["year", "Year over year"]
+  ];
+  $("salesComparisons").innerHTML = options.map(([unit, label]) => {
+    const ranges = comparisonRanges(endDate, unit);
+    const current = salesMetrics(rows, ranges.current), previous = salesMetrics(rows, ranges.previous);
+    const delta = current.net - previous.net;
+    const change = previous.net > 0
+      ? `${delta >= 0 ? "+" : "−"}${M(Math.abs(delta) / previous.net * 100)}%`
+      : previous.net === 0 && current.net > 0 ? "New"
+        : previous.net === 0 && current.net === 0 ? "—" : "N/A";
+    const tone = delta > 0 ? "good" : delta < 0 ? "bad" : "neutral";
+    return `<article class="card comparison-card"><h3>${label}</h3><p class="compare-period">Current ${E(periodLabel(ranges.current.from, ranges.current.to))}<br>Previous ${E(periodLabel(ranges.previous.from, ranges.previous.to))}</p><div class="compare-value">${E(rupees(current.net))}</div><div class="compare-change ${tone}">${change} · ${delta >= 0 ? "+" : "−"}${E(rupees(Math.abs(delta)))} vs previous</div><div class="compare-detail"><span>Invoices</span><b>${M(current.invoices)} vs ${M(previous.invoices)}</b></div><div class="compare-detail"><span>Units</span><b>${M(current.units)} vs ${M(previous.units)}</b></div></article>`;
+  }).join("");
+}
 function setRange(preset) {
   const now = new Date(), end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let start = startOfMonth(now);
@@ -170,10 +247,11 @@ async function load() {
   $("btnRefresh").disabled = $("btnApply").disabled = true;
   try {
     const [
-      sales, stockPeriod, stockHistory, daybook, settings,
+      sales, salesHistory, stockPeriod, stockHistory, daybook, settings,
       stockBalance, products, customerBalances
     ] = await Promise.all([
-      dataRows("sales", "id,date,account_no,account_title,product_id,company_name,product_category,model,qty,sales_amt,processing_fee,total_amt,return_of_id,return_ref", "date", from, to, "id"),
+      dataRows("sales", "id,date,account_no,account_title,approved_by,product_id,company_name,product_category,model,qty,sales_amt,processing_fee,total_amt,return_of_id,return_ref", "date", from, to, "id"),
+      dataRows("sales", "id,date,account_no,qty,sales_amt,return_of_id", "date", dateOffset(to, -5), to, "id"),
       dataRows("stock_ledger", "date,product_id,company_name,product_category,model,qty_in,qty_out,total_cost,unit_cost,reference_type,reference_id,created_date", "date", from, to, "transaction_id"),
       ERP.db.stock.ledger(),
       ERP.db.accounts.entries({ from, to }),
@@ -182,7 +260,7 @@ async function load() {
       ERP.db.products.list(),
       ERP.db.customers.balances()
     ]);
-    DATA = { sales, stockPeriod, stockHistory, daybook, settings: settings.rows, stockBalance, products, customerBalances, from, to };
+    DATA = { sales, salesHistory, stockPeriod, stockHistory, daybook, settings: settings.rows, stockBalance, products, customerBalances, from, to };
     render();
     $("subtitle").textContent = `Posted activity ${from} to ${to} · inventory snapshot refreshed ${today()}`;
   } catch (error) {
@@ -224,7 +302,7 @@ function render() {
   const operatingProfit = grossProfit == null ? null : grossProfit - expenses;
 
   renderPnl({ grossSales, returnSales, netSales, fees, otherIncome, cogsOut, cogsReturned, cogs, grossProfit, expenses, operatingProfit, incomeRows, expenseRows, unclassifiedInflows, unclassifiedPayments, coverageGap, saleUnits, postedSaleUnits });
-  renderSales(sales);
+  renderSales(sales, DATA.salesHistory, DATA.to);
   const inventory = renderInventory(products, stockBalance, stockHistory);
   renderOverview({ netSales, operatingProfit, customerOutstanding, totalCashIn, totalCashOut, inventory, sales, daybook, expenses, cogs });
 }
@@ -254,7 +332,8 @@ function renderPnl(p) {
   if (p.unclassifiedPayments.length) warnings.push(`${M(p.unclassifiedPayments.length)} payment(s) (${rupees(total(p.unclassifiedPayments, "money_out"))}) are excluded from expenses because they are not configured expense heads; these may be vendor settlements, receivable/payable or capital transactions.`);
   $("pnlCoverage").innerHTML = warnings.map(E).join("<br>"); $("pnlCoverage").hidden = !warnings.length;
 }
-function renderSales(sales) {
+function renderSales(sales, salesHistory, endDate) {
+  renderSalesComparisons(salesHistory, endDate);
   const productGroups = groupBy(sales, row => [row.product_id, row.model, row.company_name].join("|"), (row, current) => {
     const g = current || { id: row.product_id, model: row.model, company: row.company_name, units: 0, sales: 0 };
     g.units += N(row.qty); g.sales += N(row.sales_amt); return g;
@@ -263,16 +342,38 @@ function renderSales(sales) {
     const g = current || { category: row.product_category || "Uncategorized", units: 0, sales: 0 };
     g.units += N(row.qty); g.sales += N(row.sales_amt); return g;
   }).sort((a, b) => b.sales - a.sales);
-  const returned = sales.filter(row => row.return_of_id), units = total(sales, "qty");
+  const returned = sales.filter(row => row.return_of_id), originals = sales.filter(row => !row.return_of_id), units = total(sales, "qty");
+  const invoiceCount = new Set(originals.map(row => String(row.account_no || "")).filter(Boolean)).size;
+  const grossSales = originals.reduce((sum, row) => sum + N(row.sales_amt), 0);
+  const returnedSales = -returned.reduce((sum, row) => sum + N(row.sales_amt), 0);
   $("salesKpis").innerHTML = statCard("Gross merchandise sales", sales.filter(row => !row.return_of_id).reduce((sum, row) => sum + N(row.sales_amt), 0), "info") +
     statCard("Sales returns", -returned.reduce((sum, row) => sum + N(row.sales_amt), 0), "warn") +
     statCard("Net merchandise sales", total(sales, "sales_amt"), "good") +
+    `<article class="card kpi"><small>Sales transactions</small><b>${E(M(invoiceCount))}</b></article>` +
+    statCard("Average net sales / transaction", invoiceCount ? total(sales, "sales_amt") / invoiceCount : 0) +
+    `<article class="card kpi ${grossSales > 0 && returnedSales / grossSales > 0.1 ? "warn" : ""}"><small>Return rate by value</small><b>${E(M(grossSales > 0 ? returnedSales / grossSales * 100 : 0))}%</b></article>` +
     `<article class="card kpi"><small>Net units sold</small><b>${E(M(units))}</b></article>` +
     statCard("Processing fees", total(sales, "processing_fee"));
   $("categoryBody").innerHTML = tableRows(categoryGroups.slice(0, 12), "No category sales in this period.", row =>
     `<tr><td>${E(row.category)}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.sales)}</td></tr>`);
   $("productBody").innerHTML = tableRows(productGroups.slice(0, 12), "No product sales in this period.", row =>
     `<tr><td>${E([row.model, row.company].filter(Boolean).join(" · "))}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.sales)}</td></tr>`);
+  const croGroups = groupBy(sales, row => String(row.approved_by || "").trim() || "Unassigned", (row, current) => {
+    const g = current || { name: String(row.approved_by || "").trim() || "Unassigned", units: 0, net: 0, invoices: new Set() };
+    g.units += N(row.qty); g.net += N(row.sales_amt);
+    if (!row.return_of_id && row.account_no) g.invoices.add(String(row.account_no));
+    return g;
+  }).sort((a, b) => b.net - a.net);
+  $("croSalesBody").innerHTML = tableRows(croGroups.slice(0, 15), "No sales in this period.", row =>
+    `<tr><td>${E(row.name)}</td><td class="num">${M(row.invoices.size)}</td><td class="num">${M(row.units)}</td><td class="num">${M(row.net)}</td></tr>`);
+  const customerGroups = groupBy(sales, row => String(row.account_no || row.account_title || "Unknown"), (row, current) => {
+    const g = current || { account: String(row.account_no || ""), name: String(row.account_title || "Unknown"), net: 0, invoices: new Set() };
+    g.net += N(row.sales_amt);
+    if (!row.return_of_id && row.account_no) g.invoices.add(String(row.account_no));
+    return g;
+  }).sort((a, b) => b.net - a.net);
+  $("customerSalesBody").innerHTML = tableRows(customerGroups.slice(0, 15), "No customer sales in this period.", row =>
+    `<tr><td>${E(row.name)}${row.account ? ` · ${E(row.account)}` : ""}</td><td class="num">${M(row.invoices.size)}</td><td class="num">${M(row.net)}</td></tr>`);
   const months = new Map();
   sales.forEach(row => {
     const month = String(row.date).slice(0, 7), g = months.get(month) || { month, units: 0, sales: 0, returns: 0, fees: 0 };
