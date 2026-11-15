@@ -194,7 +194,7 @@ dialog.upload-overlay::backdrop{background:rgba(15,23,42,.58);backdrop-filter:bl
   <div class="sh-body"><div class="entry-tools"><label><input id="entrySelectAll" type="checkbox"> Select all shown</label><input id="summarySearch" class="entry-search" type="search" placeholder="Search date, party, account, amount..." aria-label="Search entries"><div><button class="btn sm ghost" id="entryEditSelected">Edit selected</button><button class="btn sm danger" id="entryDeleteSelected">Delete selected</button></div></div><div id="summaryList" class="entry-list"></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Close</button></div></dialog>
 <dialog id="entryEditDlg" class="sheet"><div class="sh-head"><div><h2>Edit selected entries</h2><p id="entryEditSub"></p></div><button class="x" data-close aria-label="Close">✕</button></div>
-  <div class="sh-body"><div class="entry-edit-grid"><div><label for="entryEditDate">Date (blank keeps existing)</label><input id="entryEditDate" type="date"></div><div><label for="entryEditAmount">Amount (blank keeps existing)</label><input id="entryEditAmount" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div id="entryEditDirectionWrap" hidden><label for="entryEditDirection">Direction</label><select id="entryEditDirection"><option value="1">In / Deposit</option><option value="-1">Out / Withdrawal</option></select></div><div id="entryEditAccountWrap" class="wide"><label id="entryEditAccountLabel" for="entryEditAccount">Payment account / mode</label><select id="entryEditAccount"><option value="">Keep existing</option></select></div><div id="entryEditPartyWrap"><label for="entryEditParty">Party (blank keeps existing)</label><input id="entryEditParty"></div><div class="wide"><label for="entryEditRemarks">Description / remarks (blank keeps existing)</label><input id="entryEditRemarks"></div></div></div>
+  <div class="sh-body"><div class="entry-edit-grid"><div><label for="entryEditDate">Date (blank keeps existing)</label><input id="entryEditDate" type="date"></div><div><label for="entryEditAmount">Amount (blank keeps existing)</label><input id="entryEditAmount" type="number" min="0.01" step="0.01" inputmode="decimal"></div><div id="entryEditDirectionWrap" hidden><label for="entryEditDirection">Direction</label><select id="entryEditDirection"><option value="1">In / Deposit</option><option value="-1">Out / Withdrawal</option></select></div><div id="entryEditAccountWrap" class="wide"><label id="entryEditAccountLabel" for="entryEditAccount">Payment account / mode</label><select id="entryEditAccount"><option value="">Keep existing</option></select></div><div id="entryEditVoucherWrap"><label for="entryEditVoucher">Receipt / voucher no. (blank keeps existing)</label><input id="entryEditVoucher"></div><div id="entryEditPartyWrap"><label for="entryEditParty">Party (blank keeps existing)</label><input id="entryEditParty"></div><div class="wide"><label for="entryEditRemarks">Description / remarks (blank keeps existing)</label><input id="entryEditRemarks"></div></div></div>
   <div class="sh-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="entryEditSave">Save changes</button></div></dialog>
 <dialog id="uploadOverlay" class="upload-overlay" aria-labelledby="uploadOverlayTitle" aria-describedby="uploadOverlayMessage">
   <div class="upload-status-card" id="uploadStatusCard"><div class="upload-spinner" id="uploadSpinner" aria-hidden="true"></div><h2 id="uploadOverlayTitle">Uploading bank entries</h2><p id="uploadOverlayMessage" role="status" aria-live="polite">Please wait while entries are saved.</p><button class="btn" id="uploadOverlayOk" type="button" hidden>OK</button></div>
@@ -486,10 +486,12 @@ function openSummaryEdit_(rows) {
   const entryAmount = bank ? Math.abs(N(row.amount)) : SUMMARY_FLOW === "in" ? N(row.money_in) : N(row.money_out);
   $("entryEditAmount").value = single ? String(entryAmount) : "";
   $("entryEditDirectionWrap").hidden = !bank;
+  $("entryEditVoucherWrap").hidden = bank;
   $("entryEditAccountWrap").hidden = false;
   summaryAccountOptions_(editableRows, bank);
   $("entryEditPartyWrap").hidden = bank;
   $("entryEditDirection").value = bank ? (N(row.amount) < 0 ? "-1" : "1") : (SUMMARY_FLOW === "in" ? "1" : "-1");
+  $("entryEditVoucher").value = single && !bank ? sameValue("voucher_no") : "";
   $("entryEditParty").value = single && !bank ? sameValue("party") : "";
   $("entryEditRemarks").value = single ? (bank ? row.remarks || "" : sameValue("remarks")) : "";
   $("entryEditDlg").dataset.count = String(editableRows.length);
@@ -571,9 +573,10 @@ async function deleteSummaryEntries_(rows) {
 async function saveSummaryEntries_(rows) {
   const date = $("entryEditDate").value, rawAmount = $("entryEditAmount").value.trim();
   const amount = rawAmount === "" ? null : Number(rawAmount), account = $("entryEditAccount").value,
-    party = $("entryEditParty").value.trim(), remarks = $("entryEditRemarks").value.trim();
+    voucherNo = $("entryEditVoucher").value.trim(), party = $("entryEditParty").value.trim(),
+    remarks = $("entryEditRemarks").value.trim();
   if (rawAmount !== "" && !(amount > 0)) return ERP.ui.toast("Amount must be greater than zero.", "err");
-  if (!date && rawAmount === "" && !account && !party && !remarks && (!SUMMARY_SIDE || $("entryEditDirection").value === (SUMMARY_FLOW === "in" ? "1" : "-1"))) {
+  if (!date && rawAmount === "" && !account && !voucherNo && !party && !remarks && (!SUMMARY_SIDE || $("entryEditDirection").value === (SUMMARY_FLOW === "in" ? "1" : "-1"))) {
     return ERP.ui.toast("Enter at least one change.", "err");
   }
   if (rows.some(row => !isSummaryEditable_(row))) return ERP.ui.toast("Some selected entries cannot be edited here.", "err");
@@ -611,12 +614,15 @@ async function saveSummaryEntries_(rows) {
             account: account || part.account || acct,
             party: party || part.party || "",
             head: part.head || "",
+            voucher_no: voucherNo || part.voucher_no || "",
             amount: amount !== null && index === 0 ? firstNewAmount : oldAmount,
             remarks: remarks || part.remarks || ""
           };
           const changed = fields.date !== part.date || fields.amount !== oldAmount ||
             fields.account !== String(part.account || "") ||
-            fields.party !== String(part.party || "") || fields.remarks !== String(part.remarks || "");
+            fields.party !== String(part.party || "") ||
+            fields.voucher_no !== String(part.voucher_no || "") ||
+            fields.remarks !== String(part.remarks || "");
           if (changed) {
             await ERP.db.accounts.update(part.src, part.rid, fields);
             saved++;
