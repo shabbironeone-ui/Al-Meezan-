@@ -329,6 +329,7 @@ ERP.db = (function () {
         const row = { date: f.date, pay_mode: f.account, account_title: f.party, amount: f.amount, remarks: f.remarks };
         if (f.account_no !== undefined) row.account_no = f.account_no;
         if (f.to_account !== undefined) row.to_account = f.to_account;
+        if (f.voucher_no !== undefined) row.voucher_no = f.voucher_no;
         row[this.HEADCOL[src]] = f.head;
         const r = must(await sb.from(t).update(row).eq("id", id).select()); if (!r.length) throw new Error("Not saved: you do not have permission"); return r;
       },
